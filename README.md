@@ -1,181 +1,123 @@
-# 🛡️ DriftGuard
+# DriftGuard
 
-**High-Availability EVM RPC Gateway, Intelligent Drift Sentinel & Automated Failover**
+**An EVM JSON-RPC gateway with upstream health monitoring and active-passive failover.**
 
-DriftGuard is a production-grade infrastructure stack designed to protect Ethereum / EVM applications, indexers, and trading bots from silent node desynchronization, stale chain heads, latency spikes, and provider outages.
+DriftGuard combines HAProxy, a Python Sentinel service, and Redis. HAProxy serves the gateway and routes JSON-RPC traffic to the primary provider while it is healthy, then to the configured backup when the primary is unavailable or Sentinel marks it unhealthy.
 
----
+## Live Sepolia endpoint
 
-## 🏗️ Architecture
+**Gateway:** [https://rpc.maskal.space](https://rpc.maskal.space)<br>
+**Network:** Ethereum Sepolia, chain ID `11155111`
+
+Try it with curl:
+
+```bash
+curl -sS --fail-with-body -X POST \
+  -H 'Content-Type: application/json' \
+  --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
+  https://rpc.maskal.space
+```
+
+```bash
+curl -sS --fail-with-body -X POST \
+  -H 'Content-Type: application/json' \
+  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+  https://rpc.maskal.space
+```
+
+The returned block number changes as Sepolia advances. A `GET` request to the endpoint displays the DriftGuard status page; JSON-RPC clients should use `POST`.
+
+## Architecture
 
 ```mermaid
-flowchart TD
-    Client["dApp / Wallet / Indexer / Bot"] -->|JSON-RPC :8545| Gateway["HAProxy Edge Gateway"]
-    
-    subgraph Gateway ["HAProxy Edge Gateway (:8545 / :8404)"]
-        direction TB
-        CORS["CORS Preflight (204)"]
-        RateLimit["Stick-Table Rate Limiter (Anti-DDoS)"]
-        PayloadGuard["Payload Size Guard (< 2MB)"]
-        PoolRouter{"Primary Pool Online?"}
-        MetricsExporter["Prometheus Exporter (:8404/metrics)"]
-        StatsUI["Protected Stats (:8404/stats)"]
-    end
-
-    PoolRouter -->|Yes (HTTP 200)| PrimaryPool["Primary Pool: PublicNode Sepolia"]
-    PoolRouter -->|No (HTTP 503 Failover)| BackupPool["Backup Pool: dRPC Sepolia"]
-
-    subgraph SentinelEngine ["Drift Sentinel Daemon (:8000)"]
-        direction TB
-        ProbeP["Probe Primary (eth_blockNumber & eth_syncing)"]
-        ProbeB["Probe Backup (eth_blockNumber & eth_syncing)"]
-        ProbeC["Probe Canonical (EthPandaOps Reference)"]
-        DriftCalc["Drift & Latency Calculator"]
-        CircuitBreaker["Circuit Breaker (Hysteresis Rise/Fall)"]
-        SentinelProbes["Health Probes (/healthz/primary, /healthz/backup)"]
-    end
-
-    SentinelEngine -.->|HTTP Layer-7 Health Check| Gateway
-    SentinelEngine -->|State, Telemetry & History| Redis[("Redis 7 (Encrypted & Memory Capped)")]
-    PrimaryPool -->|TLS 1.3 Verified| ExtPrimary["https://ethereum-sepolia-rpc.publicnode.com"]
-    BackupPool -->|TLS 1.3 Verified| ExtBackup["https://sepolia.drpc.org"]
+flowchart LR
+    Client[Wallet / dApp / indexer] -->|HTTPS JSON-RPC| Tunnel[Cloudflare Tunnel\nconfigured separately]
+    Tunnel -->|HTTP to origin :8545| HAProxy[HAProxy gateway]
+    HAProxy -->|healthy| Primary[Primary Sepolia RPC]
+    HAProxy -.->|primary unavailable| Backup[Backup Sepolia RPC]
+    Sentinel[Python Sentinel] -->|poll block height, sync state, latency| Primary
+    Sentinel -->|poll| Backup
+    Sentinel -->|compare chain head| Canonical[Canonical Sepolia RPC]
+    HAProxy -->|healthz checks| Sentinel
+    Sentinel -->|state and history| Redis[(Redis)]
+    Operator[Operator] -->|localhost :8404| HAStats[HAProxy stats and metrics]
 ```
 
----
+Cloudflare Tunnel is an external ingress layer and is not part of this Compose project. Configure its origin to reach the host's port `8545`. Docker Compose starts the gateway, Sentinel, and Redis services. The stats UI and Sentinel diagnostics are bound to localhost by default.
 
-## ❓ The Problem: Why Traditional Load Balancers Fail EVM Nodes
+## Run it locally
 
-Standard load balancers (AWS ALB, NGINX, Cloudflare) rely on layer-4 TCP socket checks or shallow HTTP 200 responses. In Web3 infrastructure, **an RPC node can return HTTP 200 OK while being fatally broken**:
-1. **Silent Head Lag (Block Drift):** The node is stuck 1,000 blocks behind the chain tip due to peering issues, yet responds to requests with stale data.
-2. **Syncing State:** The node is catching up after a restart (`eth_syncing: true`). Serving queries causes silent state mismatches and failed transactions.
-3. **Upstream Rate Limiting (429):** The node rejects JSON-RPC calls due to exhausted quotas while the HTTP server remains reachable.
+Prerequisites: Docker Engine, Docker Compose v2, `curl`, and `git`.
 
-**DriftGuard solves this by actively validating chain state** against an authoritative canonical reference, comparing block numbers in real time, and dynamically signaling HAProxy to drain lagging nodes before client applications are affected.
-
----
-
-## ⚡ Core Features
-
-- **Real-Time Block Drift Sentinel:** Concurrent asynchronous polling of Primary, Backup, and Canonical reference nodes measuring block heights, sync state, and round-trip latency.
-- **Circuit Breaker with Hysteresis:** Configurable consecutive failure and recovery thresholds prevent flapping during brief network jitter.
-- **Dynamic Failover & Host Preservation:** Cleanly switches between upstream RPC providers while rewriting SNI and `Host` headers per-provider without Cloudflare/reverse proxy SSL mismatches.
-- **Hardened TLS Upstream Verification:** Full CA-bundle certificate validation (`verify required ca-file /etc/ssl/certs/ca-certificates.crt`), eliminating MITM vulnerabilities.
-- **High-Throughput Connection Pooling:** Uses HAProxy `http-reuse aggressive` to maintain warm TLS 1.3 tunnels to upstream nodes, saving 50–150ms per JSON-RPC call.
-- **Web3 & dApp Ready:**
-  - Automatic browser CORS preflight handling (`OPTIONS` -> 204).
-  - Strict HTTP method filtering (only `POST` and `OPTIONS` allowed).
-  - Request body size guard (rejects malicious payloads > 2MB with JSON-RPC `-32600`).
-- **In-Memory Resilient Telemetry:** Health states and historical telemetry are pushed to Redis 7, with automatic in-memory fallback if Redis is temporarily offline.
-- **Dual Prometheus Observability:** Exposes native Prometheus metrics from both the HAProxy gateway (`:8404/metrics`) and the Sentinel engine (`:8000/metrics`).
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Docker Engine 24+ and Docker Compose v2.
-- `curl` and `bash`.
-
-### 1. Launch the Stack
 ```bash
-git clone https://github.com/<your-account>/driftguard.git
+git clone https://github.com/maskalfreeup-glitch/driftguard.git
 cd driftguard
 cp .env.example .env
-make up
 ```
 
-### 2. Verify JSON-RPC Routing
-Send an Ethereum Sepolia JSON-RPC call to the gateway:
+Before starting, set unique values for `REDIS_PASSWORD` and `STATS_PASSWORD` in `.env`; do not use example or repository defaults in a public deployment. Keep `.env` private. Then start and inspect the services:
+
 ```bash
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+docker compose up -d --build
+docker compose ps
+```
+
+Make a local JSON-RPC request:
+
+```bash
+curl -sS --fail-with-body -X POST \
+  -H 'Content-Type: application/json' \
+  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
   http://127.0.0.1:8545
 ```
-Example Response:
-```json
-{"jsonrpc":"2.0","id":1,"result":"0x6739bc"}
-```
 
-### 3. Run Automated Gateway Test Suite
+Useful local endpoints:
+
+- HAProxy stats: <http://127.0.0.1:8404/stats>
+- HAProxy Prometheus metrics: <http://127.0.0.1:8404/metrics>
+- Sentinel status: <http://127.0.0.1:8000/status>
+- Sentinel metrics: <http://127.0.0.1:8000/metrics>
+
+## Failover evidence
+
+The recorded Sepolia outage drill is in [evidence/failover-test.md](evidence/failover-test.md). In that run, the primary was deliberately pointed at port `444`; HAProxy marked it down, promoted the backup, and a request through the public endpoint returned a block number with HTTP 200. The primary was restored afterward and both upstreams were healthy again.
+
+The evidence file records the tested provider, responses, and scope. Provider availability and free-tier limits can change, so repeat the drill against the providers configured in your own `.env` before relying on the result.
+
+Run the included gateway checks with:
+
 ```bash
 make test
-```
-
----
-
-## ⚙️ Configuration Reference (`.env`)
-
-| Variable | Default | Purpose |
-| :--- | :--- | :--- |
-| `PRIMARY_RPC_URL` | `https://ethereum-sepolia-rpc.publicnode.com` | Primary preferred RPC provider |
-| `PRIMARY_RPC_HOST` | `ethereum-sepolia-rpc.publicnode.com` | Primary hostname for SNI / Host headers |
-| `PRIMARY_RPC_PORT` | `443` | Primary port |
-| `BACKUP_RPC_URL` | `https://sepolia.drpc.org` | Automatic failover provider |
-| `BACKUP_RPC_HOST` | `sepolia.drpc.org` | Backup hostname for SNI / Host headers |
-| `BACKUP_RPC_PORT` | `443` | Backup port |
-| `CANONICAL_RPC_URL` | `https://rpc.sepolia.ethpandaops.io` | Trusted reference to establish canonical chain tip |
-| `DRIFT_THRESHOLD` | `2` | Maximum block lag before marking node UNHEALTHY |
-| `POLL_INTERVAL` | `4.0` | Polling frequency (seconds) |
-| `RPC_TIMEOUT` | `3.5` | Upstream query timeout (seconds) |
-| `FAILURE_THRESHOLD`| `2` | Consecutive failures required to trigger circuit breaker |
-| `RECOVERY_THRESHOLD`| `2` | Consecutive successes required to restore node |
-| `RATE_LIMIT_PER_10S`| `200` | Max requests per 10s per IP (anti-abuse) |
-| `STATS_USER` | `admin` | HAProxy stats dashboard username |
-| `STATS_PASSWORD` | `driftguard_admin_secure_pass` | HAProxy stats dashboard password |
-| `REDIS_PASSWORD` | `driftguard_redis_secure_pass` | Redis authentication token |
-
----
-
-## 🧪 Automated Failover & Recovery Drill
-
-DriftGuard includes an automated failover simulation script:
-```bash
 make test-failover
 ```
 
-### What the Drill Does:
-1. Verifies healthy baseline routing on Primary via HAProxy port `8545`.
-2. Induces artificial drift by setting `DRIFT_THRESHOLD=-50`.
-3. Observes Sentinel `/healthz/primary` trigger HTTP `503 Service Unavailable`.
-4. Verifies HAProxy marks `primary_pool` DOWN and routes continuous client traffic through `backup_pool` with zero dropped requests.
-5. Restores original configuration and watches Sentinel and HAProxy automatically recover `primary_pool` to UP.
+## Operating cost
 
----
+DriftGuard uses open-source software with no license fee. If you run it on infrastructure you already pay for, its **incremental software and hosting cost can be $0/month**. This is not a claim that a public deployment has no operating cost:
 
-## 📊 Observability & Telemetry
+| Item | Cost treatment |
+| --- | --- |
+| HAProxy, Python, Redis, Docker Compose | No software license fee |
+| Existing self-hosted machine or VM | No incremental compute charge if already paid for; power and hosting still have a cost |
+| Domain, DNS, and tunnel service | Depends on your existing setup and provider plan |
+| Public RPC providers | May be free for limited use; rate limits, terms, and availability vary |
+| Production RPC capacity and monitoring | Budget according to traffic, provider SLAs, and redundancy requirements |
 
-### 1. Diagnostic Status Dashboard
-```bash
-curl -s http://127.0.0.1:8000/status | jq .
-```
-Returns real-time block numbers, latencies, drift values, and circuit breaker metrics across all nodes.
+## Current scope and limitations
 
-### 2. Prometheus Metrics
-- **Sentinel Metrics:** `http://127.0.0.1:8000/metrics`
-  - `driftguard_block_height{node="primary|backup|canonical"}`
-  - `driftguard_drift_blocks{node="primary|backup"}`
-  - `driftguard_latency_seconds{node="primary|backup|canonical"}`
-  - `driftguard_node_healthy{node="primary|backup"}`
-  - `driftguard_circuit_trips_total{node="primary|backup"}`
-- **HAProxy Metrics:** `http://127.0.0.1:8404/metrics` (Auth required)
+- The included configuration targets Ethereum Sepolia. It does not currently provide path-based Base or Optimism routing.
+- Redis stores Sentinel telemetry and state; deterministic JSON-RPC response caching is not implemented.
+- The gateway runs on one Docker host. Upstream failover does not protect against loss of that host, its network, or its tunnel.
+- No latency benchmark is published here. Measure latency from the intended deployment region and workload before making performance claims.
+- Public RPC endpoints are shared services. Review provider terms and use an appropriate RPC plan for production traffic.
 
-### 3. HAProxy Stats Dashboard
-Navigate to `http://127.0.0.1:8404/stats` in your browser.
-- **Username:** `admin`
-- **Password:** Configured in `STATS_PASSWORD`
+## Configuration and security
 
----
+- `.env` is ignored by Git; `.env.example` is the template. Never commit credentials, private keys, or provider tokens.
+- Use unique, strong passwords and restrict access to the Docker host and its management ports.
+- Keep stats and Sentinel management endpoints private unless they are protected by an authenticated access layer.
+- Review provider TLS, rate-limit, and availability requirements before exposing the gateway to clients.
 
-## 🔒 Production Hardening Best Practices
+## License
 
-- **Zero-Trust Network:** HAProxy and Redis communicate across an isolated internal Docker bridge network (`driftguard_net`).
-- **Least Privilege:** Sentinel and HAProxy run as unprivileged, non-root users (`driftguard` uid 10001, `haproxy` uid 99).
-- **Resource Constraints:** All containers specify strict memory and CPU limits to prevent noisy-neighbor host resource starvation.
-- **Persistence & Eviction:** Redis runs with `--maxmemory 256mb --maxmemory-policy volatile-lru` and append-only disk logging.
-- **CA Root Verification:** All upstream SSL/TLS handshakes strictly validate against the system CA certificates bundle.
-
----
-
-## 📜 License
-MIT License.
+MIT License. See [LICENSE](LICENSE).

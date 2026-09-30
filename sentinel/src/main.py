@@ -176,5 +176,27 @@ def metrics():
     """
     return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
+@app.post("/admin/simulate", summary="Chaos Drill - Simulate Fault")
+async def simulate_fault(
+    node: str = Query(..., pattern="^(primary|backup)$"),
+    drift: Optional[int] = Query(default=None),
+    fault: Optional[str] = Query(default=None)
+):
+    """
+    Injects a synthetic drift or fault on a node for automated failover testing.
+    """
+    monitor.simulate_fault(node=node, drift=drift, fault=fault)
+    logger.warning(f"Injected simulated fault on {node}: drift={drift}, fault={fault}")
+    return {"status": "FAULT_INJECTED", "node": node, "drift": drift, "fault": fault}
+
+@app.post("/admin/reset", summary="Chaos Drill - Reset Faults")
+async def reset_faults():
+    """
+    Clears all simulated faults and restores genuine live probing.
+    """
+    monitor.reset_faults()
+    logger.info("Cleared all simulated faults. Live probing restored.")
+    return {"status": "FAULTS_RESET"}
+
 if __name__ == "__main__":
     uvicorn.run("sentinel.src.main:app", host=settings.host, port=settings.port, log_level="warning")

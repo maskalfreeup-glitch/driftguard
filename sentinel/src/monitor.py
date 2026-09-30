@@ -41,6 +41,10 @@ class DriftMonitor:
         self.backup = NodeState("backup", config.backup_rpc_url)
         self.canonical = NodeState("canonical", config.canonical_rpc_url)
 
+        # Chaos / Failover drill simulation states
+        self.simulated_drift: Dict[str, Optional[int]] = {"primary": None, "backup": None}
+        self.simulated_status: Dict[str, Optional[str]] = {"primary": None, "backup": None}
+
     async def start(self):
         self.is_running = True
         self._task = asyncio.create_task(self._poll_loop())
@@ -59,6 +63,16 @@ class DriftMonitor:
                 pass
         await self.rpc_client.close()
         logger.info("DriftMonitor stopped.")
+
+    def simulate_fault(self, node: str, drift: Optional[int] = None, fault: Optional[str] = None):
+        if drift is not None:
+            self.simulated_drift[node] = drift
+        if fault is not None:
+            self.simulated_status[node] = fault
+
+    def reset_faults(self):
+        self.simulated_drift = {"primary": None, "backup": None}
+        self.simulated_status = {"primary": None, "backup": None}
 
     async def _poll_loop(self):
         # Initial slight delay to allow services to stabilize
@@ -141,7 +155,19 @@ class DriftMonitor:
         reason = "OK"
         drift = 0
 
-        if sample.error or sample.block_number is None:
+        sim_drift = self.simulated_drift.get(node.name)
+        sim_status = self.simulated_status.get(node.name)
+
+        if sim_drift is not None:
+            drift = sim_drift
+            node.last_drift = drift
+            if abs(drift) > self.config.drift_threshold:
+                is_faulty = True
+                reason = f"Simulated drift anomaly: {drift} blocks (threshold: {self.config.drift_threshold})"
+        elif sim_status is not None:
+            is_faulty = True
+            reason = f"Simulated fault: {sim_status}"
+        elif sample.error or sample.block_number is None:
             is_faulty = True
             reason = f"Unreachable: {sample.error}"
         elif sample.is_syncing:

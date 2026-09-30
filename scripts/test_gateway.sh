@@ -78,13 +78,15 @@ else
     exit 1
 fi
 
-# Test 6: Method Whitelist Enforcement (GET -> 405 Method Not Allowed)
-echo -n "[6/7] Testing Method Whitelist (GET rejected with 405)... "
-GET_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${GATEWAY_URL}")
-if [ "$GET_STATUS" = "405" ]; then
-    echo -e "${GREEN}PASS (HTTP 405 Rejected)${NC}"
+# Test 6: Method Whitelist Enforcement (DELETE rejected with 405, GET returns landing page)
+echo -n "[6/7] Testing Method Whitelist (DELETE rejected with 405)... "
+DEL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${GATEWAY_URL}")
+GET_BODY=$(curl -s -X GET "${GATEWAY_URL}")
+
+if [ "$DEL_STATUS" = "405" ] && echo "$GET_BODY" | grep -q "SYSTEM OPERATIONAL"; then
+    echo -e "${GREEN}PASS (DELETE -> 405, GET -> Landing Page 200)${NC}"
 else
-    echo -e "${RED}FAIL (HTTP ${GET_STATUS})${NC}"
+    echo -e "${RED}FAIL (DELETE HTTP: ${DEL_STATUS})${NC}"
     exit 1
 fi
 

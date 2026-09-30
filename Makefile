@@ -35,7 +35,7 @@ test:
 	@./scripts/test_gateway.sh
 
 test-unit:
-	@docker compose exec sentinel pytest sentinel/tests/ -v || pytest sentinel/tests/ -v
+	@docker compose exec -e PYTHONPATH=/app sentinel pytest sentinel/tests/ -v || PYTHONPATH=. pytest sentinel/tests/ -v
 
 test-failover:
 	@./scripts/test_failover.sh

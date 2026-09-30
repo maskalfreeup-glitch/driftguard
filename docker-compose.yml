@@ -1,0 +1,88 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: driftguard-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass "${REDIS_PASSWORD:-driftguard_redis_secure_pass}"
+      --maxmemory 256mb
+      --maxmemory-policy volatile-lru
+      --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - driftguard_net
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD:-driftguard_redis_secure_pass}\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 2s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  sentinel:
+    build:
+      context: .
+      dockerfile: sentinel/Dockerfile
+    container_name: driftguard-sentinel
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - driftguard_net
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  haproxy:
+    image: haproxy:2.8-alpine
+    container_name: driftguard-proxy
+    restart: unless-stopped
+    depends_on:
+      sentinel:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "8545:8545"
+      - "127.0.0.1:8404:8404"
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - driftguard_net
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8545 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+networks:
+  driftguard_net:
+    driver: bridge
+
+volumes:
+  redis_data:

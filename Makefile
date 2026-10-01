@@ -1,17 +1,9 @@
-.PHONY: help build up down restart logs status test test-unit test-failover clean
+.PHONY: all build up down restart logs status test test-unit test-failover clean help
 
-help:
-	@echo "DriftGuard Management Commands:"
-	@echo "  make up            - Build and launch the DriftGuard stack in the background"
-	@echo "  make down          - Gracefully stop all services"
-	@echo "  make restart       - Restart the stack"
-	@echo "  make build         - Rebuild Docker images without cache"
-	@echo "  make logs          - Follow container logs (all services)"
-	@echo "  make status        - Query Sentinel diagnostic status endpoint"
-	@echo "  make test          - Run full integration & gateway verification test suite"
-	@echo "  make test-unit     - Run Sentinel Python unit tests (pytest)"
-	@echo "  make test-failover - Run automated failover and recovery exercise"
-	@echo "  make clean         - Stop services and purge data volumes"
+all: up
+
+build:
+	docker compose build --no-cache
 
 up:
 	docker compose up -d --build
@@ -22,23 +14,35 @@ down:
 restart:
 	docker compose restart
 
-build:
-	docker compose build --no-cache
-
 logs:
 	docker compose logs -f --tail=100
 
-status:
-	@curl -s http://127.0.0.1:8000/status | jq . || curl -s http://127.0.0.1:8000/status
-
 test:
-	@./scripts/test_gateway.sh
+	@chmod +x scripts/test_failover.sh
+	@./scripts/test_failover.sh
+
+test-failover: test
 
 test-unit:
 	@docker compose exec -e PYTHONPATH=/app sentinel pytest sentinel/tests/ -v || PYTHONPATH=. pytest sentinel/tests/ -v
 
-test-failover:
-	@./scripts/test_failover.sh
+test-gateway:
+	@chmod +x scripts/test_gateway.sh
+	@./scripts/test_gateway.sh
+
+status:
+	@curl -s http://127.0.0.1:8000/status | jq . 2>/dev/null || curl -s http://127.0.0.1:8000/status
 
 clean:
-	docker compose down -v
+	docker compose down -v --remove-orphans
+
+help:
+	@echo "DriftGuard Management Commands:"
+	@echo "  make up            - Build and launch the DriftGuard stack in the background"
+	@echo "  make down          - Gracefully stop all services"
+	@echo "  make build         - Rebuild Docker images without cache"
+	@echo "  make logs          - Follow container logs (all services)"
+	@echo "  make test          - Run automated failover verification drill (scripts/test_failover.sh)"
+	@echo "  make test-unit     - Run Sentinel Python unit tests (pytest)"
+	@echo "  make status        - Query Sentinel diagnostic status endpoint"
+	@echo "  make clean         - Stop services and purge data volumes"

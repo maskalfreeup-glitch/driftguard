@@ -1,11 +1,10 @@
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, patch
 
 from sentinel.src.config import Settings
+from sentinel.src.monitor import DriftMonitor
 from sentinel.src.rpc_client import NodeSample
 from sentinel.src.storage import StorageEngine
-from sentinel.src.monitor import DriftMonitor, NodeState
+
 
 @pytest.mark.asyncio
 async def test_storage_engine_in_memory_fallback():
@@ -26,13 +25,10 @@ async def test_storage_engine_in_memory_fallback():
     assert len(history) == 1
     assert history[0]["block"] == 100
 
+
 @pytest.mark.asyncio
 async def test_drift_monitor_healthy_evaluation():
-    config = Settings(
-        drift_threshold=2,
-        failure_threshold=2,
-        recovery_threshold=2
-    )
+    config = Settings(drift_threshold=2, failure_threshold=2, recovery_threshold=2)
     storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
     monitor = DriftMonitor(config=config, storage=storage)
 
@@ -40,12 +36,7 @@ async def test_drift_monitor_healthy_evaluation():
     assert monitor.primary.status == "INITIALIZING"
 
     sample = NodeSample(
-        endpoint="http://mock",
-        block_number=1000,
-        is_syncing=False,
-        latency_ms=45.0,
-        error=None,
-        timestamp=1000.0
+        endpoint="http://mock", block_number=1000, is_syncing=False, latency_ms=45.0, error=None, timestamp=1000.0
     )
 
     # 1st success
@@ -60,25 +51,17 @@ async def test_drift_monitor_healthy_evaluation():
     assert monitor.primary.status == "HEALTHY"
     assert monitor.primary.last_drift == 1
 
+
 @pytest.mark.asyncio
 async def test_drift_monitor_drift_exceeded_trips_circuit():
-    config = Settings(
-        drift_threshold=2,
-        failure_threshold=2,
-        recovery_threshold=2
-    )
+    config = Settings(drift_threshold=2, failure_threshold=2, recovery_threshold=2)
     storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
     monitor = DriftMonitor(config=config, storage=storage)
     monitor.primary.status = "HEALTHY"
 
     # Reference is 1010, target is 1000 -> drift is 10 (exceeds threshold 2)
     lagging_sample = NodeSample(
-        endpoint="http://mock",
-        block_number=1000,
-        is_syncing=False,
-        latency_ms=50.0,
-        error=None,
-        timestamp=1000.0
+        endpoint="http://mock", block_number=1000, is_syncing=False, latency_ms=50.0, error=None, timestamp=1000.0
     )
 
     # 1st failure
@@ -92,6 +75,7 @@ async def test_drift_monitor_drift_exceeded_trips_circuit():
     assert monitor.primary.status == "UNHEALTHY"
     assert "Drift threshold exceeded" in monitor.primary.reason
 
+
 @pytest.mark.asyncio
 async def test_drift_monitor_syncing_node_rejected():
     config = Settings(drift_threshold=2, failure_threshold=1)
@@ -99,12 +83,7 @@ async def test_drift_monitor_syncing_node_rejected():
     monitor = DriftMonitor(config=config, storage=storage)
 
     syncing_sample = NodeSample(
-        endpoint="http://mock",
-        block_number=1000,
-        is_syncing=True,
-        latency_ms=25.0,
-        error=None,
-        timestamp=1000.0
+        endpoint="http://mock", block_number=1000, is_syncing=True, latency_ms=25.0, error=None, timestamp=1000.0
     )
 
     await monitor._evaluate_node(monitor.primary, syncing_sample, reference_block=1000, timestamp=1000)

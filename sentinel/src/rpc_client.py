@@ -1,19 +1,21 @@
-import time
-import httpx
 import logging
+import time
 from dataclasses import dataclass
-from typing import Optional, Tuple
+
+import httpx
 
 logger = logging.getLogger("driftguard.rpc")
+
 
 @dataclass
 class NodeSample:
     endpoint: str
-    block_number: Optional[int]
+    block_number: int | None
     is_syncing: bool
     latency_ms: float
-    error: Optional[str]
+    error: str | None
     timestamp: float
+
 
 class RpcClient:
     def __init__(self, timeout: float = 3.5):
@@ -22,7 +24,7 @@ class RpcClient:
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(self.timeout, connect=2.0),
             limits=limits,
-            headers={"Content-Type": "application/json", "User-Agent": "DriftGuard-Sentinel/1.0"}
+            headers={"Content-Type": "application/json", "User-Agent": "DriftGuard-Sentinel/1.0"},
         )
 
     async def close(self):
@@ -32,15 +34,10 @@ class RpcClient:
         """
         Queries eth_blockNumber and eth_syncing to evaluate node state.
         """
-        payload = {
-            "jsonrpc": "2.0",
-            "method": "eth_blockNumber",
-            "params": [],
-            "id": 1
-        }
+        payload = {"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}
         start = time.perf_counter()
         now = time.time()
-        
+
         try:
             resp = await self.client.post(endpoint_url, json=payload)
             elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
@@ -52,7 +49,7 @@ class RpcClient:
                     is_syncing=False,
                     latency_ms=elapsed_ms,
                     error=f"HTTP {resp.status_code}: {resp.text[:100]}",
-                    timestamp=now
+                    timestamp=now,
                 )
 
             data = resp.json()
@@ -64,7 +61,7 @@ class RpcClient:
                     is_syncing=False,
                     latency_ms=elapsed_ms,
                     error=f"RPC Error: {err_msg}",
-                    timestamp=now
+                    timestamp=now,
                 )
 
             hex_block = data.get("result")
@@ -75,18 +72,13 @@ class RpcClient:
                     is_syncing=False,
                     latency_ms=elapsed_ms,
                     error=f"Invalid result: {hex_block}",
-                    timestamp=now
+                    timestamp=now,
                 )
 
             block_num = int(hex_block, 16)
 
             # Check eth_syncing
-            syncing_payload = {
-                "jsonrpc": "2.0",
-                "method": "eth_syncing",
-                "params": [],
-                "id": 2
-            }
+            syncing_payload = {"jsonrpc": "2.0", "method": "eth_syncing", "params": [], "id": 2}
             is_syncing = False
             try:
                 sync_resp = await self.client.post(endpoint_url, json=syncing_payload)
@@ -104,7 +96,7 @@ class RpcClient:
                 is_syncing=is_syncing,
                 latency_ms=elapsed_ms,
                 error=None,
-                timestamp=now
+                timestamp=now,
             )
 
         except httpx.TimeoutException:
@@ -115,7 +107,7 @@ class RpcClient:
                 is_syncing=False,
                 latency_ms=elapsed_ms,
                 error=f"Request timed out (> {self.timeout}s)",
-                timestamp=now
+                timestamp=now,
             )
         except Exception as e:
             elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
@@ -124,6 +116,6 @@ class RpcClient:
                 block_number=None,
                 is_syncing=False,
                 latency_ms=elapsed_ms,
-                error=f"{type(e).__name__}: {str(e)}",
-                timestamp=now
+                error=f"{type(e).__name__}: {e!s}",
+                timestamp=now,
             )

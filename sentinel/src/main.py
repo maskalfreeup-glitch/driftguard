@@ -1,31 +1,29 @@
 import logging
 import time
 from contextlib import asynccontextmanager
-from typing import Dict, Any, Optional
 
-from fastapi import FastAPI, Response, status, Query
-from fastapi.responses import PlainTextResponse, JSONResponse
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 import uvicorn
+from fastapi import FastAPI, Query, Response, status
+from fastapi.responses import PlainTextResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .config import settings
-from .storage import StorageEngine
 from .monitor import DriftMonitor
+from .storage import StorageEngine
 
 # Configure Structured Logging
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
 )
 logger = logging.getLogger("driftguard.sentinel")
 
 storage = StorageEngine(
-    redis_url=settings.redis_url,
-    timeout=settings.redis_timeout,
-    history_limit=settings.history_limit
+    redis_url=settings.redis_url, timeout=settings.redis_timeout, history_limit=settings.history_limit
 )
 monitor = DriftMonitor(config=settings, storage=storage)
 start_time = time.time()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -37,12 +35,14 @@ async def lifespan(app: FastAPI):
     await monitor.stop()
     await storage.close()
 
+
 app = FastAPI(
     title="DriftGuard Sentinel",
     version="1.0.0",
     description="High-availability EVM RPC drift detection, circuit breaker, and health probe daemon",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
+
 
 @app.get("/healthz", summary="Stack Liveness Probe")
 async def healthz(response: Response):
@@ -59,15 +59,16 @@ async def healthz(response: Response):
         return {
             "status": "CRITICAL",
             "message": "Both primary and backup nodes are unavailable or drifting",
-            "uptime_seconds": uptime
+            "uptime_seconds": uptime,
         }
 
     return {
         "status": "OK",
         "primary": monitor.primary.status,
         "backup": monitor.backup.status,
-        "uptime_seconds": uptime
+        "uptime_seconds": uptime,
     }
+
 
 @app.get("/healthz/primary", summary="HAProxy Primary Pool Probe")
 async def healthz_primary(response: Response):
@@ -83,7 +84,7 @@ async def healthz_primary(response: Response):
             "status": "DOWN",
             "reason": monitor.primary.reason,
             "drift": monitor.primary.last_drift,
-            "consecutive_failures": monitor.primary.consecutive_failures
+            "consecutive_failures": monitor.primary.consecutive_failures,
         }
 
     return {
@@ -91,8 +92,9 @@ async def healthz_primary(response: Response):
         "node": "primary",
         "block": monitor.primary.last_sample.block_number if monitor.primary.last_sample else None,
         "drift": monitor.primary.last_drift,
-        "latency_ms": monitor.primary.last_sample.latency_ms if monitor.primary.last_sample else 0.0
+        "latency_ms": monitor.primary.last_sample.latency_ms if monitor.primary.last_sample else 0.0,
     }
+
 
 @app.get("/healthz/backup", summary="HAProxy Backup Pool Probe")
 async def healthz_backup(response: Response):
@@ -106,7 +108,7 @@ async def healthz_backup(response: Response):
             "status": "DOWN",
             "reason": monitor.backup.reason,
             "drift": monitor.backup.last_drift,
-            "consecutive_failures": monitor.backup.consecutive_failures
+            "consecutive_failures": monitor.backup.consecutive_failures,
         }
 
     return {
@@ -114,8 +116,9 @@ async def healthz_backup(response: Response):
         "node": "backup",
         "block": monitor.backup.last_sample.block_number if monitor.backup.last_sample else None,
         "drift": monitor.backup.last_drift,
-        "latency_ms": monitor.backup.last_sample.latency_ms if monitor.backup.last_sample else 0.0
+        "latency_ms": monitor.backup.last_sample.latency_ms if monitor.backup.last_sample else 0.0,
     }
+
 
 @app.get("/status", summary="Diagnostic Status Dashboard")
 async def get_status():
@@ -132,29 +135,30 @@ async def get_status():
             "drift_threshold_blocks": settings.drift_threshold,
             "poll_interval_seconds": settings.poll_interval,
             "failure_threshold": settings.failure_threshold,
-            "recovery_threshold": settings.recovery_threshold
+            "recovery_threshold": settings.recovery_threshold,
         },
         "nodes": {
             "primary": {
                 "url": settings.primary_rpc_url,
                 "status": monitor.primary.status,
                 "reason": monitor.primary.reason,
-                "latest": p_health
+                "latest": p_health,
             },
             "backup": {
                 "url": settings.backup_rpc_url,
                 "status": monitor.backup.status,
                 "reason": monitor.backup.reason,
-                "latest": b_health
+                "latest": b_health,
             },
             "canonical_reference": {
                 "url": settings.canonical_rpc_url,
                 "status": monitor.canonical.status,
                 "block": monitor.canonical.last_sample.block_number if monitor.canonical.last_sample else None,
-                "latency_ms": monitor.canonical.last_sample.latency_ms if monitor.canonical.last_sample else None
-            }
-        }
+                "latency_ms": monitor.canonical.last_sample.latency_ms if monitor.canonical.last_sample else None,
+            },
+        },
     }
+
 
 @app.get("/history", summary="Telemetry History")
 async def get_history(limit: int = Query(default=20, ge=1, le=100)):
@@ -163,11 +167,8 @@ async def get_history(limit: int = Query(default=20, ge=1, le=100)):
     """
     p_hist = await storage.get_history("primary", limit=limit)
     b_hist = await storage.get_history("backup", limit=limit)
-    return {
-        "limit": limit,
-        "primary_history": p_hist,
-        "backup_history": b_hist
-    }
+    return {"limit": limit, "primary_history": p_hist, "backup_history": b_hist}
+
 
 @app.get("/metrics", response_class=PlainTextResponse, summary="Prometheus Exporter")
 def metrics():
@@ -176,11 +177,12 @@ def metrics():
     """
     return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
+
 @app.post("/admin/simulate", summary="Chaos Drill - Simulate Fault")
 async def simulate_fault(
     node: str = Query(..., pattern="^(primary|backup)$"),
-    drift: Optional[int] = Query(default=None),
-    fault: Optional[str] = Query(default=None)
+    drift: int | None = Query(default=None),
+    fault: str | None = Query(default=None),
 ):
     """
     Injects a synthetic drift or fault on a node for automated failover testing.
@@ -188,6 +190,7 @@ async def simulate_fault(
     monitor.simulate_fault(node=node, drift=drift, fault=fault)
     logger.warning(f"Injected simulated fault on {node}: drift={drift}, fault={fault}")
     return {"status": "FAULT_INJECTED", "node": node, "drift": drift, "fault": fault}
+
 
 @app.post("/admin/reset", summary="Chaos Drill - Reset Faults")
 async def reset_faults():
@@ -197,6 +200,7 @@ async def reset_faults():
     monitor.reset_faults()
     logger.info("Cleared all simulated faults. Live probing restored.")
     return {"status": "FAULTS_RESET"}
+
 
 if __name__ == "__main__":
     uvicorn.run("sentinel.src.main:app", host=settings.host, port=settings.port, log_level="warning")

@@ -3,10 +3,11 @@ services:
     image: redis:7-alpine
     container_name: driftguard-redis
     restart: unless-stopped
+    mem_limit: 32m
     command: >
       redis-server
       --requirepass "${REDIS_PASSWORD:-driftguard_redis_secure_pass}"
-      --maxmemory 256mb
+      --maxmemory 24mb
       --maxmemory-policy volatile-lru
       --appendonly yes
     volumes:
@@ -23,7 +24,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 256M
+          memory: 32M
 
   sentinel:
     build:
@@ -31,6 +32,7 @@ services:
       dockerfile: sentinel/Dockerfile
     container_name: driftguard-sentinel
     restart: unless-stopped
+    mem_limit: 48m
     depends_on:
       redis:
         condition: service_healthy
@@ -50,29 +52,37 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 512M
+          memory: 48M
 
   haproxy:
     image: haproxy:2.8-alpine
     container_name: driftguard-proxy
-    environment:
-      - STATS_USER=${STATS_USER:-admin}
-      - STATS_PASSWORD=${STATS_PASSWORD:-driftguard2026}
     restart: unless-stopped
+    mem_limit: 64m
     depends_on:
       sentinel:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      - GATEWAY_PORT=${GATEWAY_PORT:-8545}
+      - HAPROXY_STATS_PORT=${HAPROXY_STATS_PORT:-8404}
+      - STATS_USER=${STATS_USER:-admin}
+      - STATS_PASSWORD=${STATS_PASSWORD:-driftguard_admin_secure_pass}
+      - PRIMARY_RPC_HOST=${PRIMARY_RPC_HOST:-ethereum-sepolia-rpc.publicnode.com}
+      - PRIMARY_RPC_PORT=${PRIMARY_RPC_PORT:-443}
+      - FALLBACK_RPC_HOST=${FALLBACK_RPC_HOST:-sepolia.gateway.tenderly.co}
+      - FALLBACK_RPC_PORT=${FALLBACK_RPC_PORT:-443}
+      - RATE_LIMIT_PER_10S=${RATE_LIMIT_PER_10S:-200}
     ports:
-      - "8545:8545"
-      - "127.0.0.1:8404:8404"
+      - "${GATEWAY_PORT:-8545}:${GATEWAY_PORT:-8545}"
+      - "127.0.0.1:${HAPROXY_STATS_PORT:-8404}:${HAPROXY_STATS_PORT:-8404}"
     volumes:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     networks:
       - driftguard_net
     healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 8545 || exit 1"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 $${GATEWAY_PORT:-8545} || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 3
@@ -81,7 +91,7 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 512M
+          memory: 64M
 
 networks:
   driftguard_net:

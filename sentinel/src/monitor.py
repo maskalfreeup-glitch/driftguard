@@ -1,11 +1,12 @@
 import asyncio
 import logging
 import time
-from typing import Dict, Any, Optional
-from prometheus_client import Gauge, Counter
+from typing import Any
+
+from prometheus_client import Counter, Gauge
 
 from .config import Settings
-from .rpc_client import RpcClient, NodeSample
+from .rpc_client import NodeSample, RpcClient
 from .storage import StorageEngine
 
 logger = logging.getLogger("driftguard.monitor")
@@ -18,6 +19,7 @@ METRIC_STATUS = Gauge("driftguard_node_healthy", "Node health status (1 for heal
 METRIC_POLL_COUNT = Counter("driftguard_polls_total", "Total poll cycles executed")
 METRIC_FAILOVERS = Counter("driftguard_circuit_trips_total", "Total circuit breaker trips to unhealthy", ["node"])
 
+
 class NodeState:
     def __init__(self, name: str, url: str):
         self.name = name
@@ -25,9 +27,10 @@ class NodeState:
         self.status = "INITIALIZING"
         self.consecutive_failures = 0
         self.consecutive_successes = 0
-        self.last_sample: Optional[NodeSample] = None
+        self.last_sample: NodeSample | None = None
         self.last_drift = 0
         self.reason = "Initializing"
+
 
 class DriftMonitor:
     def __init__(self, config: Settings, storage: StorageEngine):
@@ -35,15 +38,15 @@ class DriftMonitor:
         self.storage = storage
         self.rpc_client = RpcClient(timeout=config.rpc_timeout)
         self.is_running = False
-        self._task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task | None = None
 
         self.primary = NodeState("primary", config.primary_rpc_url)
         self.backup = NodeState("backup", config.backup_rpc_url)
         self.canonical = NodeState("canonical", config.canonical_rpc_url)
 
         # Chaos / Failover drill simulation states
-        self.simulated_drift: Dict[str, Optional[int]] = {"primary": None, "backup": None}
-        self.simulated_status: Dict[str, Optional[str]] = {"primary": None, "backup": None}
+        self.simulated_drift: dict[str, int | None] = {"primary": None, "backup": None}
+        self.simulated_status: dict[str, str | None] = {"primary": None, "backup": None}
 
     async def start(self):
         self.is_running = True
@@ -64,15 +67,29 @@ class DriftMonitor:
         await self.rpc_client.close()
         logger.info("DriftMonitor stopped.")
 
-    def simulate_fault(self, node: str, drift: Optional[int] = None, fault: Optional[str] = None):
+    def simulate_fault(self, node: str, drift: int | None = None, fault: str | None = None):
         if drift is not None:
             self.simulated_drift[node] = drift
         if fault is not None:
             self.simulated_status[node] = fault
 
+        target = self.primary if node == "primary" else self.backup
+        if (drift is not None and abs(drift) > self.config.drift_threshold) or fault is not None:
+            target.consecutive_failures = self.config.failure_threshold
+            target.consecutive_successes = 0
+            target.status = "UNHEALTHY"
+            target.last_drift = drift if drift is not None else 0
+            target.reason = (
+                f"Simulated drift anomaly: {drift} blocks" if drift is not None else f"Simulated fault: {fault}"
+            )
+
     def reset_faults(self):
         self.simulated_drift = {"primary": None, "backup": None}
         self.simulated_status = {"primary": None, "backup": None}
+        self.primary.status = "HEALTHY"
+        self.primary.consecutive_failures = 0
+        self.primary.consecutive_successes = self.config.recovery_threshold
+        self.primary.reason = "Restored"
 
     async def _poll_loop(self):
         # Initial slight delay to allow services to stabilize
@@ -96,7 +113,7 @@ class DriftMonitor:
             self.rpc_client.probe(self.primary.url),
             self.rpc_client.probe(self.backup.url),
             self.rpc_client.probe(self.canonical.url),
-            return_exceptions=True
+            return_exceptions=True,
         )
 
         now = int(time.time())
@@ -122,8 +139,24 @@ class DriftMonitor:
         await self._evaluate_node(self.backup, b_res, ref_block, now)
 
         # Log concise status summary
-        p_info = f"b:{self.primary.last_sample.block_number} d:{self.primary.last_drift} {self.primary.last_sample.latency_ms}ms" if self.primary.last_sample and self.primary.last_sample.block_number else f"err:{self.primary.reason}"
-        b_info = f"b:{self.backup.last_sample.block_number} d:{self.backup.last_drift} {self.backup.last_sample.latency_ms}ms" if self.backup.last_sample and self.backup.last_sample.block_number else f"err:{self.backup.reason}"
+        if self.primary.last_sample and self.primary.last_sample.block_number:
+            p_info = (
+                f"b:{self.primary.last_sample.block_number} "
+                f"d:{self.primary.last_drift} "
+                f"{self.primary.last_sample.latency_ms}ms"
+            )
+        else:
+            p_info = f"err:{self.primary.reason}"
+
+        if self.backup.last_sample and self.backup.last_sample.block_number:
+            b_info = (
+                f"b:{self.backup.last_sample.block_number} "
+                f"d:{self.backup.last_drift} "
+                f"{self.backup.last_sample.latency_ms}ms"
+            )
+        else:
+            b_info = f"err:{self.backup.reason}"
+
         c_info = f"b:{ref_block}" if ref_block else "unavailable"
 
         logger.info(
@@ -131,13 +164,7 @@ class DriftMonitor:
             f"Backup: [{self.backup.status}] ({b_info}) | Ref: ({c_info})"
         )
 
-    async def _evaluate_node(
-        self,
-        node: NodeState,
-        sample_or_exc: Any,
-        reference_block: Optional[int],
-        timestamp: int
-    ):
+    async def _evaluate_node(self, node: NodeState, sample_or_exc: Any, reference_block: int | None, timestamp: int):
         if not isinstance(sample_or_exc, NodeSample):
             sample = NodeSample(
                 endpoint=node.url,
@@ -145,7 +172,7 @@ class DriftMonitor:
                 is_syncing=False,
                 latency_ms=0.0,
                 error=f"Internal exception: {sample_or_exc}",
-                timestamp=timestamp
+                timestamp=timestamp,
             )
         else:
             sample = sample_or_exc
@@ -229,7 +256,7 @@ class DriftMonitor:
             "is_syncing": sample.is_syncing,
             "reason": node.reason,
             "consecutive_failures": node.consecutive_failures,
-            "consecutive_successes": node.consecutive_successes
+            "consecutive_successes": node.consecutive_successes,
         }
 
         await self.storage.set_health(node.name, telemetry)

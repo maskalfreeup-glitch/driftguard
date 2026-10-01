@@ -1,29 +1,27 @@
 import json
 import logging
-import asyncio
-from typing import Dict, Any, List, Optional
 from collections import deque
+from typing import Any
+
 import redis.asyncio as aioredis
 
 logger = logging.getLogger("driftguard.storage")
+
 
 class StorageEngine:
     def __init__(self, redis_url: str, timeout: float = 2.0, history_limit: int = 100):
         self.redis_url = redis_url
         self.timeout = timeout
         self.history_limit = history_limit
-        self.redis: Optional[aioredis.Redis] = None
+        self.redis: aioredis.Redis | None = None
         self._is_connected = False
-        self._local_health: Dict[str, Dict[str, Any]] = {}
-        self._local_history: Dict[str, deque] = {}
+        self._local_health: dict[str, dict[str, Any]] = {}
+        self._local_history: dict[str, deque] = {}
 
     async def connect(self):
         try:
             self.redis = aioredis.from_url(
-                self.redis_url,
-                socket_timeout=self.timeout,
-                socket_connect_timeout=self.timeout,
-                decode_responses=True
+                self.redis_url, socket_timeout=self.timeout, socket_connect_timeout=self.timeout, decode_responses=True
             )
             await self.redis.ping()
             self._is_connected = True
@@ -41,7 +39,7 @@ class StorageEngine:
                     self.redis_url,
                     socket_timeout=self.timeout,
                     socket_connect_timeout=self.timeout,
-                    decode_responses=True
+                    decode_responses=True,
                 )
             await self.redis.ping()
             self._is_connected = True
@@ -51,20 +49,22 @@ class StorageEngine:
             self._is_connected = False
             return False
 
-    async def set_health(self, node: str, data: Dict[str, Any]):
+    async def set_health(self, node: str, data: dict[str, Any]):
         # Always update in-memory state
         self._local_health[node] = dict(data)
 
         if await self._ensure_connection() and self.redis:
             try:
                 # Store as Redis Hash
-                stringified = {k: json.dumps(v) if isinstance(v, (dict, list, bool)) else str(v) for k, v in data.items()}
+                stringified = {
+                    k: json.dumps(v) if isinstance(v, (dict, list, bool)) else str(v) for k, v in data.items()
+                }
                 await self.redis.hset(f"driftguard:health:{node}", mapping=stringified)
             except Exception as e:
                 logger.debug(f"Failed to write health to Redis: {e}")
                 self._is_connected = False
 
-    async def get_health(self, node: str) -> Optional[Dict[str, Any]]:
+    async def get_health(self, node: str) -> dict[str, Any] | None:
         # Fast read from in-memory fallback
         if node in self._local_health:
             return self._local_health[node]
@@ -86,7 +86,7 @@ class StorageEngine:
 
         return None
 
-    async def push_history(self, node: str, data: Dict[str, Any]):
+    async def push_history(self, node: str, data: dict[str, Any]):
         if node not in self._local_history:
             self._local_history[node] = deque(maxlen=self.history_limit)
         self._local_history[node].appendleft(dict(data))
@@ -103,7 +103,7 @@ class StorageEngine:
                 logger.debug(f"Failed to write history to Redis: {e}")
                 self._is_connected = False
 
-    async def get_history(self, node: str, limit: int = 50) -> List[Dict[str, Any]]:
+    async def get_history(self, node: str, limit: int = 50) -> list[dict[str, Any]]:
         if await self._ensure_connection() and self.redis:
             try:
                 key = f"driftguard:history:{node}"

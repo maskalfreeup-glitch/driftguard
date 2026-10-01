@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test-python:
+    name: Lint & Unit Test Python (Sentinel)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r sentinel/requirements.txt
+          pip install ruff flake8
+
+      - name: Run Ruff Lint Check
+        run: |
+          ruff check sentinel/
+
+      - name: Run Flake8 Check
+        run: |
+          flake8 sentinel/ --max-line-length=120 --ignore=E203,W503
+
+      - name: Run Pytest Unit Tests
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest sentinel/tests/ -v
+
+  validate-haproxy:
+    name: Validate HAProxy Configuration Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate haproxy.cfg syntax
+        run: |
+          docker run --rm \
+            -e GATEWAY_PORT=8545 \
+            -e HAPROXY_STATS_PORT=8404 \
+            -e STATS_USER=admin \
+            -e STATS_PASSWORD=driftguard_admin_secure_pass \
+            -e PRIMARY_RPC_HOST=ethereum-sepolia-rpc.publicnode.com \
+            -e PRIMARY_RPC_PORT=443 \
+            -e FALLBACK_RPC_HOST=sepolia.gateway.tenderly.co \
+            -e FALLBACK_RPC_PORT=443 \
+            -e RATE_LIMIT_PER_10S=200 \
+            -v ${{ github.workspace }}/haproxy:/usr/local/etc/haproxy:ro \
+            haproxy:2.8-alpine haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg
+
+  validate-docker:
+    name: Validate Docker Compose & Builds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Copy .env.example to .env
+        run: |
+          cp .env.example .env
+
+      - name: Validate Docker Compose Configuration
+        run: |
+          docker compose config
+
+      - name: Build Docker Containers
+        run: |
+          docker compose build

@@ -86,10 +86,11 @@ class DriftMonitor:
     def reset_faults(self):
         self.simulated_drift = {"primary": None, "backup": None}
         self.simulated_status = {"primary": None, "backup": None}
-        self.primary.status = "HEALTHY"
-        self.primary.consecutive_failures = 0
-        self.primary.consecutive_successes = self.config.recovery_threshold
-        self.primary.reason = "Restored"
+        for target in (self.primary, self.backup):
+            target.status = "INITIALIZING"
+            target.consecutive_failures = 0
+            target.consecutive_successes = 0
+            target.reason = "Awaiting live health samples"
 
     async def _poll_loop(self):
         # Initial slight delay to allow services to stabilize
@@ -132,7 +133,16 @@ class DriftMonitor:
             self.canonical.status = "DEGRADED"
             logger.warning(f"Canonical RPC exception: {c_res}")
 
-        ref_block = self.canonical.last_sample.block_number if self.canonical.last_sample else None
+        ref_sample = self.canonical.last_sample
+        max_reference_age = max(2 * self.config.poll_interval + self.config.rpc_timeout, 5.0)
+        reference_is_fresh = bool(
+            self.canonical.status == "HEALTHY"
+            and ref_sample
+            and ref_sample.block_number is not None
+            and now - ref_sample.timestamp <= max_reference_age
+            and (ref_sample.chain_id is None or ref_sample.chain_id == self.config.expected_chain_id)
+        )
+        ref_block = ref_sample.block_number if reference_is_fresh and ref_sample else None
 
         # Evaluate Primary and Backup nodes
         await self._evaluate_node(self.primary, p_res, ref_block, now)
@@ -197,6 +207,10 @@ class DriftMonitor:
         elif sample.error or sample.block_number is None:
             is_faulty = True
             reason = f"Unreachable: {sample.error}"
+        elif sample.chain_id is not None and sample.chain_id != self.config.expected_chain_id:
+            is_faulty = True
+            reason = (f"Wrong chain ID: got {sample.chain_id}, "
+                      f"expected {self.config.expected_chain_id}")
         elif sample.is_syncing:
             is_faulty = True
             reason = "Node is actively syncing"
@@ -208,7 +222,8 @@ class DriftMonitor:
                 is_faulty = True
                 reason = f"Drift threshold exceeded: {drift} blocks (threshold: {self.config.drift_threshold})"
         else:
-            # If reference is unavailable, check if block exists
+            is_faulty = True
+            reason = "Canonical reference unavailable or stale"
             node.last_drift = 0
 
         # Update Metrics

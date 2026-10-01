@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     fallback_rpc_url: str = Field(default="https://sepolia.gateway.tenderly.co", alias="FALLBACK_RPC_URL")
     backup_rpc_url: str = Field(default="https://sepolia.gateway.tenderly.co", alias="BACKUP_RPC_URL")
     canonical_rpc_url: str = Field(default="https://rpc.sepolia.ethpandaops.io", alias="CANONICAL_RPC_URL")
+    expected_chain_id: int = Field(default=11155111, alias="EXPECTED_CHAIN_ID")
 
     # Drift & Polling Configuration
     block_drift_threshold: int = Field(default=2, alias="BLOCK_DRIFT_THRESHOLD")
@@ -33,6 +34,7 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://:driftguard_redis_secure_pass@redis:6379/0", alias="REDIS_URL")
     redis_timeout: float = Field(default=2.0, alias="REDIS_TIMEOUT")
     history_limit: int = Field(default=100, alias="HISTORY_LIMIT")
+    admin_token: str = Field(default="", alias="DRIFTGUARD_ADMIN_TOKEN")
 
     # Server Configuration
     host: str = Field(default="0.0.0.0", alias="SENTINEL_HOST")

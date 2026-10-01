@@ -1,9 +1,11 @@
 import logging
+import secrets
 import time
 from contextlib import asynccontextmanager
+from urllib.parse import urlsplit
 
 import uvicorn
-from fastapi import FastAPI, Query, Response, status
+from fastapi import FastAPI, Header, HTTPException, Query, Response, status
 from fastapi.responses import PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
@@ -139,19 +141,19 @@ async def get_status():
         },
         "nodes": {
             "primary": {
-                "url": settings.primary_rpc_url,
+                "endpoint_host": _endpoint_host(settings.primary_rpc_url),
                 "status": monitor.primary.status,
                 "reason": monitor.primary.reason,
                 "latest": p_health,
             },
             "backup": {
-                "url": settings.backup_rpc_url,
+                "endpoint_host": _endpoint_host(settings.backup_rpc_url),
                 "status": monitor.backup.status,
                 "reason": monitor.backup.reason,
                 "latest": b_health,
             },
             "canonical_reference": {
-                "url": settings.canonical_rpc_url,
+                "endpoint_host": _endpoint_host(settings.canonical_rpc_url),
                 "status": monitor.canonical.status,
                 "block": monitor.canonical.last_sample.block_number if monitor.canonical.last_sample else None,
                 "latency_ms": monitor.canonical.last_sample.latency_ms if monitor.canonical.last_sample else None,
@@ -183,23 +185,37 @@ async def simulate_fault(
     node: str = Query(..., pattern="^(primary|backup)$"),
     drift: int | None = Query(default=None),
     fault: str | None = Query(default=None),
+    authorization: str | None = Header(default=None),
 ):
     """
     Injects a synthetic drift or fault on a node for automated failover testing.
     """
+    _require_admin(authorization)
     monitor.simulate_fault(node=node, drift=drift, fault=fault)
     logger.warning(f"Injected simulated fault on {node}: drift={drift}, fault={fault}")
     return {"status": "FAULT_INJECTED", "node": node, "drift": drift, "fault": fault}
 
 
 @app.post("/admin/reset", summary="Chaos Drill - Reset Faults")
-async def reset_faults():
+async def reset_faults(authorization: str | None = Header(default=None)):
     """
     Clears all simulated faults and restores genuine live probing.
     """
+    _require_admin(authorization)
     monitor.reset_faults()
     logger.info("Cleared all simulated faults. Live probing restored.")
     return {"status": "FAULTS_RESET"}
+
+
+def _require_admin(authorization: str | None):
+    token = settings.admin_token
+    if not token or not authorization or not secrets.compare_digest(authorization, f"Bearer {token}"):
+        raise HTTPException(status_code=404, detail="Not found")
+
+
+def _endpoint_host(url: str) -> str:
+    """Expose the host for diagnostics without leaking path/query API credentials."""
+    return urlsplit(url).hostname or "configured"
 
 
 if __name__ == "__main__":

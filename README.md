@@ -1,14 +1,14 @@
 # DriftGuard
 
 [![Status](https://img.shields.io/badge/status-active-emerald.svg)](https://github.com/maskalfreeup-glitch/driftguard)
-[![RAM](https://img.shields.io/badge/RAM-%3C100MB-blue.svg)](https://github.com/maskalfreeup-glitch/driftguard)
+[![Container limits](https://img.shields.io/badge/container%20memory%20limits-192MiB-blue.svg)](https://github.com/maskalfreeup-glitch/driftguard)
 [![License: MIT](https://img.shields.io/badge/license-MIT-gray.svg)](LICENSE)
 [![Patreon](https://img.shields.io/badge/patreon-sponsor-orange.svg?logo=patreon)](https://patreon.com/maskal)
 [![GitHub Sponsors](https://img.shields.io/badge/sponsor-GitHub-ea4aaa.svg?logo=github)](https://github.com/sponsors/maskalfreeup-glitch)
 
 **High-Availability EVM JSON-RPC Failover Gateway & Consensus Drift Circuit Breaker.**
 
-DriftGuard bridges the gap between infrastructure load balancing and EVM consensus state. Standard reverse proxies only inspect HTTP transport codes (treating an HTTP 200 as healthy); DriftGuard couples an enterprise-grade **HAProxy L7 ingress gateway** with an asynchronous **Python Sentinel daemon** that actively detects node desyncs, chain splits, and silent consensus drift, executing seamless sub-4s active-passive failover with zero HTTP 5xx errors while maintaining a strict **<100MB RAM runtime footprint**.
+DriftGuard combines an HAProxy JSON-RPC gateway with an asynchronous Python sentinel. The sentinel checks chain identity, head height, syncing state, and a canonical reference before HAProxy marks an upstream healthy. It is an experimental, single-host failover tool; failover time and request continuity depend on polling intervals, provider behavior, and deployment topology. The included drill measures a synthetic health transition and confirms a subsequent request is served by the fallback. It does not establish a zero-error SLA.
 
 ---
 
@@ -100,7 +100,7 @@ flowchart TD
     HAP -->|Active Routing: Healthy| P["Primary RPC Provider\n(ethereum-sepolia-rpc)"]
     HAP -.->|Failover Routing: Desync| F["Fallback RPC Provider\n(sepolia.gateway.tenderly)"]
     
-    subgraph Sentinel_Engine ["DriftGuard Sentinel Stack (<48MB RAM)"]
+    subgraph Sentinel_Engine ["DriftGuard Sentinel and Redis (container limits: 128MiB)"]
         S["Async Sentinel Daemon (:8000)\n(FastAPI + asyncio + httpx)"]
         R[("Redis Engine\n(Telemetry & History)")]
         S <--> R
@@ -121,7 +121,7 @@ flowchart TD
 
 ## 60-Second Quickstart
 
-Get a production-grade, hardened RPC failover gateway running locally in under a minute:
+Start an experimental RPC failover gateway locally:
 
 ```bash
 # 1. Clone repository
@@ -161,10 +161,10 @@ curl -sS -X POST \
 | :--- | :--- | :--- | :--- |
 | **HTTP 200 with Stale Chain Head** | ❌ **Passes traffic blindly** (Broken dApp state) | ❌ **Passes traffic blindly** | ✅ **Detects drift & trips failover pool** |
 | **Active Node Syncing (`eth_syncing`)** | ❌ Blind (Cannot parse JSON-RPC) | ❌ Blind | ✅ **Drains node immediately** |
-| **Active-Passive Failover SLA** | ⚠️ 10s – 30s (Health check timeouts) | ⚠️ 5s – 10s | ✅ **Sub-4.0s (Deterministic SLA)** |
-| **Zero 5xx Window Guarantee** | ❌ Re-exposes client to 502/504 errors | ⚠️ Dropped in-flight connections | ✅ **Zero HTTP 5xx responses** |
+| **Failover timing** | Depends on configuration | Depends on configuration | Measured by the included synthetic drill; no general SLA claimed |
+| **Request continuity** | Depends on deployment and upstream | Depends on deployment and upstream | Drill checks a successful fallback request; no zero-5xx guarantee |
 | **Hysteresis & Flap Damping** | ❌ Unstable oscillation on latency spikes | ⚠️ Manual TCP fall/rise | ✅ **Failure/Recovery count thresholds** |
-| **Memory Footprint** | ~50MB – 150MB | ~20MB – 40MB | ✅ **<100MB Total Stack Footprint** |
+| **Configured container memory limits** | Varies by deployment | Varies by deployment | 192 MiB total across HAProxy, Sentinel, and Redis |
 | **Prometheus Telemetry** | Transport codes only (200/500) | Layer 4/7 counters | ✅ **Block heights, drift count, RPC latency** |
 
 ---
@@ -186,25 +186,25 @@ All runtime configurations are decoupled into `.env.example`:
 | `FAILURE_THRESHOLD` | `2` | Consecutive failed checks to declare UNHEALTHY |
 | `RECOVERY_THRESHOLD` | `2` | Consecutive healthy checks before restoring node |
 
-### Container Memory Hardening (<100MB Footprint)
+### Container Memory Limits (192 MiB Total)
 
 In `docker-compose.yml`, strict kernel cgroup limits prevent resource exhaustion:
 
 ```yaml
 services:
   haproxy:
-    mem_limit: 64m       # Max 64MB RAM
+    mem_limit: 64m       # Max 64MiB RAM
     deploy:
       resources:
         limits:
           memory: 64M
 
   sentinel:
-    mem_limit: 48m       # Max 48MB RAM
+    mem_limit: 96m       # Max 96MiB RAM
     deploy:
       resources:
         limits:
-          memory: 48M
+          memory: 96M
 
   redis:
     mem_limit: 32m       # Max 32MB RAM
@@ -227,13 +227,15 @@ make test
 
 ### Drill Execution Output
 
+Set a unique `DRIFTGUARD_ADMIN_TOKEN` in `.env` before running the chaos drill. The admin endpoints are disabled when the token is empty and require a bearer token when enabled.
+
 ```
 ================================================================
          DriftGuard Automated Failover Verification Drill       
 ================================================================
 [INFO] Target Gateway: http://127.0.0.1:8545
 [INFO] Sentinel Daemon: http://127.0.0.1:8000
-[INFO] Failover SLA Limit: 4.0s
+[INFO] Observed failover threshold: 4.0s (not a service SLA)
 
 [INFO] Phase 1: Querying gateway baseline state...
 [PASS] Gateway operational on active upstream: 'primary' (Head Block: #11821960 [0xb46388])
@@ -242,7 +244,7 @@ make test
 [INFO] Injected fault payload: {"status":"FAULT_INJECTED","node":"primary","drift":50,"fault":null}
 
 [INFO] Phase 3: Polling gateway to assert failover to Fallback upstream within 4.0s...
-[PASS] Failover to Fallback upstream succeeded in 0.983s (<= 4.0s SLA) with zero HTTP 5xx errors
+[PASS] Fallback served a successful response in 0.983s (within the 4.0s drill threshold)
 [PASS] Active Fallback upstream returned valid canonical block: "result":"0xb46388"
 
 [INFO] Phase 4: Restoring healthy state on Primary...
@@ -276,6 +278,8 @@ Your sponsorship directly funds:
 - **Dedicated Validator & Ingress Nodes**: High-frequency NVMe hardware running Sepolia and Base testnet nodes.
 - **Archive Node Bandwidth**: High-throughput upstream providers (Tenderly, PublicNode, dRPC, QuickNode).
 - **Chaos Drill Testbeds**: Continuous automated integration testing against live EVM testnets.
+
+See [FUNDING.md](FUNDING.md) for proposed milestones, outputs, and how funded work will be reported. Milestones are proposals, not commitments to a particular grant program.
 
 ### Funding Options
 

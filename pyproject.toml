@@ -10,4 +10,5 @@ ignore = ["B008"]
 minversion = "8.0"
 addopts = "-v"
 testpaths = ["sentinel/tests"]
+pythonpath = ["."]
 asyncio_mode = "auto"

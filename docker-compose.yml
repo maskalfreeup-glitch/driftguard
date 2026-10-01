@@ -32,7 +32,7 @@ services:
       dockerfile: sentinel/Dockerfile
     container_name: driftguard-sentinel
     restart: unless-stopped
-    mem_limit: 48m
+    mem_limit: 96m
     depends_on:
       redis:
         condition: service_healthy
@@ -52,7 +52,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 48M
+          memory: 96M
 
   haproxy:
     image: haproxy:2.8-alpine

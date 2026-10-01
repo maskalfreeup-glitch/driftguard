@@ -1,9 +1,20 @@
-import pytest
+import time
+from unittest.mock import AsyncMock
 
-from sentinel.src.config import Settings
+import pytest
+from fastapi import HTTPException
+
+from sentinel.src.config import ChainConfig, Settings
+from sentinel.src.main import _require_admin, settings
 from sentinel.src.monitor import DriftMonitor
 from sentinel.src.rpc_client import NodeSample
 from sentinel.src.storage import StorageEngine
+
+TEST_CHAIN = ChainConfig(
+    name="test-chain", chain_id=11155111, backend="be_test",
+    primary_url="https://primary.example", fallback_url="https://fallback.example",
+    reference_url="https://reference.example",
+)
 
 
 @pytest.mark.asyncio
@@ -28,15 +39,16 @@ async def test_storage_engine_in_memory_fallback():
 
 @pytest.mark.asyncio
 async def test_drift_monitor_healthy_evaluation():
-    config = Settings(drift_threshold=2, failure_threshold=2, recovery_threshold=2)
+    config = Settings(failure_threshold=2, recovery_threshold=2)
     storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
-    monitor = DriftMonitor(config=config, storage=storage)
+    monitor = DriftMonitor(config=config, storage=storage, chains=[TEST_CHAIN])
 
     # Initial state is INITIALIZING
     assert monitor.primary.status == "INITIALIZING"
 
     sample = NodeSample(
-        endpoint="http://mock", block_number=1000, is_syncing=False, latency_ms=45.0, error=None, timestamp=1000.0
+        endpoint="http://mock", block_number=1000, is_syncing=False, latency_ms=45.0, error=None,
+        timestamp=1000.0, chain_id=11155111
     )
 
     # 1st success
@@ -54,14 +66,15 @@ async def test_drift_monitor_healthy_evaluation():
 
 @pytest.mark.asyncio
 async def test_drift_monitor_drift_exceeded_trips_circuit():
-    config = Settings(drift_threshold=2, failure_threshold=2, recovery_threshold=2)
+    config = Settings(failure_threshold=2, recovery_threshold=2)
     storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
-    monitor = DriftMonitor(config=config, storage=storage)
+    monitor = DriftMonitor(config=config, storage=storage, chains=[TEST_CHAIN])
     monitor.primary.status = "HEALTHY"
 
     # Reference is 1010, target is 1000 -> drift is 10 (exceeds threshold 2)
     lagging_sample = NodeSample(
-        endpoint="http://mock", block_number=1000, is_syncing=False, latency_ms=50.0, error=None, timestamp=1000.0
+        endpoint="http://mock", block_number=1000, is_syncing=False, latency_ms=50.0, error=None,
+        timestamp=1000.0, chain_id=11155111
     )
 
     # 1st failure
@@ -78,14 +91,222 @@ async def test_drift_monitor_drift_exceeded_trips_circuit():
 
 @pytest.mark.asyncio
 async def test_drift_monitor_syncing_node_rejected():
-    config = Settings(drift_threshold=2, failure_threshold=1)
+    config = Settings(failure_threshold=1)
     storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
-    monitor = DriftMonitor(config=config, storage=storage)
+    monitor = DriftMonitor(config=config, storage=storage, chains=[TEST_CHAIN])
 
     syncing_sample = NodeSample(
-        endpoint="http://mock", block_number=1000, is_syncing=True, latency_ms=25.0, error=None, timestamp=1000.0
+        endpoint="http://mock", block_number=1000, is_syncing=True, latency_ms=25.0, error=None,
+        timestamp=1000.0, chain_id=11155111
     )
 
     await monitor._evaluate_node(monitor.primary, syncing_sample, reference_block=1000, timestamp=1000)
     assert monitor.primary.status == "UNHEALTHY"
     assert "actively syncing" in monitor.primary.reason
+
+
+@pytest.mark.asyncio
+async def test_reference_loss_fails_closed_immediately():
+    config = Settings(failure_threshold=3, recovery_threshold=2)
+    storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
+    monitor = DriftMonitor(config=config, storage=storage, chains=[TEST_CHAIN])
+    monitor.primary.status = "HEALTHY"
+    sample = NodeSample(
+        endpoint="https://mock", block_number=1000, is_syncing=False, latency_ms=10.0,
+        error=None, timestamp=1000.0, chain_id=TEST_CHAIN.chain_id,
+    )
+
+    await monitor._evaluate_node(monitor.primary, sample, reference_block=None, timestamp=1001)
+
+    assert monitor.primary.status == "UNHEALTHY"
+    assert monitor.primary.consecutive_failures == config.failure_threshold
+    assert monitor.primary.reason == "Canonical reference unavailable or stale"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reference_chain_id,reference_time", [(1, None), (11155111, 1.0)])
+async def test_poll_cycle_drains_both_pools_when_reference_is_untrusted(
+    monkeypatch, reference_chain_id, reference_time
+):
+    config = Settings(failure_threshold=3, max_reference_age=2)
+    storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
+    monitor = DriftMonitor(config=config, storage=storage, chains=[TEST_CHAIN])
+    chain_monitor = monitor._default_chain
+    now = time.time()
+
+    async def fake_probe(endpoint, check_syncing=True):
+        is_reference = endpoint == TEST_CHAIN.reference_url
+        return NodeSample(
+            endpoint=endpoint,
+            block_number=100,
+            is_syncing=False,
+            latency_ms=1.0,
+            error=None,
+            timestamp=(reference_time if reference_time is not None else now) if is_reference else now,
+            chain_id=(reference_chain_id if is_reference else TEST_CHAIN.chain_id),
+            syncing_checked=check_syncing,
+        )
+
+    monkeypatch.setattr(monitor.rpc_client, "probe", fake_probe)
+    set_state = AsyncMock(return_value=True)
+    monkeypatch.setattr("sentinel.src.monitor.set_server_state", set_state)
+    monkeypatch.setattr(monitor.alerter, "send_reference_unavailable", AsyncMock(return_value=True))
+
+    await chain_monitor._poll_cycle()
+
+    assert chain_monitor.reference.status == "UNHEALTHY"
+    assert chain_monitor.primary.status == "UNHEALTHY"
+    assert chain_monitor.fallback.status == "UNHEALTHY"
+    assert set_state.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_wrong_chain_id_is_rejected():
+    config = Settings(failure_threshold=1)
+    storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
+    monitor = DriftMonitor(config=config, storage=storage, chains=[TEST_CHAIN])
+    wrong_chain = NodeSample(
+        endpoint="https://mock", block_number=1000, is_syncing=False, latency_ms=10.0,
+        error=None, timestamp=1000.0, chain_id=1,
+    )
+
+    await monitor._evaluate_node(monitor.primary, wrong_chain, reference_block=1000, timestamp=1001)
+
+    assert monitor.primary.status == "UNHEALTHY"
+    assert "Wrong chain ID" in monitor.primary.reason
+
+
+@pytest.mark.asyncio
+async def test_missing_chain_id_is_rejected():
+    config = Settings(failure_threshold=1)
+    storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
+    monitor = DriftMonitor(config=config, storage=storage, chains=[TEST_CHAIN])
+    missing_chain = NodeSample(
+        endpoint="https://mock", block_number=1000, is_syncing=False, latency_ms=10.0,
+        error=None, timestamp=1000.0, chain_id=None,
+    )
+
+    await monitor._evaluate_node(monitor.primary, missing_chain, reference_block=1000, timestamp=1001)
+
+    assert monitor.primary.status == "UNHEALTHY"
+    assert "Wrong chain ID" in monitor.primary.reason
+
+
+def test_admin_routes_require_configured_bearer_token(monkeypatch):
+    monkeypatch.setattr(settings, "admin_token", "test-only-token")
+
+    with pytest.raises(HTTPException) as missing:
+        _require_admin(None)
+    assert missing.value.status_code == 404
+
+    with pytest.raises(HTTPException) as wrong:
+        _require_admin("Bearer incorrect")
+    assert wrong.value.status_code == 404
+
+    assert _require_admin("Bearer test-only-token") is None
+
+
+def test_chain_configuration_requires_three_distinct_https_endpoints():
+    with pytest.raises(ValueError):
+        ChainConfig(name="bad", chain_id=1, backend="be_bad", primary_url="http://a",
+                    fallback_url="https://b", reference_url="https://c")
+
+
+@pytest.mark.asyncio
+async def test_discord_alerter_empty_webhook_noop():
+    from sentinel.alerts import DiscordAlerter
+    alerter = DiscordAlerter(webhook_url="")
+    # Should cleanly no-op and return False without making network calls
+    assert await alerter.send_drift_tripped("Base", 8453, "be_base", 100, 90, 10) is False
+    assert await alerter.send_consensus_recovered("Base", "be_base") is False
+    await alerter.close()
+
+
+@pytest.mark.asyncio
+async def test_discord_alerter_embed_payload():
+    import httpx
+
+    from sentinel.alerts import COLOR_DRIFT_TRIPPED, COLOR_RECOVERED, DiscordAlerter
+
+    dispatched = []
+
+    def mock_handler(request: httpx.Request):
+
+        import json
+        dispatched.append(json.loads(request.content))
+        return httpx.Response(204)
+
+    transport = httpx.MockTransport(mock_handler)
+    client = httpx.AsyncClient(transport=transport)
+    alerter = DiscordAlerter(webhook_url="https://discord.com/api/webhooks/mock/test", client=client)
+
+    # 1. Test Drift Tripped Embed
+    res = await alerter.send_drift_tripped(
+        chain_name="Base Mainnet",
+        chain_id=8453,
+        backend="be_base",
+        canonical_head=2000,
+        primary_head=1950,
+        delta_blocks=50,
+        failover_action="Drained primary -> Fallback active",
+    )
+    assert res is True
+    assert len(dispatched) == 1
+    embed = dispatched[0]["embeds"][0]
+    assert embed["color"] == COLOR_DRIFT_TRIPPED  # 0xE02424
+    field_names = [f["name"] for f in embed["fields"]]
+    assert "Chain Name" in field_names
+    assert "Chain ID" in field_names
+    assert "Backend" in field_names
+    assert "Canonical Head" in field_names
+    assert "Primary Head" in field_names
+    assert "Delta Blocks" in field_names
+    assert "Failover Action" in field_names
+
+    # 2. Test Cooldown / Debounce suppression
+    res_dup = await alerter.send_drift_tripped(
+        chain_name="Base Mainnet",
+        chain_id=8453,
+        backend="be_base",
+        canonical_head=2000,
+        primary_head=1950,
+        delta_blocks=50,
+    )
+    assert res_dup is False  # Suppressed due to debounce
+    assert len(dispatched) == 1
+
+    # 3. Test Recovery Embed
+    res_rec = await alerter.send_consensus_recovered(
+        chain_name="Base Mainnet",
+        backend="be_base",
+        primary_weight_restored="Ready (100%)",
+        force=True,
+    )
+    assert res_rec is True
+    assert len(dispatched) == 2
+    rec_embed = dispatched[1]["embeds"][0]
+    assert rec_embed["color"] == COLOR_RECOVERED  # 0x31C48D
+    rec_fields = {f["name"]: f["value"] for f in rec_embed["fields"]}
+    assert rec_fields["Chain Name"] == "Base Mainnet"
+    assert rec_fields["Status"] == "Synced to Tip"
+    assert rec_fields["Primary Weight Restored"] == "Ready (100%)"
+
+    await alerter.close()
+
+
+@pytest.mark.asyncio
+async def test_multi_chain_monitor_loads_all_chains():
+    from sentinel.src.config import load_chains_config
+    chains = load_chains_config("sentinel/config/chains.yaml")
+    assert len(chains) == 3
+    backends = {c.backend for c in chains}
+    assert backends == {"be_base", "be_arb", "be_sepolia"}
+
+    config = Settings(drift_threshold=2)
+    storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
+    monitor = DriftMonitor(config=config, storage=storage, chains=chains)
+    unique = monitor.unique_monitors()
+    assert len(unique) == 3
+    assert "base-mainnet" in unique
+    assert "arbitrum-one" in unique
+    assert "sepolia-testnet" in unique

@@ -5,7 +5,10 @@ from typing import Any
 
 from prometheus_client import Counter, Gauge
 
-from .config import Settings
+from sentinel.alerts import DiscordAlerter
+
+from .config import ChainConfig, Settings, load_chains_config
+from .haproxy_client import set_server_state
 from .rpc_client import NodeSample, RpcClient
 from .storage import StorageEngine
 
@@ -32,28 +35,51 @@ class NodeState:
         self.reason = "Initializing"
 
 
-class DriftMonitor:
-    def __init__(self, config: Settings, storage: StorageEngine):
-        self.config = config
+class ChainMonitor:
+    """
+    Dedicated, isolated monitor loop for a single EVM chain.
+    Runs concurrently in its own asyncio Task so network latency on one chain
+    never degrades monitoring on another.
+    """
+
+    def __init__(
+        self,
+        chain: ChainConfig,
+        rpc_client: RpcClient,
+        storage: StorageEngine,
+        alerter: DiscordAlerter,
+        socket_path: str,
+        failure_threshold: int = 2,
+        recovery_threshold: int = 2,
+        max_reference_age: float = 10.0,
+    ):
+        self.chain = chain
+        self.rpc_client = rpc_client
         self.storage = storage
-        self.rpc_client = RpcClient(timeout=config.rpc_timeout)
+        self.alerter = alerter
+        self.socket_path = socket_path
+        self.failure_threshold = failure_threshold
+        self.recovery_threshold = recovery_threshold
+        self.max_reference_age = max_reference_age
+
+        self.primary = NodeState(f"{chain.backend}:primary", chain.primary_url)
+        self.fallback = NodeState(f"{chain.backend}:fallback", chain.fallback_url)
+        self.reference = NodeState(f"{chain.backend}:reference", chain.reference_url)
+
         self.is_running = False
         self._task: asyncio.Task | None = None
 
-        self.primary = NodeState("primary", config.primary_rpc_url)
-        self.backup = NodeState("backup", config.backup_rpc_url)
-        self.canonical = NodeState("canonical", config.canonical_rpc_url)
-
         # Chaos / Failover drill simulation states
-        self.simulated_drift: dict[str, int | None] = {"primary": None, "backup": None}
-        self.simulated_status: dict[str, str | None] = {"primary": None, "backup": None}
+        self.simulated_drift: int | None = None
+        self.simulated_fault: str | None = None
+        self.simulated_node = "primary"
 
     async def start(self):
         self.is_running = True
         self._task = asyncio.create_task(self._poll_loop())
         logger.info(
-            f"DriftMonitor initialized. Polling interval: {self.config.poll_interval}s, "
-            f"Drift threshold: {self.config.drift_threshold} blocks"
+            f"ChainMonitor[{self.chain.name}] initialized. Interval: {self.chain.poll_interval}s, "
+            f"Drift threshold: {self.chain.drift_threshold} blocks, Backend: {self.chain.backend}"
         )
 
     async def stop(self):
@@ -64,115 +90,61 @@ class DriftMonitor:
                 await self._task
             except asyncio.CancelledError:
                 pass
-        await self.rpc_client.close()
-        logger.info("DriftMonitor stopped.")
-
-    def simulate_fault(self, node: str, drift: int | None = None, fault: str | None = None):
-        if drift is not None:
-            self.simulated_drift[node] = drift
-        if fault is not None:
-            self.simulated_status[node] = fault
-
-        target = self.primary if node == "primary" else self.backup
-        if (drift is not None and abs(drift) > self.config.drift_threshold) or fault is not None:
-            target.consecutive_failures = self.config.failure_threshold
-            target.consecutive_successes = 0
-            target.status = "UNHEALTHY"
-            target.last_drift = drift if drift is not None else 0
-            target.reason = (
-                f"Simulated drift anomaly: {drift} blocks" if drift is not None else f"Simulated fault: {fault}"
-            )
-
-    def reset_faults(self):
-        self.simulated_drift = {"primary": None, "backup": None}
-        self.simulated_status = {"primary": None, "backup": None}
-        for target in (self.primary, self.backup):
-            target.status = "INITIALIZING"
-            target.consecutive_failures = 0
-            target.consecutive_successes = 0
-            target.reason = "Awaiting live health samples"
+        logger.info(f"ChainMonitor[{self.chain.name}] stopped.")
 
     async def _poll_loop(self):
-        # Initial slight delay to allow services to stabilize
         await asyncio.sleep(0.5)
-
         while self.is_running:
             try:
                 await self._poll_cycle()
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Unexpected error in monitor cycle: {e}", exc_info=True)
+                logger.error(f"[{self.chain.name}] Error in chain monitor cycle: {e}", exc_info=True)
 
-            await asyncio.sleep(self.config.poll_interval)
+            await asyncio.sleep(self.chain.poll_interval)
 
     async def _poll_cycle(self):
         METRIC_POLL_COUNT.inc()
+        now = int(time.time())
 
-        # Concurrent probe to all 3 endpoints
-        p_res, b_res, c_res = await asyncio.gather(
-            self.rpc_client.probe(self.primary.url),
-            self.rpc_client.probe(self.backup.url),
-            self.rpc_client.probe(self.canonical.url),
+        # Concurrently probe primary and fallback RPC endpoints
+        p_res, f_res, r_res = await asyncio.gather(
+            self.rpc_client.probe(self.chain.primary_url),
+            self.rpc_client.probe(self.chain.fallback_url),
+            self.rpc_client.probe(self.chain.reference_url, check_syncing=False),
             return_exceptions=True,
         )
 
-        now = int(time.time())
-
-        # Process Canonical Sample
-        if isinstance(c_res, NodeSample):
-            self.canonical.last_sample = c_res
-            if c_res.block_number is not None:
-                self.canonical.status = "HEALTHY"
-                METRIC_BLOCK_HEIGHT.labels(node="canonical").set(c_res.block_number)
-                METRIC_LATENCY.labels(node="canonical").set(c_res.latency_ms / 1000.0)
-            else:
-                self.canonical.status = "DEGRADED"
-                logger.warning(f"Canonical RPC warning: {c_res.error}")
-        else:
-            self.canonical.status = "DEGRADED"
-            logger.warning(f"Canonical RPC exception: {c_res}")
-
-        ref_sample = self.canonical.last_sample
-        max_reference_age = max(2 * self.config.poll_interval + self.config.rpc_timeout, 5.0)
-        reference_is_fresh = bool(
-            self.canonical.status == "HEALTHY"
-            and ref_sample
-            and ref_sample.block_number is not None
-            and now - ref_sample.timestamp <= max_reference_age
-            and (ref_sample.chain_id is None or ref_sample.chain_id == self.config.expected_chain_id)
+        reference_valid = (
+            isinstance(r_res, NodeSample) and r_res.error is None and r_res.block_number is not None
+            and r_res.chain_id == self.chain.chain_id and not r_res.is_syncing
+            and 0 <= time.time() - r_res.timestamp <= self.max_reference_age
         )
-        ref_block = ref_sample.block_number if reference_is_fresh and ref_sample else None
+        self.reference.last_sample = r_res if isinstance(r_res, NodeSample) else None
+        if not reference_valid:
+            reason = "Canonical reference unavailable, stale, syncing, or wrong chain ID"
+            should_alert = self.reference.status != "UNHEALTHY"
+            self.reference.status = "UNHEALTHY"
+            self.reference.reason = reason
+            for node, server in ((self.primary, "primary"), (self.fallback, "fallback")):
+                node.consecutive_failures = self.failure_threshold
+                node.consecutive_successes = 0
+                node.status = "UNHEALTHY"
+                node.reason = reason
+                METRIC_STATUS.labels(node=node.name).set(0)
+                await set_server_state(self.socket_path, self.chain.backend, server, "maint")
+            if should_alert:
+                await self.alerter.send_reference_unavailable(
+                    self.chain.name, self.chain.chain_id, self.chain.backend, reason
+                )
+            return
 
-        # Evaluate Primary and Backup nodes
-        await self._evaluate_node(self.primary, p_res, ref_block, now)
-        await self._evaluate_node(self.backup, b_res, ref_block, now)
-
-        # Log concise status summary
-        if self.primary.last_sample and self.primary.last_sample.block_number:
-            p_info = (
-                f"b:{self.primary.last_sample.block_number} "
-                f"d:{self.primary.last_drift} "
-                f"{self.primary.last_sample.latency_ms}ms"
-            )
-        else:
-            p_info = f"err:{self.primary.reason}"
-
-        if self.backup.last_sample and self.backup.last_sample.block_number:
-            b_info = (
-                f"b:{self.backup.last_sample.block_number} "
-                f"d:{self.backup.last_drift} "
-                f"{self.backup.last_sample.latency_ms}ms"
-            )
-        else:
-            b_info = f"err:{self.backup.reason}"
-
-        c_info = f"b:{ref_block}" if ref_block else "unavailable"
-
-        logger.info(
-            f"[Cycle] Primary: [{self.primary.status}] ({p_info}) | "
-            f"Backup: [{self.backup.status}] ({b_info}) | Ref: ({c_info})"
-        )
+        self.reference.status = "HEALTHY"
+        self.reference.reason = "Healthy"
+        reference_head = r_res.block_number
+        await self._evaluate_node(self.primary, p_res, reference_head, now)
+        await self._evaluate_node(self.fallback, f_res, reference_head, now)
 
     async def _evaluate_node(self, node: NodeState, sample_or_exc: Any, reference_block: int | None, timestamp: int):
         if not isinstance(sample_or_exc, NodeSample):
@@ -192,76 +164,96 @@ class DriftMonitor:
         reason = "OK"
         drift = 0
 
-        sim_drift = self.simulated_drift.get(node.name)
-        sim_status = self.simulated_status.get(node.name)
-
-        if sim_drift is not None:
-            drift = sim_drift
+        simulated = node is (self.primary if self.simulated_node == "primary" else self.fallback)
+        if simulated and self.simulated_drift is not None:
+            drift = self.simulated_drift
             node.last_drift = drift
-            if abs(drift) > self.config.drift_threshold:
+            if abs(drift) > self.chain.drift_threshold:
                 is_faulty = True
-                reason = f"Simulated drift anomaly: {drift} blocks (threshold: {self.config.drift_threshold})"
-        elif sim_status is not None:
+                reason = f"Simulated drift anomaly: {drift} blocks (threshold: {self.chain.drift_threshold})"
+        elif simulated and self.simulated_fault is not None:
             is_faulty = True
-            reason = f"Simulated fault: {sim_status}"
+            reason = f"Simulated fault: {self.simulated_fault}"
         elif sample.error or sample.block_number is None:
             is_faulty = True
             reason = f"Unreachable: {sample.error}"
-        elif sample.chain_id is not None and sample.chain_id != self.config.expected_chain_id:
-            is_faulty = True
-            reason = (f"Wrong chain ID: got {sample.chain_id}, "
-                      f"expected {self.config.expected_chain_id}")
         elif sample.is_syncing:
             is_faulty = True
             reason = "Node is actively syncing"
+        elif sample.chain_id != self.chain.chain_id:
+            is_faulty = True
+            reason = f"Wrong chain ID: got {sample.chain_id}, expected {self.chain.chain_id}"
         elif reference_block is not None:
-            # Positive drift: reference is ahead of target (target lagging)
             drift = reference_block - sample.block_number
             node.last_drift = drift
-            if abs(drift) > self.config.drift_threshold:
+            if abs(drift) > self.chain.drift_threshold:
                 is_faulty = True
-                reason = f"Drift threshold exceeded: {drift} blocks (threshold: {self.config.drift_threshold})"
+                reason = f"Drift threshold exceeded: {drift} blocks (threshold: {self.chain.drift_threshold})"
         else:
             is_faulty = True
             reason = "Canonical reference unavailable or stale"
             node.last_drift = 0
+            node.consecutive_failures = max(node.consecutive_failures, self.failure_threshold - 1)
 
         # Update Metrics
+
         if sample.block_number is not None:
             METRIC_BLOCK_HEIGHT.labels(node=node.name).set(sample.block_number)
             METRIC_LATENCY.labels(node=node.name).set(sample.latency_ms / 1000.0)
             METRIC_DRIFT.labels(node=node.name).set(drift)
 
-        # Circuit Breaker / Hysteresis Logic
+        # Circuit Breaker & Failover Logic
         if is_faulty:
             node.consecutive_failures += 1
             node.consecutive_successes = 0
             node.reason = reason
-            if node.consecutive_failures >= self.config.failure_threshold:
+            if node.consecutive_failures >= self.failure_threshold:
                 if node.status != "UNHEALTHY":
                     METRIC_FAILOVERS.labels(node=node.name).inc()
                     logger.warning(
-                        f"\033[91m[ALERT] Node '{node.name}' transitioned to UNHEALTHY! "
+                        f"\033[91m[ALERT] [{self.chain.name}] Node '{node.name}' transitioned to UNHEALTHY! "
                         f"Failures: {node.consecutive_failures}, Reason: {reason}\033[0m"
                     )
+                    # Dispatch Discord incident embed
+                    await self.alerter.send_drift_tripped(
+                        chain_name=self.chain.name,
+                        chain_id=self.chain.chain_id,
+                        backend=self.chain.backend,
+                        canonical_head=reference_block,
+                        primary_head=sample.block_number,
+                        delta_blocks=drift,
+                        node_role="primary" if node is self.primary else "fallback",
+                    )
                 node.status = "UNHEALTHY"
+            await set_server_state(self.socket_path, self.chain.backend,
+                                   "primary" if node is self.primary else "fallback", "maint")
         else:
             node.consecutive_successes += 1
             node.consecutive_failures = 0
             node.reason = "Healthy"
-            if node.consecutive_successes >= self.config.recovery_threshold:
+            if node.consecutive_successes >= self.recovery_threshold:
                 if node.status != "HEALTHY":
                     logger.info(
-                        f"\033[92m[RECOVERY] Node '{node.name}' restored to HEALTHY! "
+                        f"\033[92m[RECOVERY] [{self.chain.name}] Node '{node.name}' restored to HEALTHY! "
                         f"Successes: {node.consecutive_successes}\033[0m"
                     )
+                    # Dispatch Discord recovery embed
+                    await self.alerter.send_consensus_recovered(
+                        chain_name=self.chain.name,
+                        backend=self.chain.backend,
+                    )
                 node.status = "HEALTHY"
+            await set_server_state(self.socket_path, self.chain.backend,
+                                   "primary" if node is self.primary else "fallback", "ready")
 
         METRIC_STATUS.labels(node=node.name).set(1 if node.status == "HEALTHY" else 0)
 
-        # Store Telemetry in Redis & In-Memory cache
+        # Store Telemetry in Storage
         telemetry = {
             "timestamp": timestamp,
+            "chain": self.chain.name,
+            "chain_id": self.chain.chain_id,
+            "backend": self.chain.backend,
             "node": node.name,
             "status": node.status,
             "block_number": sample.block_number,
@@ -269,10 +261,163 @@ class DriftMonitor:
             "drift": drift,
             "latency_ms": sample.latency_ms,
             "is_syncing": sample.is_syncing,
+            "syncing_checked": sample.syncing_checked,
             "reason": node.reason,
             "consecutive_failures": node.consecutive_failures,
             "consecutive_successes": node.consecutive_successes,
         }
 
-        await self.storage.set_health(node.name, telemetry)
-        await self.storage.push_history(node.name, telemetry)
+        role = "primary" if node is self.primary else "fallback"
+        await self.storage.set_health(f"{self.chain.backend}:{role}", telemetry)
+        await self.storage.set_health(f"{self.chain.name}:{role}", telemetry)
+        await self.storage.push_history(f"{self.chain.backend}:{role}", telemetry)
+
+    async def simulate_fault(self, drift: int | None = None, fault: str | None = None,
+                             node_name: str = "primary"):
+        if node_name not in {"primary", "backup"}:
+            raise ValueError("node must be primary or backup")
+        target = self.primary if node_name == "primary" else self.fallback
+        server = node_name if node_name == "primary" else "fallback"
+        self.simulated_drift = drift
+        self.simulated_fault = fault
+        self.simulated_node = node_name
+        if (drift is not None and abs(drift) > self.chain.drift_threshold) or fault is not None:
+            target.consecutive_failures = self.failure_threshold
+            target.consecutive_successes = 0
+            target.status = "UNHEALTHY"
+            target.last_drift = drift if drift is not None else 0
+            target.reason = (
+                f"Simulated drift anomaly: {drift} blocks" if drift is not None else f"Simulated fault: {fault}"
+            )
+            # Immediate HAProxy cutover for < 0.5s chaos drills
+            await set_server_state(self.socket_path, self.chain.backend, server, "maint")
+            await self.alerter.send_drift_tripped(
+                chain_name=self.chain.name,
+                chain_id=self.chain.chain_id,
+                backend=self.chain.backend,
+                canonical_head=(target.last_sample.block_number + drift)
+                if (target.last_sample and target.last_sample.block_number and drift is not None)
+                else None,
+                primary_head=target.last_sample.block_number if target.last_sample else None,
+                delta_blocks=drift or 0,
+                node_role=node_name,
+            )
+
+    async def reset_faults(self):
+        self.simulated_drift = None
+        self.simulated_fault = None
+        self.simulated_node = "primary"
+        for node, server in ((self.primary, "primary"), (self.fallback, "fallback")):
+            node.status = "INITIALIZING"
+            node.consecutive_failures = 0
+            node.consecutive_successes = 0
+            node.reason = "Awaiting live health probes"
+            await set_server_state(self.socket_path, self.chain.backend, server, "ready")
+        await self.alerter.send_consensus_recovered(
+            chain_name=self.chain.name,
+            backend=self.chain.backend,
+        )
+
+
+class DriftMonitor:
+    """
+    Fleet controller managing independent ChainMonitor tasks across all EVM networks.
+    """
+
+    def __init__(self, config: Settings, storage: StorageEngine, chains: list[ChainConfig] | None = None):
+        self.config = config
+        self.storage = storage
+        self.rpc_client = RpcClient(timeout=config.rpc_timeout)
+        self.alerter = DiscordAlerter(webhook_url=config.discord_webhook_url)
+        self.is_running = False
+
+        self.chain_configs = chains if chains is not None else load_chains_config(config.chains_config_path)
+        self.chains: dict[str, ChainMonitor] = {}
+
+        for cc in self.chain_configs:
+            if cc.name in self.chains or cc.backend in self.chains:
+                raise ValueError("chain names and backend names must not collide")
+            chain_mon = ChainMonitor(
+                chain=cc,
+                rpc_client=self.rpc_client,
+                storage=self.storage,
+                alerter=self.alerter,
+                socket_path=self.config.haproxy_socket_path,
+                failure_threshold=self.config.failure_threshold,
+                recovery_threshold=self.config.recovery_threshold,
+                max_reference_age=self.config.max_reference_age,
+            )
+            self.chains[cc.name] = chain_mon
+            self.chains[cc.backend] = chain_mon
+
+        # Backwards-compatibility aliases for legacy tests and status endpoints
+        default_chain = self.chains.get("base-mainnet") or next(iter(self.chains.values()))
+        default_chain.failure_threshold = config.failure_threshold
+        default_chain.recovery_threshold = config.recovery_threshold
+        self._default_chain = default_chain
+        self.primary = default_chain.primary
+        self.backup = default_chain.fallback
+        self.simulated_drift = {"primary": None, "backup": None}
+        self.simulated_status = {"primary": None, "backup": None}
+
+    @property
+    def is_healthy(self) -> bool:
+        return bool(self.unique_monitors()) and any(
+            mon.reference.status == "HEALTHY"
+            and (mon.primary.status == "HEALTHY" or mon.fallback.status == "HEALTHY")
+            for mon in self.unique_monitors().values()
+        )
+
+    async def start(self):
+        self.is_running = True
+        for mon in self.unique_monitors().values():
+            await mon.start()
+        logger.info(f"DriftMonitor initialized with {len(self.unique_monitors())} active chain tasks.")
+
+    async def stop(self):
+        self.is_running = False
+        for mon in self.unique_monitors().values():
+            await mon.stop()
+        await self.rpc_client.close()
+        await self.alerter.close()
+        logger.info("DriftMonitor stopped.")
+
+    def unique_monitors(self) -> dict[str, ChainMonitor]:
+        return {cc.name: self.chains[cc.name] for cc in self.chain_configs if cc.name in self.chains}
+
+    async def _evaluate_node(self, node: NodeState, sample_or_exc: Any, reference_block: int | None, timestamp: int):
+        """Backwards compatibility delegator for existing tests."""
+        await self._default_chain._evaluate_node(node, sample_or_exc, reference_block, timestamp)
+
+    async def simulate_fault(
+        self,
+        node: str = "primary",
+        drift: int | None = None,
+        fault: str | None = None,
+        chain: str | None = None,
+        backend: str | None = None,
+    ):
+        target_chain = self._resolve_chain(chain, backend)
+        await target_chain.simulate_fault(
+            drift=drift, fault=fault, node_name="primary" if node == "primary" else "backup"
+        )
+
+    async def reset_faults(self, chain: str | None = None, backend: str | None = None):
+
+        if chain or backend:
+            target = self._resolve_chain(chain, backend)
+            await target.reset_faults()
+        else:
+            await asyncio.gather(*(mon.reset_faults() for mon in self.unique_monitors().values()))
+
+    def _resolve_chain(self, chain: str | None = None, backend: str | None = None) -> ChainMonitor:
+        by_backend = self.chains.get(backend) if backend else None
+        by_name = self.chains.get(chain) if chain else None
+        if by_backend and by_name and by_backend is not by_name:
+            raise ValueError("chain and backend identify different networks")
+        resolved = by_backend or by_name
+        if resolved:
+            return resolved
+        if backend or chain:
+            raise ValueError("Unknown chain or backend")
+        return self.chains.get("be_base") or self._default_chain

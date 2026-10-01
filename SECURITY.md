@@ -7,6 +7,8 @@ Please do not report security vulnerabilities in public issues. Email **hello@ma
 ## Deployment notes
 
 - Keep the Sentinel diagnostic port and HAProxy stats port private or behind authenticated access.
+- Compose binds the gateway to loopback by default. Do not expose it publicly without a secured ingress and an explicit trusted-client rate-limit design.
+- Compose requires unique Redis and HAProxy stats passwords; never substitute the `.env.example` blanks with shared credentials.
 - Set a unique `DRIFTGUARD_ADMIN_TOKEN` only when chaos drill endpoints are needed. Those endpoints are disabled when the value is empty.
 - Do not use example credentials in a public deployment. Protect RPC provider URLs as secrets when they contain credentials.
 - DriftGuard is experimental and should not be the sole protection for safety-critical transaction flows.

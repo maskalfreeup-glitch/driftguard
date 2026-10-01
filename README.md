@@ -1,50 +1,32 @@
 # DriftGuard
 
 [![Status](https://img.shields.io/badge/status-active-emerald.svg)](https://github.com/maskalfreeup-glitch/driftguard)
-[![Container limits](https://img.shields.io/badge/container%20memory%20limits-192MiB-blue.svg)](https://github.com/maskalfreeup-glitch/driftguard)
+[![Container limits](https://img.shields.io/badge/container%20memory%20limits-120MiB-blue.svg)](https://github.com/maskalfreeup-glitch/driftguard)
 [![License: MIT](https://img.shields.io/badge/license-MIT-gray.svg)](LICENSE)
 [![Patreon](https://img.shields.io/badge/patreon-sponsor-orange.svg?logo=patreon)](https://patreon.com/maskal)
 [![GitHub Sponsors](https://img.shields.io/badge/sponsor-GitHub-ea4aaa.svg?logo=github)](https://github.com/sponsors/maskalfreeup-glitch)
 
-**High-Availability EVM JSON-RPC Failover Gateway & Consensus Drift Circuit Breaker.**
+**EVM JSON-RPC health monitor and active-passive failover gateway.**
 
 DriftGuard combines an HAProxy JSON-RPC gateway with an asynchronous Python sentinel. The sentinel checks chain identity, head height, syncing state, and a canonical reference before HAProxy marks an upstream healthy. It is an experimental, single-host failover tool; failover time and request continuity depend on polling intervals, provider behavior, and deployment topology. The included drill measures a synthetic health transition and confirms a subsequent request is served by the fallback. It does not establish a zero-error SLA.
 
 ---
 
-## Live Sepolia Endpoint
+## Multi-chain routing
 
-- **Production Gateway:** [https://rpc.maskal.space](https://rpc.maskal.space)
-- **Target Network:** Ethereum Sepolia Testnet (Chain ID: `11155111` / `0xaa36a7`)
-- **Ingress Layer:** Cloudflare Edge $\rightarrow$ HAProxy L7 Gateway $\rightarrow$ DriftGuard Sentinel Stack
-
-```bash
-# Query the canonical head block number
-curl -sS -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
-  https://rpc.maskal.space
-```
-
-```bash
-# Query chain ID verification
-curl -sS -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":2}' \
-  https://rpc.maskal.space
-```
+The included configuration defines a primary, fallback, and independent reference provider for Base, Arbitrum One, and Sepolia. The gateway routes JSON-RPC POST requests by path: `/base`, `/arb`, and `/sepolia`. Sentinel reads chain IDs, providers, thresholds, and polling intervals from `sentinel/config/chains.yaml`; HAProxy upstreams are configured separately in `haproxy/haproxy.cfg` and must be kept aligned when providers change.
 
 ---
 
-## The Problem: Silent Consensus Drift
+## The Problem: Silent RPC Staleness
 
-Standard load balancers (Nginx, Traefik, Envoy, AWS ALB) rely on transport health (TCP connect, HTTP 200). In decentralized EVM infrastructure, this creates catastrophic blind spots:
+Standard load balancer health checks often rely on transport health (TCP connect, HTTP 200). For EVM RPC consumers, this can miss:
 
 1. **Silent Stale Heads**: An RPC node can return `HTTP 200 OK` while stalled 50 blocks behind the canonical head, tricking wallets and liquidation bots into executing on obsolete state.
 2. **Background Syncing (`eth_syncing = true`)**: Nodes catching up after a restart still respond to queries, returning inconsistent balances and missing transaction receipts.
 3. **Flapping Circuit Breakers**: Brief latency spikes cause naive balancers to flap between upstreams, triggering connection resets and nonce collisions.
 
-DriftGuard resolves this by continuously benchmarking upstreams against a trusted canonical reference RPC, tripping HAProxy health checks before stale state impacts end users.
+DriftGuard compares primary and fallback heads with a separately configured reference provider. It checks chain IDs and syncing state, and drains both serving upstreams when the reference is missing, stale, syncing, or on the wrong chain. A reference is an operational comparator, not a cryptographic consensus proof.
 
 ---
 
@@ -63,7 +45,7 @@ DriftGuard resolves this by continuously benchmarking upstreams against a truste
                       |  Active-Passive Pools |
                       +-----------+-----------+
                         /                   \
-        (Healthy: HTTP 200)               (Failover: HTTP 503 on Primary)
+        (Healthy: HTTP 200)               (Failover: Socket Maint on Primary)
                       /                       \
                      v                         v
           +---------------------+   +---------------------+
@@ -75,10 +57,11 @@ DriftGuard resolves this by continuously benchmarking upstreams against a truste
                      |  Sync & Drift Probing   |
                      |                         |
             +--------+-------------------------+--------+
-            |        Async Sentinel Health Daemon       | (Port 8000, mem_limit: 48m)
-            |  • Background Poll Loop (every 3000ms)    |
+            |        Async Sentinel Health Daemon       | (Port 8000, mem_limit: 96m)
+            |  • Independent per-chain poll loops (2s)  |
             |  • Drift Anomaly Threshold (2 blocks)     |
-            |  • Dynamic /healthz/primary HAProxy Probe |
+            |  • HAProxy UNIX Socket Runtime Control    |
+            |  • Zero-Overhead Discord Incident Alerts  |
             +-------------------+-----------------------+
                                 |
                    +------------+------------+
@@ -97,10 +80,10 @@ flowchart TD
     Client["Clients (Wallets / Indexers / dApps)"] -->|HTTPS JSON-RPC| CF["Cloudflare Edge"]
     CF -->|Origin HTTP :8545| HAP["HAProxy L7 Gateway\n(mem_limit: 64M)"]
     
-    HAP -->|Active Routing: Healthy| P["Primary RPC Provider\n(ethereum-sepolia-rpc)"]
-    HAP -.->|Failover Routing: Desync| F["Fallback RPC Provider\n(sepolia.gateway.tenderly)"]
+    HAP -->|Active Routing: Healthy| P["Primary RPC Provider\n(mainnet.base.org / arb1 / publicnode)"]
+    HAP -.->|Failover Routing: Desync| F["Fallback RPC Provider\n(llamarpc.com / tenderly)"]
     
-    subgraph Sentinel_Engine ["DriftGuard Sentinel and Redis (container limits: 128MiB)"]
+    subgraph Sentinel_Engine ["DriftGuard Sentinel and Redis (container limits: 72MiB)"]
         S["Async Sentinel Daemon (:8000)\n(FastAPI + asyncio + httpx)"]
         R[("Redis Engine\n(Telemetry & History)")]
         S <--> R
@@ -130,42 +113,106 @@ cd driftguard
 
 # 2. Configure environment
 cp .env.example .env
+python3 - <<'PY'
+from pathlib import Path
+import secrets
+
+path = Path('.env')
+values = {
+    'REDIS_PASSWORD': secrets.token_hex(32),
+    'STATS_PASSWORD': secrets.token_hex(32),
+    'DRIFTGUARD_ADMIN_TOKEN': secrets.token_hex(32),
+}
+path.write_text('\n'.join(
+    f'{line.split("=", 1)[0]}={values[line.split("=", 1)[0]]}'
+    if line.split('=', 1)[0] in values else line
+    for line in path.read_text().splitlines()
+) + '\n')
+PY
 
 # 3. Launch stack
 docker compose up -d
 ```
 
-### Verify Local Gateway
+### Verify Local Multi-Chain Gateway
+
+DriftGuard provides unified path-based ingress for Base, Arbitrum One, and Sepolia. Upstream path-stripping ensures upstream JSON-RPC endpoints receive requests at root `/`:
 
 ```bash
-# Query JSON-RPC through HAProxy gateway (port 8545)
+# 1. Base Mainnet (Chain ID 8453 / 0x2105)
 curl -sS -X POST \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
-  http://127.0.0.1:8545
+  http://127.0.0.1:8545/base
+
+# 2. Arbitrum One (Chain ID 42161 / 0xa4b1)
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+  http://127.0.0.1:8545/arb
+
+# 3. Ethereum Sepolia Testnet (Chain ID 11155111 / 0xaa36a7)
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+  http://127.0.0.1:8545/sepolia
 ```
 
 ### Local Endpoints
 
-- **Gateway JSON-RPC**: `http://127.0.0.1:8545`
-- **HAProxy Stats & Prometheus Exporter**: `http://127.0.0.1:8404/stats` (auth: `admin:driftguard_admin_secure_pass`)
+- **Gateway JSON-RPC**: `http://127.0.0.1:8545` (`/base`, `/arb`, `/sepolia`)
+- **HAProxy Stats & Prometheus Exporter**: `http://127.0.0.1:8404/stats` (credentials set in `.env`)
 - **HAProxy Metrics**: `http://127.0.0.1:8404/metrics`
 - **Sentinel Diagnostic Telemetry**: `http://127.0.0.1:8000/status`
 - **Sentinel Prometheus Metrics**: `http://127.0.0.1:8000/metrics`
 
 ---
 
-## Benchmark: DriftGuard vs Standard Reverse Proxies
+## Observability & Discord Alerting
 
-| Feature / Scenario | Standard Reverse Proxy (Nginx / Envoy / Traefik) | Vanilla HAProxy (without Sentinel) | DriftGuard Gateway (HAProxy + Sentinel) |
-| :--- | :--- | :--- | :--- |
-| **HTTP 200 with Stale Chain Head** | ❌ **Passes traffic blindly** (Broken dApp state) | ❌ **Passes traffic blindly** | ✅ **Detects drift & trips failover pool** |
-| **Active Node Syncing (`eth_syncing`)** | ❌ Blind (Cannot parse JSON-RPC) | ❌ Blind | ✅ **Drains node immediately** |
-| **Failover timing** | Depends on configuration | Depends on configuration | Measured by the included synthetic drill; no general SLA claimed |
-| **Request continuity** | Depends on deployment and upstream | Depends on deployment and upstream | Drill checks a successful fallback request; no zero-5xx guarantee |
-| **Hysteresis & Flap Damping** | ❌ Unstable oscillation on latency spikes | ⚠️ Manual TCP fall/rise | ✅ **Failure/Recovery count thresholds** |
-| **Configured container memory limits** | Varies by deployment | Varies by deployment | 192 MiB total across HAProxy, Sentinel, and Redis |
-| **Prometheus Telemetry** | Transport codes only (200/500) | Layer 4/7 counters | ✅ **Block heights, drift count, RPC latency** |
+DriftGuard supports asynchronous incident alerting via Discord incoming webhooks (`sentinel/alerts.py`), built using `httpx.AsyncClient` without Discord gateway connections.
+
+### Alerting Lifecycle & Flapping Protection
+
+- **Zero-Overhead No-Op**: If `DISCORD_WEBHOOK_URL` is omitted or empty, no webhook requests are made and the alert HTTP client is not allocated.
+- **Debounce / Flapping Cooldown**: State transitions (`TRIPPED`, `RECOVERED`) are tracked per-backend with a 10s cooldown timer to prevent rate-limit flooding (`HTTP 429`) if an upstream flaps.
+
+### Incident Embed Preview
+
+#### 🚨 1. Consensus Drift Tripped (Color `0xE02424` / Red)
+Triggered whenever Primary falls behind the canonical reference by more than `drift_threshold` blocks, or fails live health checks:
+
+| Field | Example Value | Description |
+| :--- | :--- | :--- |
+| **Chain Name** | `base-mainnet` | Target EVM network name |
+| **Chain ID** | `8453` | Canonical network identifier |
+| **Backend** | `be_base` | Active HAProxy backend pool |
+| **Canonical Head**| `#19842510` | Canonical reference tip height |
+| **Primary Head** | `#19842458` | Desynced primary block height |
+| **Delta Blocks** | `52` | Detected lag behind canonical head |
+| **Failover Action**| `Drained primary -> Fallback active` | Operational mitigation executed |
+
+#### ✅ 2. Consensus Recovered (Color `0x31C48D` / Green)
+Triggered once Primary achieves `recovery_threshold` consecutive successful probes synchronized with the canonical tip:
+
+| Field | Example Value | Description |
+| :--- | :--- | :--- |
+| **Chain Name** | `base-mainnet` | Target EVM network name |
+| **Status** | `Synced to Tip` | Consensus synchronization state |
+| **Primary Weight Restored** | `Ready (100%)` | Restored routing pool weight |
+
+---
+
+## Capabilities and known limits
+
+| Capability | Current behavior | Limit |
+| :--- | :--- | :--- |
+| Chain identity | Checks `eth_chainId` per chain against `chains.yaml` | Does not prove endpoint honesty |
+| Head health | Compares primary and fallback heights with an independent reference | Does not compare block hashes or establish consensus |
+| Syncing | Drains nodes reporting `eth_syncing` | Depends on provider RPC semantics |
+| Failover | Drains and restores nodes through the HAProxy runtime socket | Drill measures synthetic cutover; no latency guarantee |
+| Telemetry | Exposes block, drift, health, and latency metrics | Measured latency covers the three-method probe |
+| Resource limits | Compose caps the fleet at 192 MiB total | Docker stats snapshot measured approximately 66 MiB RSS; usage varies by load |
 
 ---
 
@@ -175,20 +222,22 @@ All runtime configurations are decoupled into `.env.example`:
 
 | Environment Variable | Default Value | Description |
 | :--- | :--- | :--- |
-| `PRIMARY_RPC_URL` | `https://ethereum-sepolia-rpc.publicnode.com` | High-throughput primary EVM RPC provider |
-| `FALLBACK_RPC_URL` | `https://sepolia.gateway.tenderly.co` | Automatic backup failover target provider |
-| `CANONICAL_RPC_URL` | `https://rpc.sepolia.ethpandaops.io` | Trusted reference source for chain head truth |
-| `BLOCK_DRIFT_THRESHOLD` | `2` | Max allowable block lag before draining upstream |
-| `POLL_INTERVAL_MS` | `3000` | Sentinel background probing cadence (in ms) |
+| `CHAINS_CONFIG_PATH` | `sentinel/config/chains.yaml` | Per-chain IDs, backends, provider URLs, thresholds, and intervals |
+| `HAPROXY_SOCKET_PATH` | `/run/haproxy/admin.sock` in Compose | Shared runtime socket for draining and restoring pool members |
+| `MAX_REFERENCE_AGE` | `10` seconds | Maximum age accepted for a reference sample |
+| `REDIS_PASSWORD`, `STATS_PASSWORD` | No default | Required unique secrets; Compose refuses to start when unset |
+| `DRIFTGUARD_ADMIN_TOKEN` | Empty (disabled) | Bearer token enabling local chaos-drill routes |
+| `GATEWAY_BIND` | `127.0.0.1` | Host bind address; keep loopback unless ingress is secured |
 | `GATEWAY_PORT` | `8545` | Inbound JSON-RPC port exposed by HAProxy |
 | `HAPROXY_STATS_PORT` | `8404` | Observability UI & Prometheus metrics endpoint |
 | `RPC_TIMEOUT` | `3.5` | Timeout limit (seconds) for upstream JSON-RPC calls |
+| `DISCORD_WEBHOOK_URL` | Empty (disabled) | Optional incoming webhook URL for incident alerting |
 | `FAILURE_THRESHOLD` | `2` | Consecutive failed checks to declare UNHEALTHY |
 | `RECOVERY_THRESHOLD` | `2` | Consecutive healthy checks before restoring node |
 
 ### Container Memory Limits (192 MiB Total)
 
-In `docker-compose.yml`, strict kernel cgroup limits prevent resource exhaustion:
+Compose applies per-container cgroup limits totaling 192 MiB. A single `docker stats` snapshot measured about 66 MiB of combined RSS (Sentinel 50 MiB, HAProxy 11 MiB, Redis 5 MiB); this is a point-in-time observation, not a performance guarantee.
 
 ```yaml
 services:
@@ -207,7 +256,7 @@ services:
           memory: 96M
 
   redis:
-    mem_limit: 32m       # Max 32MB RAM
+    mem_limit: 32m       # Max 32MiB RAM
     deploy:
       resources:
         limits:
@@ -218,42 +267,16 @@ services:
 
 ## Verification & Automated Failover Runbooks
 
-DriftGuard includes an automated failover simulation script (`scripts/test_failover.sh`):
+DriftGuard includes an automated multi-chain failover simulation script (`scripts/test_failover.sh`):
 
 ```bash
 # Run automated upstream failover verification drill
 make test
 ```
 
-### Drill Execution Output
+### Drill results
 
-Set a unique `DRIFTGUARD_ADMIN_TOKEN` in `.env` before running the chaos drill. The admin endpoints are disabled when the token is empty and require a bearer token when enabled.
-
-```
-================================================================
-         DriftGuard Automated Failover Verification Drill       
-================================================================
-[INFO] Target Gateway: http://127.0.0.1:8545
-[INFO] Sentinel Daemon: http://127.0.0.1:8000
-[INFO] Observed failover threshold: 4.0s (not a service SLA)
-
-[INFO] Phase 1: Querying gateway baseline state...
-[PASS] Gateway operational on active upstream: 'primary' (Head Block: #11821960 [0xb46388])
-
-[INFO] Phase 2: Injecting upstream consensus drift / kill event on Primary...
-[INFO] Injected fault payload: {"status":"FAULT_INJECTED","node":"primary","drift":50,"fault":null}
-
-[INFO] Phase 3: Polling gateway to assert failover to Fallback upstream within 4.0s...
-[PASS] Fallback served a successful response in 0.983s (within the 4.0s drill threshold)
-[PASS] Active Fallback upstream returned valid canonical block: "result":"0xb46388"
-
-[INFO] Phase 4: Restoring healthy state on Primary...
-[PASS] Primary upstream restored to HEALTHY (HTTP 200) in Sentinel
-
-================================================================
-[PASS] All automated failover verification assertions PASSED successfully!
-================================================================
-```
+The drill records failover latency and sampled HTTP status codes at runtime. Treat those numbers as measurements of that run only; they are not an availability guarantee or service-level objective. Run `make test` against the locally built stack before publishing a result.
 
 ### Makefile Reference
 
@@ -274,10 +297,7 @@ Set a unique `DRIFTGUARD_ADMIN_TOKEN` in `.env` before running the chaos drill. 
 
 Maintaining high-availability testnet and mainnet infrastructure requires dedicated compute, public IP allocations, edge tunnel routing, and premium RPC tier access.
 
-Your sponsorship directly funds:
-- **Dedicated Validator & Ingress Nodes**: High-frequency NVMe hardware running Sepolia and Base testnet nodes.
-- **Archive Node Bandwidth**: High-throughput upstream providers (Tenderly, PublicNode, dRPC, QuickNode).
-- **Chaos Drill Testbeds**: Continuous automated integration testing against live EVM testnets.
+Funding would be allocated to the proposed work in [FUNDING.md](FUNDING.md): maintainer engineering and independent review, RPC access and controlled test infrastructure, CI and repeatable evaluation, documentation, and operator onboarding.
 
 See [FUNDING.md](FUNDING.md) for proposed milestones, outputs, and how funded work will be reported. Milestones are proposals, not commitments to a particular grant program.
 

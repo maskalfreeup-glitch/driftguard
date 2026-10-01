@@ -1,8 +1,12 @@
+import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass
 
 import httpx
+
+from sentinel import __version__
 
 logger = logging.getLogger("driftguard.rpc")
 
@@ -16,6 +20,7 @@ class NodeSample:
     error: str | None
     timestamp: float
     chain_id: int | None = None
+    syncing_checked: bool = True
 
 
 class RpcClient:
@@ -25,98 +30,43 @@ class RpcClient:
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(self.timeout, connect=2.0),
             limits=limits,
-            headers={"Content-Type": "application/json", "User-Agent": "DriftGuard-Sentinel/1.0"},
+            headers={"Content-Type": "application/json", "User-Agent": f"DriftGuard-Sentinel/{__version__}"},
         )
 
     async def close(self):
         await self.client.aclose()
 
-    async def probe(self, endpoint_url: str) -> NodeSample:
+    async def probe(self, endpoint_url: str, check_syncing: bool = True) -> NodeSample:
         """
         Queries eth_chainId, eth_blockNumber, and eth_syncing to evaluate node state.
         """
-        payload = {"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}
         start = time.perf_counter()
         now = time.time()
 
         try:
-            resp = await self.client.post(endpoint_url, json=payload)
+            calls = [
+                self._rpc_result(endpoint_url, "eth_blockNumber", 1),
+                self._rpc_result(endpoint_url, "eth_chainId", 2),
+            ]
+            if check_syncing:
+                calls.append(self._rpc_result(endpoint_url, "eth_syncing", 3))
+            results = await asyncio.gather(*calls)
+            block_result, chain_result = results[:2]
+            sync_result = False
+            if check_syncing:
+                sync_result = results[2]
+
+            if not isinstance(block_result, str) or not re.fullmatch(r"0x[0-9a-fA-F]+", block_result):
+                raise ValueError("Malformed eth_blockNumber result")
+            block_num = int(block_result, 16)
+            if not isinstance(chain_result, str) or not re.fullmatch(r"0x[0-9a-fA-F]+", chain_result):
+                raise ValueError("Malformed eth_chainId result")
+            chain_id = int(chain_result, 16)
+            if sync_result is not False and not isinstance(sync_result, dict):
+                raise ValueError("Malformed eth_syncing result")
+            is_syncing = isinstance(sync_result, dict)
+
             elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
-
-            if resp.status_code != 200:
-                return NodeSample(
-                    endpoint=endpoint_url,
-                    block_number=None,
-                    is_syncing=False,
-                    latency_ms=elapsed_ms,
-                    error=f"HTTP {resp.status_code}: {resp.text[:100]}",
-                    timestamp=now,
-                )
-
-            data = resp.json()
-            if "error" in data:
-                err_msg = data["error"].get("message", "Unknown RPC error")
-                return NodeSample(
-                    endpoint=endpoint_url,
-                    block_number=None,
-                    is_syncing=False,
-                    latency_ms=elapsed_ms,
-                    error=f"RPC Error: {err_msg}",
-                    timestamp=now,
-                )
-
-            hex_block = data.get("result")
-            if not hex_block or not isinstance(hex_block, str):
-                return NodeSample(
-                    endpoint=endpoint_url,
-                    block_number=None,
-                    is_syncing=False,
-                    latency_ms=elapsed_ms,
-                    error=f"Invalid result: {hex_block}",
-                    timestamp=now,
-                )
-
-            try:
-                block_num = int(hex_block, 16)
-                if block_num < 0:
-                    raise ValueError("negative block number")
-            except ValueError as exc:
-                return NodeSample(endpoint_url, None, False, elapsed_ms, f"Invalid block number: {exc}", now)
-
-            chain_resp = await self.client.post(
-                endpoint_url,
-                json={"jsonrpc": "2.0", "method": "eth_chainId", "params": [], "id": 3},
-            )
-            if chain_resp.status_code != 200:
-                return NodeSample(endpoint_url, None, False, elapsed_ms,
-                                  f"eth_chainId HTTP {chain_resp.status_code}", now)
-            chain_data = chain_resp.json()
-            chain_value = chain_data.get("result")
-            if chain_data.get("error") or not isinstance(chain_value, str):
-                return NodeSample(endpoint_url, None, False, elapsed_ms,
-                                  "Invalid eth_chainId response", now)
-            try:
-                chain_id = int(chain_value, 16)
-            except ValueError:
-                return NodeSample(endpoint_url, None, False, elapsed_ms,
-                                  "Malformed eth_chainId result", now)
-
-            # Check eth_syncing
-            syncing_payload = {"jsonrpc": "2.0", "method": "eth_syncing", "params": [], "id": 2}
-            is_syncing = False
-            try:
-                sync_resp = await self.client.post(endpoint_url, json=syncing_payload)
-                if sync_resp.status_code != 200:
-                    raise ValueError(f"eth_syncing HTTP {sync_resp.status_code}")
-                sync_body = sync_resp.json()
-                if sync_body.get("error") or "result" not in sync_body:
-                    raise ValueError("invalid eth_syncing response")
-                sync_result = sync_body["result"]
-                if sync_result is not False and not isinstance(sync_result, dict):
-                    raise ValueError("invalid eth_syncing result")
-                is_syncing = isinstance(sync_result, dict)
-            except Exception as exc:
-                return NodeSample(endpoint_url, None, False, elapsed_ms, f"eth_syncing failed: {exc}", now)
 
             return NodeSample(
                 endpoint=endpoint_url,
@@ -126,6 +76,7 @@ class RpcClient:
                 error=None,
                 timestamp=now,
                 chain_id=chain_id,
+                syncing_checked=check_syncing,
             )
 
         except httpx.TimeoutException:
@@ -148,3 +99,22 @@ class RpcClient:
                 error=f"{type(e).__name__}: {e!s}",
                 timestamp=now,
             )
+
+    async def _rpc_result(self, endpoint_url: str, method: str, request_id: int):
+        response = await self.client.post(
+            endpoint_url,
+            json={"jsonrpc": "2.0", "method": method, "params": [], "id": request_id},
+        )
+        if response.status_code != 200:
+            raise ValueError(f"{method} returned HTTP {response.status_code}")
+        body = response.json()
+        if not isinstance(body, dict) or body.get("jsonrpc") != "2.0" or body.get("id") != request_id:
+            raise ValueError(f"Malformed {method} JSON-RPC envelope")
+        if body.get("error") is not None:
+            err = body.get("error")
+            if method == "eth_syncing" and isinstance(err, dict) and err.get("code") == -32601:
+                return False
+            raise ValueError(f"{method} returned a JSON-RPC error")
+        if "result" not in body:
+            raise ValueError(f"{method} response has no result")
+        return body["result"]

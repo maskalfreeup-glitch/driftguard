@@ -1,1 +1,3 @@
-# driftguard sentinel package
+"""DriftGuard Sentinel package."""
+
+__version__ = "1.0.1"

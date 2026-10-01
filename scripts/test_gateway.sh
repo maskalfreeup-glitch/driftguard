@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-GATEWAY_URL="http://127.0.0.1:8545"
-SENTINEL_URL="http://127.0.0.1:8000"
-STATS_URL="http://127.0.0.1:8404"
-STATS_AUTH="admin:driftguard_admin_secure_pass"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+if [ -f "${PROJECT_ROOT}/.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "${PROJECT_ROOT}/.env"
+    set +a
+fi
+
+GATEWAY_URL="${GATEWAY_URL:-http://127.0.0.1:${GATEWAY_PORT:-8545}}"
+SEPOLIA_GATEWAY_URL="${GATEWAY_URL%/}/sepolia"
+SENTINEL_URL="${SENTINEL_URL:-http://127.0.0.1:${SENTINEL_PORT:-8000}}"
+STATS_URL="${STATS_URL:-http://127.0.0.1:${HAPROXY_STATS_PORT:-8404}}"
+STATS_AUTH="${STATS_USER:-admin}:${STATS_PASSWORD:?Set STATS_PASSWORD in .env}"
+EXPECTED_CHAIN_ID="${EXPECTED_CHAIN_ID:-11155111}"
 
 GREEN="\033[0;32m"
 RED="\033[0;31m"
@@ -12,11 +23,11 @@ YELLOW="\033[1;33m"
 NC="\033[0m"
 
 echo -e "${YELLOW}================================================================${NC}"
-echo -e "${YELLOW}           DriftGuard Automated Verification Suite              ${NC}"
+echo -e "${YELLOW}        DriftGuard Multi-Chain Gateway Verification Suite        ${NC}"
 echo -e "${YELLOW}================================================================${NC}"
 
 # Test 1: Sentinel Liveness
-echo -n "[1/7] Testing Sentinel healthz... "
+echo -n "[1/8] Testing Sentinel healthz... "
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${SENTINEL_URL}/healthz" || true)
 if [ "$STATUS" = "200" ]; then
     echo -e "${GREEN}PASS (HTTP 200)${NC}"
@@ -26,7 +37,7 @@ else
 fi
 
 # Test 2: Primary Node Health Probe
-echo -n "[2/7] Testing Sentinel /healthz/primary probe... "
+echo -n "[2/8] Testing Sentinel /healthz/primary probe... "
 P_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${SENTINEL_URL}/healthz/primary" || true)
 if [ "$P_STATUS" = "200" ]; then
     echo -e "${GREEN}PASS (HTTP 200 - Primary is in-sync)${NC}"
@@ -35,11 +46,11 @@ else
 fi
 
 # Test 3: EVM JSON-RPC eth_blockNumber through HAProxy Gateway
-echo -n "[3/7] Testing eth_blockNumber through HAProxy (:8545)... "
+echo -n "[3/8] Testing eth_blockNumber through HAProxy (:8545)... "
 BLOCK_RESP=$(curl -s -X POST \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
-  "${GATEWAY_URL}")
+  "${SEPOLIA_GATEWAY_URL}")
 
 if echo "$BLOCK_RESP" | grep -q '"result":"0x'; then
     HEX_BLOCK=$(echo "$BLOCK_RESP" | grep -o '"result":"[^"]*"' | cut -d'"' -f4)
@@ -50,22 +61,30 @@ else
     exit 1
 fi
 
-# Test 4: EVM JSON-RPC eth_chainId (Verify Sepolia 0xaa36a7)
-echo -n "[4/7] Testing eth_chainId verification... "
-CHAIN_RESP=$(curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":2}' \
-  "${GATEWAY_URL}")
+# Test 4: Path-based routing and chain identity for all configured networks.
+check_chain_id() {
+    local path="$1" expected="$2" response
+    local expected_hex
+    expected_hex="$(printf '0x%x' "${expected}")"
+    response=$(curl -sS -X POST -H "Content-Type: application/json" \
+      -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":2}' \
+      "${GATEWAY_URL%/}/${path}")
+    if echo "${response}" | grep -qi "\"result\":\"${expected_hex}\""; then
+        echo -e "${GREEN}PASS (${path}: chain ID ${expected} / ${expected_hex})${NC}"
+    else
+        echo -e "${RED}FAIL (${path}: expected ${expected_hex}, response: ${response})${NC}"
+        exit 1
+    fi
+}
 
-if echo "$CHAIN_RESP" | grep -q '0xaa36a7'; then
-    echo -e "${GREEN}PASS (Sepolia ChainID: 11155111 / 0xaa36a7)${NC}"
-else
-    echo -e "${RED}FAIL (Response: ${CHAIN_RESP})${NC}"
-    exit 1
-fi
+echo "[4/8] Checking chain identity by route..."
+check_chain_id "base" 8453
+check_chain_id "arb" 42161
+check_chain_id "arbitrum" 42161
+check_chain_id "sepolia" "${EXPECTED_CHAIN_ID}"
 
 # Test 5: CORS Preflight Handling (OPTIONS -> 204)
-echo -n "[5/7] Testing CORS Preflight (OPTIONS)... "
+echo -n "[5/8] Testing CORS Preflight (OPTIONS)... "
 CORS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS \
   -H "Origin: https://app.uniswap.org" \
   -H "Access-Control-Request-Method: POST" \
@@ -79,7 +98,7 @@ else
 fi
 
 # Test 6: Method Whitelist Enforcement (DELETE rejected with 405, GET returns landing page)
-echo -n "[6/7] Testing Method Whitelist (DELETE rejected with 405)... "
+echo -n "[6/8] Testing Method Whitelist (DELETE rejected with 405)... "
 DEL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${GATEWAY_URL}")
 GET_BODY=$(curl -s -X GET "${GATEWAY_URL}")
 
@@ -91,7 +110,19 @@ else
 fi
 
 # Test 7: Prometheus Metrics Exporters
-echo -n "[7/7] Testing Prometheus Exporter endpoints... "
+echo -n "[7/8] Testing unknown chain route rejection (404)... "
+UNKNOWN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":3}' \
+  "${GATEWAY_URL%/}/unknown")
+if [ "${UNKNOWN_STATUS}" = "404" ]; then
+    echo -e "${GREEN}PASS (Unknown route -> 404)${NC}"
+else
+    echo -e "${RED}FAIL (Unknown route HTTP ${UNKNOWN_STATUS})${NC}"
+    exit 1
+fi
+
+echo -n "[8/8] Testing Prometheus Exporter endpoints... "
 SENTINEL_METRICS=$(curl -s "${SENTINEL_URL}/metrics" | grep -c "driftguard_" || true)
 HAPROXY_METRICS=$(curl -s -u "${STATS_AUTH}" "${STATS_URL}/metrics" | grep -c "haproxy_" || true)
 

@@ -56,8 +56,10 @@ jobs:
             -e STATS_PASSWORD=driftguard_admin_secure_pass \
             -e PRIMARY_RPC_HOST=ethereum-sepolia-rpc.publicnode.com \
             -e PRIMARY_RPC_PORT=443 \
+            -e PRIMARY_RPC_PATH=/ \
             -e FALLBACK_RPC_HOST=sepolia.gateway.tenderly.co \
             -e FALLBACK_RPC_PORT=443 \
+            -e FALLBACK_RPC_PATH=/ \
             -e RATE_LIMIT_PER_10S=200 \
             -v ${{ github.workspace }}/haproxy:/usr/local/etc/haproxy:ro \
             haproxy:2.8-alpine haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg
@@ -72,6 +74,22 @@ jobs:
       - name: Copy .env.example to .env
         run: |
           cp .env.example .env
+          python - <<'PY'
+          from pathlib import Path
+          import secrets
+
+          path = Path('.env')
+          values = {
+              'REDIS_PASSWORD': secrets.token_hex(32),
+              'STATS_PASSWORD': secrets.token_hex(32),
+          }
+          lines = path.read_text().splitlines()
+          path.write_text('\n'.join(
+              f'{line.split("=", 1)[0]}={values[line.split("=", 1)[0]]}'
+              if line.split('=', 1)[0] in values else line
+              for line in lines
+          ) + '\n')
+          PY
 
       - name: Validate Docker Compose Configuration
         run: |

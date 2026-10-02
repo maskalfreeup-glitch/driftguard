@@ -1,12 +1,4 @@
 chains:
-  - name: "base-mainnet"
-    chain_id: 8453
-    backend: "be_base"
-    primary_url: "https://mainnet.base.org"
-    fallback_url: "https://base-rpc.publicnode.com"
-    reference_url: "https://base.gateway.tenderly.co"
-    drift_threshold: 2
-    poll_interval: 2.0
   - name: "arbitrum-one"
     chain_id: 42161
     backend: "be_arb"
@@ -15,11 +7,19 @@ chains:
     reference_url: "https://arbitrum.gateway.tenderly.co"
     drift_threshold: 4
     poll_interval: 2.0
-  - name: "sepolia-testnet"
-    chain_id: 11155111
-    backend: "be_sepolia"
-    primary_url: "https://ethereum-sepolia-rpc.publicnode.com"
-    fallback_url: "https://sepolia.gateway.tenderly.co"
-    reference_url: "https://rpc.sepolia.ethpandaops.io"
-    drift_threshold: 2
+  - name: "arbitrum-nova"
+    chain_id: 42170
+    backend: "be_nova"
+    primary_url: "https://nova.arbitrum.io/rpc"
+    fallback_url: "https://arbitrum-nova-rpc.publicnode.com"
+    reference_url: "https://arbitrum-nova.drpc.org"
+    drift_threshold: 4
+    poll_interval: 2.0
+  - name: "arbitrum-sepolia"
+    chain_id: 421614
+    backend: "be_arb_sepolia"
+    primary_url: "https://sepolia-rollup.arbitrum.io/rpc"
+    fallback_url: "https://arbitrum-sepolia-rpc.publicnode.com"
+    reference_url: "https://arbitrum-sepolia.drpc.org"
+    drift_threshold: 6
     poll_interval: 2.0

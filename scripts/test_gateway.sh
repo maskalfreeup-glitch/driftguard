@@ -78,9 +78,11 @@ check_chain_id() {
 }
 
 echo "[4/8] Checking chain identity by route..."
-check_chain_id "base" 8453
 check_chain_id "arb" 42161
 check_chain_id "arbitrum" 42161
+check_chain_id "nova" 42170
+check_chain_id "arb-sepolia" 421614
+check_chain_id "base" 8453
 check_chain_id "sepolia" "${EXPECTED_CHAIN_ID}"
 
 # Test 5: CORS Preflight Handling (OPTIONS -> 204)

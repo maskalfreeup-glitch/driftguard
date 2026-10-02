@@ -112,16 +112,16 @@ validate_chain() {
     pass "Ingress ${path} -> ${chain_name} matched Chain ID ${dec_id} (${hex_id})"
 }
 
-validate_chain "/base" 8453 "Base Mainnet"
 validate_chain "/arb" 42161 "Arbitrum One"
 validate_chain "/arbitrum" 42161 "Arbitrum One (Alias)"
-validate_chain "/sepolia" 11155111 "Sepolia Testnet"
+validate_chain "/nova" 42170 "Arbitrum Nova"
+validate_chain "/arb-sepolia" 421614 "Arbitrum Sepolia"
 
 # ------------------------------------------------------------------------------
-# STEP 2: Chaos Drill Against Base Mainnet (be_base)
+# STEP 2: Chaos Drill Against Arbitrum One (be_arb)
 # ------------------------------------------------------------------------------
 echo ""
-info "Phase 2: Executing chaos drill against be_base..."
+info "Phase 2: Executing chaos drill against be_arb (Arbitrum One)..."
 
 # Check baseline upstream
 HTTP_HEADER_FILE=$(mktemp)
@@ -131,15 +131,15 @@ trap 'rm -f "${HTTP_HEADER_FILE}" "${HTTP_BODY_FILE}"' EXIT
 curl -s -D "${HTTP_HEADER_FILE}" -o "${HTTP_BODY_FILE}" \
     -X POST -H "Content-Type: application/json" \
     -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":100}' \
-    "${GATEWAY_BASE_URL}/base"
+    "${GATEWAY_BASE_URL}/arb"
 
-BASE_UPSTREAM=$(grep -i '^x-upstream:' "${HTTP_HEADER_FILE}" | awk '{print $2}' | tr -d '\r\n' || echo "")
-pass "Baseline active upstream on /base: '${BASE_UPSTREAM:-primary}'"
+ARB_UPSTREAM=$(grep -i '^x-upstream:' "${HTTP_HEADER_FILE}" | awk '{print $2}' | tr -d '\r\n' || echo "")
+pass "Baseline active upstream on /arb: '${ARB_UPSTREAM:-primary}'"
 
-info "Injecting consensus drift fault on be_base (drift=50 blocks)..."
+info "Injecting consensus drift fault on be_arb (drift=50 blocks)..."
 START_TS=$(python3 -c "import time; print(time.time())")
 
-SIM_RESP=$(curl -s "${ADMIN_HEADER[@]}" -X POST "${SENTINEL_URL}/admin/simulate?node=primary&drift=50&backend=be_base")
+SIM_RESP=$(curl -s "${ADMIN_HEADER[@]}" -X POST "${SENTINEL_URL}/admin/simulate?node=primary&drift=50&backend=be_arb")
 if ! echo "${SIM_RESP}" | grep -q '"status":"FAULT_INJECTED"'; then
     fail "Sentinel rejected chaos injection: ${SIM_RESP}"
 fi
@@ -156,7 +156,7 @@ for _ in $(seq 1 50); do
     REQ_CODE=$(curl -s -D "${LOOP_HEADER}" -o "${LOOP_BODY}" \
         -X POST -H "Content-Type: application/json" \
         -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":200}' \
-        "${GATEWAY_BASE_URL}/base" -w "%{http_code}" || echo "000")
+        "${GATEWAY_BASE_URL}/arb" -w "%{http_code}" || echo "000")
 
     case "${REQ_CODE}" in
         5??)
@@ -180,7 +180,7 @@ for _ in $(seq 1 50); do
 done
 
 if [ "${FAILOVER_DETECTED}" != "true" ]; then
-    fail "Gateway failed to route traffic to fallback for be_base!"
+    fail "Gateway failed to route traffic to fallback for be_arb!"
 fi
 
 IS_UNDER_CUTOFF=$(python3 -c "print('true' if float(${ELAPSED_FINAL}) <= float(${MAX_CUTOVER_SECONDS}) else 'false')")
@@ -197,7 +197,7 @@ fi
 # Verify fallback upstream response validity
 POST_FAILOVER_BODY=$(curl -s -X POST -H "Content-Type: application/json" \
     -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":201}' \
-    "${GATEWAY_BASE_URL}/base")
+    "${GATEWAY_BASE_URL}/arb")
 
 if echo "${POST_FAILOVER_BODY}" | grep -q '"result":"0x'; then
     HEX_BLOCK=$(echo "${POST_FAILOVER_BODY}" | grep -o '"result":"[^"]*"' | cut -d'"' -f4)
@@ -213,7 +213,7 @@ fi
 echo ""
 info "Phase 3: Testing Discord webhook alerting integration..."
 
-ALERT_RESP=$(curl -s "${ADMIN_HEADER[@]}" -X POST "${SENTINEL_URL}/admin/test-alert?chain=base-mainnet")
+ALERT_RESP=$(curl -s "${ADMIN_HEADER[@]}" -X POST "${SENTINEL_URL}/admin/test-alert?chain=arbitrum-one")
 info "Test alert response: ${ALERT_RESP}"
 
 if echo "${ALERT_RESP}" | grep -q '"status":"ALERT_SENT"'; then
@@ -228,11 +228,11 @@ fi
 # STEP 4: Restore Primary Upstream and Validate Recovery
 # ------------------------------------------------------------------------------
 echo ""
-info "Phase 4: Restoring healthy state on be_base..."
+info "Phase 4: Restoring healthy state on be_arb..."
 
-RESET_RESP=$(curl -s "${ADMIN_HEADER[@]}" -X POST "${SENTINEL_URL}/admin/reset?backend=be_base")
+RESET_RESP=$(curl -s "${ADMIN_HEADER[@]}" -X POST "${SENTINEL_URL}/admin/reset?backend=be_arb")
 if ! echo "${RESET_RESP}" | grep -q '"status":"FAULTS_RESET"'; then
-    fail "Failed to reset faults on be_base: ${RESET_RESP}"
+    fail "Failed to reset faults on be_arb: ${RESET_RESP}"
 fi
 
 # Verify traffic routes back to primary
@@ -240,7 +240,7 @@ RECOVERED=false
 for _ in $(seq 1 20); do
     RESP_HEAD=$(curl -s -D - -o /dev/null -X POST -H "Content-Type: application/json" \
         -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":300}' \
-        "${GATEWAY_BASE_URL}/base")
+        "${GATEWAY_BASE_URL}/arb")
     UPSTREAM=$(echo "${RESP_HEAD}" | grep -i '^x-upstream:' | awk '{print $2}' | tr -d '\r\n' || echo "")
     if [ "${UPSTREAM}" = "primary" ]; then
         RECOVERED=true
@@ -250,7 +250,7 @@ for _ in $(seq 1 20); do
 done
 
 if [ "${RECOVERED}" = "true" ]; then
-    pass "be_base Primary restored to active routing (X-Upstream: primary)"
+    pass "be_arb Primary restored to active routing (X-Upstream: primary)"
 else
     warn "Primary did not immediately become active; verify async health probe cycle"
 fi

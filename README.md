@@ -241,7 +241,7 @@ Compose applies per-container cgroup limits totaling 192 MiB. A single `docker s
 
 ```yaml
 services:
-  haproxy:
+  proxy:
     mem_limit: 64m       # Max 64MiB RAM
     deploy:
       resources:

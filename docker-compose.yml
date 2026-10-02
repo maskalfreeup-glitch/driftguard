@@ -63,7 +63,7 @@ services:
           cpus: '0.5'
           memory: 56M
 
-  haproxy:
+  proxy:
     image: haproxy:2.8-alpine
     container_name: driftguard-proxy
     user: root

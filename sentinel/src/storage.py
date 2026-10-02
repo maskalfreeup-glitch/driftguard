@@ -55,11 +55,15 @@ class StorageEngine:
 
         if await self._ensure_connection() and self.redis:
             try:
-                # Store as Redis Hash
+                # Store as Redis Hash with 24h TTL
+                key = f"driftguard:health:{node}"
                 stringified = {
                     k: json.dumps(v) if isinstance(v, (dict, list, bool)) else str(v) for k, v in data.items()
                 }
-                await self.redis.hset(f"driftguard:health:{node}", mapping=stringified)
+                async with self.redis.pipeline(transaction=True) as pipe:
+                    pipe.hset(key, mapping=stringified)
+                    pipe.expire(key, 86400)
+                    await pipe.execute()
             except Exception as e:
                 logger.debug(f"Failed to write health to Redis: {e}")
                 self._is_connected = False
@@ -98,6 +102,7 @@ class StorageEngine:
                 async with self.redis.pipeline(transaction=True) as pipe:
                     pipe.lpush(key, serialized)
                     pipe.ltrim(key, 0, self.history_limit - 1)
+                    pipe.expire(key, 86400)
                     await pipe.execute()
             except Exception as e:
                 logger.debug(f"Failed to write history to Redis: {e}")

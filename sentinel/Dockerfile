@@ -30,4 +30,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/healthz || exit 1
 
-CMD ["uvicorn", "sentinel.src.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]
+CMD ["uvicorn", "sentinel.src.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info", "--no-access-log"]

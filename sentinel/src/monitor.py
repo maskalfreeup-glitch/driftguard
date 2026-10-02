@@ -33,6 +33,7 @@ class NodeState:
         self.last_sample: NodeSample | None = None
         self.last_drift = 0
         self.reason = "Initializing"
+        self.current_haproxy_state: str | None = None
 
 
 class ChainMonitor:
@@ -133,7 +134,9 @@ class ChainMonitor:
                 node.status = "UNHEALTHY"
                 node.reason = reason
                 METRIC_STATUS.labels(node=node.name).set(0)
-                await set_server_state(self.socket_path, self.chain.backend, server, "maint")
+                if node.current_haproxy_state != "maint":
+                    if await set_server_state(self.socket_path, self.chain.backend, server, "maint"):
+                        node.current_haproxy_state = "maint"
             if should_alert:
                 await self.alerter.send_reference_unavailable(
                     self.chain.name, self.chain.chain_id, self.chain.backend, reason
@@ -225,8 +228,10 @@ class ChainMonitor:
                         node_role="primary" if node is self.primary else "fallback",
                     )
                 node.status = "UNHEALTHY"
-            await set_server_state(self.socket_path, self.chain.backend,
-                                   "primary" if node is self.primary else "fallback", "maint")
+                if node.current_haproxy_state != "maint":
+                    server = "primary" if node is self.primary else "fallback"
+                    if await set_server_state(self.socket_path, self.chain.backend, server, "maint"):
+                        node.current_haproxy_state = "maint"
         else:
             node.consecutive_successes += 1
             node.consecutive_failures = 0
@@ -243,8 +248,10 @@ class ChainMonitor:
                         backend=self.chain.backend,
                     )
                 node.status = "HEALTHY"
-            await set_server_state(self.socket_path, self.chain.backend,
-                                   "primary" if node is self.primary else "fallback", "ready")
+                if node.current_haproxy_state != "ready":
+                    server = "primary" if node is self.primary else "fallback"
+                    if await set_server_state(self.socket_path, self.chain.backend, server, "ready"):
+                        node.current_haproxy_state = "ready"
 
         METRIC_STATUS.labels(node=node.name).set(1 if node.status == "HEALTHY" else 0)
 
@@ -290,7 +297,8 @@ class ChainMonitor:
                 f"Simulated drift anomaly: {drift} blocks" if drift is not None else f"Simulated fault: {fault}"
             )
             # Immediate HAProxy cutover for < 0.5s chaos drills
-            await set_server_state(self.socket_path, self.chain.backend, server, "maint")
+            if await set_server_state(self.socket_path, self.chain.backend, server, "maint"):
+                target.current_haproxy_state = "maint"
             await self.alerter.send_drift_tripped(
                 chain_name=self.chain.name,
                 chain_id=self.chain.chain_id,
@@ -312,7 +320,8 @@ class ChainMonitor:
             node.consecutive_failures = 0
             node.consecutive_successes = 0
             node.reason = "Awaiting live health probes"
-            await set_server_state(self.socket_path, self.chain.backend, server, "ready")
+            if await set_server_state(self.socket_path, self.chain.backend, server, "ready"):
+                node.current_haproxy_state = "ready"
         await self.alerter.send_consensus_recovered(
             chain_name=self.chain.name,
             backend=self.chain.backend,

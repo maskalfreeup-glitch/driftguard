@@ -149,35 +149,47 @@ The following benchmark was captured on a live production deployment (`instance-
 
 ---
 
-## 8. Reviewer Testing Protocol
+## 8. Live Demonstration & Reviewer Verification Suite
 
-Evaluators can run these commands from any Unix terminal in under 60 seconds without installing local dependencies:
+Reviewers can verify the live DriftGuard production gateway running on OCI and routed through Cloudflare Edge without installing dependencies:
 
-### A. Multi-Chain Ingress Verification (Edge Smoke Test)
-
-Verifies that the Cloudflare tunnel, HAProxy routing tables, and upstream providers are active across Arbitrum networks:
+### 1. Multi-Chain Ingress Smoke Test
 
 ```bash
-# Arbitrum One (Primary Route)
-curl -s -w "\nHTTP Status: %{http_code} | Total Latency: %{time_total}s\n" \
-  -X POST https://rpc.maskal.space/arb \
+# Query Arbitrum One
+curl -s -X POST https://rpc.maskal.space/arb \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 
-# Arbitrum Nova
-curl -s -w "\nHTTP Status: %{http_code} | Total Latency: %{time_total}s\n" \
-  -X POST https://rpc.maskal.space/nova \
+# Query Arbitrum Nova
+curl -s -X POST https://rpc.maskal.space/nova \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 
-# Arbitrum Sepolia (Testnet)
-curl -s -w "\nHTTP Status: %{http_code} | Total Latency: %{time_total}s\n" \
-  -X POST https://rpc.maskal.space/arb-sepolia \
+# Query Arbitrum Sepolia Testnet
+curl -s -X POST https://rpc.maskal.space/arb-sepolia \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```
 
-### B. Sentinel Health & Consensus State Verification
+### 2. Inspect L7 Gateway Headers & Routing Metadata
+
+```bash
+curl -i -s -X POST https://rpc.maskal.space/arb \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' | grep -E 'HTTP/|x-driftguard|x-upstream|result'
+```
+
+*Expected Output:*
+
+```http
+HTTP/2 200
+x-driftguard-gateway: HAProxy-L7
+x-upstream: primary
+{"jsonrpc":"2.0","id":1,"result":"0x..."}
+```
+
+### 3. Sentinel Live Consensus State Verification
 
 Verifies background node polling and chain drift states via the Sentinel API:
 
@@ -186,9 +198,13 @@ Verifies background node polling and chain drift states via the Sentinel API:
 curl -s https://rpc.maskal.space/healthz | jq .
 ```
 
-*(If `/healthz` is internal to port 8000 on the VPS, expose it as a route in Cloudflare or provide the SSH verification command).*
+### 4. Failover & Consensus Architecture
 
-### C. Automated Chaos & Failover Verification (For Deep Review)
+* **Ingress Data Plane:** HAProxy 2.8 L7 reverse proxy with health-check state machine and dynamic socket-driven weight adjustment.
+* **Control Plane:** Out-of-band Python/asyncio Sentinel evaluating upstream drift against canonical reference nodes at 2s polling intervals.
+* **Storage/State:** Redis caching layer maintaining node health history, flap-damping cooldowns, and drift metrics.
+
+### 5. Automated Chaos & Failover Benchmark (Deep Review)
 
 To prove zero dropped requests during an active upstream provider blackout:
 
@@ -197,4 +213,5 @@ To prove zero dropped requests during an active upstream provider blackout:
 cd ~/driftguard
 ./scripts/test_failover.sh
 ```
+
 

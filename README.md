@@ -40,7 +40,24 @@ curl -s -w "\nHTTP Status: %{http_code} | Total Latency: %{time_total}s\n" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```
 
-### B. Sentinel Health & Consensus State Verification
+### B. Inspect L7 Gateway Headers & Routing Metadata
+
+```bash
+curl -i -s -X POST https://rpc.maskal.space/arb \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' | grep -E 'HTTP/|x-driftguard|x-upstream|result'
+```
+
+*Expected Output:*
+
+```http
+HTTP/2 200
+x-driftguard-gateway: HAProxy-L7
+x-upstream: primary
+{"jsonrpc":"2.0","id":1,"result":"0x..."}
+```
+
+### C. Sentinel Health & Consensus State Verification
 
 Verifies background node polling and chain drift states via the Sentinel API:
 
@@ -49,9 +66,7 @@ Verifies background node polling and chain drift states via the Sentinel API:
 curl -s https://rpc.maskal.space/healthz | jq .
 ```
 
-*(If `/healthz` is internal to port 8000 on the VPS, expose it as a route in Cloudflare or provide the SSH verification command).*
-
-### C. Automated Chaos & Failover Verification (For Deep Review)
+### D. Automated Chaos & Failover Verification (For Deep Review)
 
 To prove zero dropped requests during an active upstream provider blackout:
 
@@ -60,6 +75,7 @@ To prove zero dropped requests during an active upstream provider blackout:
 cd ~/driftguard
 ./scripts/test_failover.sh
 ```
+
 
 ---
 

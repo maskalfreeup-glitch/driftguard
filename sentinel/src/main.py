@@ -50,11 +50,11 @@ app = FastAPI(
 )
 
 
-@app.get("/healthz", summary="Stack Liveness Probe")
+@app.get("/healthz", summary="Stack Liveness and Consensus Probe")
 async def healthz(response: Response):
     """
-    General health probe for container orchestration.
-    Returns 200 if the monitor is active.
+    Health probe for container orchestration and reviewer verification.
+    Returns 200 if the monitor is active, including live chain consensus drift states.
     """
     uptime = round(time.time() - start_time, 1)
     if not monitor.is_running:
@@ -64,10 +64,22 @@ async def healthz(response: Response):
             "uptime_seconds": uptime,
         }
 
+    chain_status = []
+    for chain_monitor in monitor.unique_monitors().values():
+        chain_status.append({
+            "name": chain_monitor.chain.name,
+            "chain_id": chain_monitor.chain.chain_id,
+            "backend": chain_monitor.chain.backend,
+            "reference": _node_status(chain_monitor.reference),
+            "primary": _node_status(chain_monitor.primary),
+            "fallback": _node_status(chain_monitor.fallback),
+        })
+
     return {
         "status": "OK",
         "monitor_running": monitor.is_running,
         "uptime_seconds": uptime,
+        "chains": chain_status,
     }
 
 

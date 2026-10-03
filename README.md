@@ -12,6 +12,57 @@ DriftGuard combines an HAProxy JSON-RPC gateway with an asynchronous Python sent
 
 ---
 
+## ⚡ Live Reviewer Testing Protocol (Under 60 Seconds)
+
+Evaluators can run these commands from any Unix terminal in under 60 seconds without installing local dependencies:
+
+### A. Multi-Chain Ingress Verification (Edge Smoke Test)
+
+Verifies that the Cloudflare tunnel, HAProxy routing tables, and upstream providers are active across Arbitrum networks:
+
+```bash
+# Arbitrum One (Primary Route)
+curl -s -w "\nHTTP Status: %{http_code} | Total Latency: %{time_total}s\n" \
+  -X POST https://rpc.maskal.space/arb \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+
+# Arbitrum Nova
+curl -s -w "\nHTTP Status: %{http_code} | Total Latency: %{time_total}s\n" \
+  -X POST https://rpc.maskal.space/nova \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+
+# Arbitrum Sepolia (Testnet)
+curl -s -w "\nHTTP Status: %{http_code} | Total Latency: %{time_total}s\n" \
+  -X POST https://rpc.maskal.space/arb-sepolia \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+```
+
+### B. Sentinel Health & Consensus State Verification
+
+Verifies background node polling and chain drift states via the Sentinel API:
+
+```bash
+# Query live consensus monitor state
+curl -s https://rpc.maskal.space/healthz | jq .
+```
+
+*(If `/healthz` is internal to port 8000 on the VPS, expose it as a route in Cloudflare or provide the SSH verification command).*
+
+### C. Automated Chaos & Failover Verification (For Deep Review)
+
+To prove zero dropped requests during an active upstream provider blackout:
+
+```bash
+# On the VPS: Run automated failover benchmark
+cd ~/driftguard
+./scripts/test_failover.sh
+```
+
+---
+
 ## Multi-chain routing
 
 The included configuration defines a primary, fallback, and independent reference provider for Base, Arbitrum One, and Sepolia. The gateway routes JSON-RPC POST requests by path: `/base`, `/arb`, and `/sepolia`. Sentinel reads chain IDs, providers, thresholds, and polling intervals from `sentinel/config/chains.yaml`; HAProxy upstreams are configured separately in `haproxy/haproxy.cfg` and must be kept aligned when providers change.

@@ -14,6 +14,8 @@ DriftGuard combines an HAProxy JSON-RPC gateway with an asynchronous Python sent
 
 ## ⚡ Live Reviewer Testing Protocol (Under 60 Seconds)
 
+![DriftGuard Failover Demo](evidence/failover-demo.gif)
+
 Evaluators can run these commands from any Unix terminal in under 60 seconds without installing local dependencies:
 
 ### A. Multi-Chain Ingress Verification (Edge Smoke Test)

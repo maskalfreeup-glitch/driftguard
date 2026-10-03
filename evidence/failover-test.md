@@ -36,6 +36,8 @@ The backup is `rpc.sepolia.ethpandaops.io`. The previous dRPC endpoint returned 
 
 ## Automated Terminal Session (AsciiCast)
 
+![DriftGuard Failover Demo](failover-demo.gif)
+
 A live demonstration recording is captured in [evidence/failover-demo.cast](failover-demo.cast), demonstrating:
 1. Live Arbitrum One head query over `https://rpc.maskal.space/arb` (`x-upstream: primary`).
 2. Sentinel consensus monitor probe (`https://rpc.maskal.space/healthz`).

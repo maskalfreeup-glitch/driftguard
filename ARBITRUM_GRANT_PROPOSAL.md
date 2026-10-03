@@ -151,6 +151,8 @@ The following benchmark was captured on a live production deployment (`instance-
 
 ## 8. Live Demonstration & Reviewer Verification Suite
 
+![DriftGuard Failover Demo](evidence/failover-demo.gif)
+
 Reviewers can verify the live DriftGuard production gateway running on OCI and routed through Cloudflare Edge without installing dependencies:
 
 ### 1. Multi-Chain Ingress Smoke Test

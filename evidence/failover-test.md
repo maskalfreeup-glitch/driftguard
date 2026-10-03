@@ -31,3 +31,21 @@
 The active-passive failover was exercised through the live public endpoint. HAProxy was restarted to inject and then clear the outage; this test confirms successful requests after promotion, not uninterrupted requests during the restart window.
 
 The backup is `rpc.sepolia.ethpandaops.io`. The previous dRPC endpoint returned `chain is not available on free plan` during a separate check, so it was not used for this successful continuity test.
+
+---
+
+## Automated Terminal Session (AsciiCast)
+
+A live demonstration recording is captured in [evidence/failover-demo.cast](failover-demo.cast), demonstrating:
+1. Live Arbitrum One head query over `https://rpc.maskal.space/arb` (`x-upstream: primary`).
+2. Sentinel consensus monitor probe (`https://rpc.maskal.space/healthz`).
+3. Draining the primary node via the Sentinel socket / simulated consensus drift fault.
+4. Immediate transparent cutover to fallback (`x-upstream: fallback`) with zero dropped requests (HTTP 200).
+5. Primary node recovery back to active routing.
+
+To replay the recorded terminal session:
+
+```bash
+asciinema play evidence/failover-demo.cast
+```
+

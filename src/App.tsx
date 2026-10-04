@@ -751,6 +751,7 @@ export function App() {
                   <TabsList className="bg-zinc-950 border border-zinc-800 mb-4">
                     <TabsTrigger value="foundry" className="text-xs">Foundry</TabsTrigger>
                     <TabsTrigger value="hardhat" className="text-xs">Hardhat</TabsTrigger>
+                    <TabsTrigger value="metamask" className="text-xs">MetaMask</TabsTrigger>
                     <TabsTrigger value="viem" className="text-xs">Viem</TabsTrigger>
                     <TabsTrigger value="curl" className="text-xs">cURL</TabsTrigger>
                   </TabsList>
@@ -769,6 +770,17 @@ export function App() {
                       <code>
                         {`// hardhat.config.ts\nnetworks: {\n  arbitrum: {\n    url: "https://rpc.driftguard.live/arb",\n    chainId: 42161,\n  },\n}`}
                       </code>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="metamask">
+                    <div className="relative rounded-md bg-zinc-950 p-4 border border-zinc-800 font-mono text-xs text-zinc-300 space-y-1">
+                      <div className="text-zinc-400 font-semibold mb-2">Custom RPC Network Parameters:</div>
+                      <div><span className="text-zinc-500">Network Name:</span> <span className="text-emerald-400">Arbitrum One (DriftGuard HA)</span></div>
+                      <div><span className="text-zinc-500">New RPC URL:</span> <span className="text-emerald-400">https://rpc.driftguard.live/arb</span></div>
+                      <div><span className="text-zinc-500">Chain ID:</span> <span className="text-emerald-400">42161</span></div>
+                      <div><span className="text-zinc-500">Currency Symbol:</span> <span className="text-emerald-400">ETH</span></div>
+                      <div><span className="text-zinc-500">Block Explorer URL:</span> <span className="text-emerald-400">https://arbiscan.io</span></div>
                     </div>
                   </TabsContent>
 

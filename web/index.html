@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DriftGuard | Nitro Consensus & RPC Sentry</title>
+  <meta name="description" content="Sub-130ms failover gateway and asynchronous consensus sentinel for Arbitrum Nitro & EVM infrastructure. Eliminates silent 250ms sequencer desync & stale 200 OK reads.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+              950: '#022c22',
+            },
+            slate: {
+              850: '#111827',
+              900: '#0f172a',
+              950: '#080c14',
+            },
+            zinc: {
+              900: '#18181b',
+              950: '#09090b',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          boxShadow: {
+            'glow-emerald': '0 0 35px -5px rgba(16, 185, 129, 0.3)',
+            'glow-emerald-lg': '0 0 60px -10px rgba(16, 185, 129, 0.4)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Subtle grid background */
+    .bg-grid {
+      background-size: 32px 32px;
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    }
+    .radial-fade {
+      mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+      -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+    }
+    .gradient-border {
+      position: relative;
+    }
+    .gradient-border::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(16,185,129,0.4), rgba(59,130,246,0.1), transparent 70%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-brand-500 selection:text-slate-950 min-h-screen relative overflow-x-hidden">
+
+  <!-- Ambient background glow elements -->
+  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-brand-500/10 blur-[140px] rounded-full"></div>
+    <div class="absolute top-[600px] -right-40 w-[500px] h-[500px] bg-cyan-500/5 blur-[120px] rounded-full"></div>
+    <div class="absolute top-[1400px] -left-40 w-[600px] h-[600px] bg-brand-600/10 blur-[150px] rounded-full"></div>
+    <div class="absolute inset-0 bg-grid radial-fade opacity-70"></div>
+  </div>
+
+  <!-- Global Header / Navbar -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80 transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-3 group">
+        <div class="w-10 h-10 rounded-xl bg-slate-900 border border-brand-500/30 flex items-center justify-center text-brand-400 group-hover:border-brand-400 group-hover:shadow-glow-emerald transition-all duration-300">
+          <svg class="w-5 h-5 transform group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xl font-bold tracking-tight text-white group-hover:text-brand-300 transition-colors">DriftGuard</span>
+          <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-brand-950/80 text-brand-400 border border-brand-800/60 font-semibold tracking-wider">v1.0 nitro</span>
+        </div>
+      </a>
+
+      <!-- Desktop Nav -->
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+        <a href="#the-problem" class="hover:text-brand-400 transition-colors">The Problem</a>
+        <a href="#demo" class="hover:text-brand-400 transition-colors">Visual Drill</a>
+        <a href="#architecture" class="hover:text-brand-400 transition-colors">Architecture</a>
+        <a href="/rpc" class="text-emerald-400 font-semibold flex items-center gap-1.5 hover:text-emerald-300 transition-colors">
+          <span>RPC Playground</span>
+          <span class="inline-block px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 text-[10px] font-mono rounded">Live</span>
+        </a>
+      </nav>
+
+      <!-- Action CTAs -->
+      <div class="hidden sm:flex items-center gap-3">
+        <!-- Discord button (#bot-stats) -->
+        <a href="javascript:void(0)" onclick="openDiscordModal()" title="View Discord #bot-stats integration" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-indigo-500/40 hover:text-indigo-300 text-slate-300 text-xs font-medium transition-all group">
+          <svg class="w-4 h-4 fill-current text-indigo-400 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+          </svg>
+          <span class="font-mono">#bot-stats</span>
+        </a>
+
+        <!-- GitHub Repo -->
+        <a href="https://github.com/maskalfreeup-glitch/driftguard" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs font-medium hover:text-white transition-all">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          <span>GitHub</span>
+        </a>
+
+        <!-- Primary CTA to /rpc -->
+        <a href="/rpc" class="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-400 text-slate-950 font-semibold text-xs tracking-wide transition-all shadow-glow-emerald hover:shadow-glow-emerald-lg">
+          <span>RPC Playground</span>
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </a>
+      </div>
+
+      <!-- Mobile Hamburger button -->
+      <button onclick="toggleMobileNav()" class="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-850">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Mobile Dropdown -->
+    <div id="mobile-menu" class="hidden md:hidden px-4 pt-2 pb-6 border-b border-slate-800 bg-slate-950/95 space-y-3">
+      <a href="#the-problem" onclick="toggleMobileNav()" class="block py-2 text-slate-300 hover:text-brand-400 font-medium">The Problem</a>
+      <a href="#demo" onclick="toggleMobileNav()" class="block py-2 text-slate-300 hover:text-brand-400 font-medium">Visual Drill</a>
+      <a href="#architecture" onclick="toggleMobileNav()" class="block py-2 text-slate-300 hover:text-brand-400 font-medium">Architecture</a>
+      <a href="/rpc" class="block py-2 text-brand-400 font-semibold">RPC Playground & Endpoints &rarr;</a>
+      <div class="pt-3 border-t border-slate-800 flex flex-col gap-2">
+        <a href="https://github.com/maskalfreeup-glitch/driftguard" target="_blank" class="flex items-center justify-center gap-2 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 text-xs">
+          <span>GitHub Repository</span>
+        </a>
+        <button onclick="openDiscordModal(); toggleMobileNav()" class="flex items-center justify-center gap-2 py-2 rounded-lg bg-indigo-950/40 border border-indigo-800/60 text-indigo-300 text-xs">
+          <span>Discord Alert Stream (#bot-stats)</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="relative z-10 pt-12 pb-20 sm:pt-20 sm:pb-28">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Center Hero Content -->
+      <div class="text-center max-w-4xl mx-auto">
+        
+        <!-- sub-130ms failover badge -->
+        <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-400 text-xs font-semibold tracking-wider uppercase mb-8 shadow-[0_0_20px_rgba(16,185,129,0.15)] animate-pulse">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+          </span>
+          <span>Sub-130ms Failover Badge</span>
+          <span class="text-slate-600">&bull;</span>
+          <span class="text-slate-300 font-mono">Zero Dropped Reads</span>
+        </div>
+
+        <!-- Headline -->
+        <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.1] mb-6">
+          DriftGuard: <br class="hidden sm:inline" />
+          <span class="bg-gradient-to-r from-brand-400 via-emerald-300 to-teal-200 bg-clip-text text-transparent">
+            Nitro Consensus & RPC Sentry
+          </span>
+        </h1>
+
+        <!-- Subheadline -->
+        <p class="text-lg sm:text-xl text-slate-400 font-normal leading-relaxed max-w-3xl mx-auto mb-10">
+          High-performance active-passive L7 gateway & asynchronous consensus sentinel. Protects Web3 wallets, liquidation bots, and indexers from <span class="text-slate-200 font-medium">silent 250ms sequencer desync</span> and <span class="text-slate-200 font-medium">stale "HTTP 200 OK" reads</span> with zero-downtime cutover.
+        </p>
+
+        <!-- CTA Buttons Row -->
+        <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-5 mb-14">
+          <!-- Primary CTA to /rpc -->
+          <a href="/rpc" class="px-6 py-3.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-slate-950 font-bold text-sm sm:text-base flex items-center gap-2.5 shadow-glow-emerald hover:shadow-glow-emerald-lg transition-all transform hover:-translate-y-0.5">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span>Launch RPC Playground & Endpoints</span>
+          </a>
+
+          <!-- GitHub Repo -->
+          <a href="https://github.com/maskalfreeup-glitch/driftguard" target="_blank" rel="noopener noreferrer" class="px-6 py-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 text-slate-200 font-semibold text-sm sm:text-base flex items-center gap-2.5 transition-all">
+            <svg class="w-5 h-5 fill-current text-slate-400" viewBox="0 0 24 24">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            <span>GitHub (MIT)</span>
+          </a>
+
+          <!-- Discord #bot-stats -->
+          <button onclick="openDiscordModal()" class="px-5 py-3.5 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-700/50 text-indigo-300 font-semibold text-sm sm:text-base flex items-center gap-2.5 transition-all">
+            <svg class="w-5 h-5 fill-current text-indigo-400" viewBox="0 0 24 24">
+              <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+            </svg>
+            <span>Discord (#bot-stats)</span>
+          </button>
+        </div>
+
+        <!-- Key Infrastructure Metrics Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-6 border-t border-slate-800/80 text-left">
+          <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 backdrop-blur-sm">
+            <div class="text-xs font-mono text-slate-400 uppercase tracking-wider mb-1">Synthetic Failover</div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-brand-400 font-mono">&lt; 130 ms</div>
+            <div class="text-[11px] text-slate-500 mt-1">L7 socket state transition</div>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 backdrop-blur-sm">
+            <div class="text-xs font-mono text-slate-400 uppercase tracking-wider mb-1">Nitro Drift Window</div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white font-mono">250 ms</div>
+            <div class="text-[11px] text-slate-500 mt-1">Micro-block desync threshold</div>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 backdrop-blur-sm">
+            <div class="text-xs font-mono text-slate-400 uppercase tracking-wider mb-1">Stale "200" Defense</div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-brand-400 font-mono">100%</div>
+            <div class="text-[11px] text-slate-500 mt-1">Deep JSON-RPC sync probing</div>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 backdrop-blur-sm">
+            <div class="text-xs font-mono text-slate-400 uppercase tracking-wider mb-1">Memory Footprint</div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white font-mono">&lt; 160 MiB</div>
+            <div class="text-[11px] text-slate-500 mt-1">Combined HAProxy + Sentinel</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Section: The Problem -->
+  <section id="the-problem" class="relative z-10 py-20 bg-slate-900/50 border-t border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono uppercase tracking-wider mb-4">
+          <span>Root Cause Analysis</span>
+        </div>
+        <h2 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-4">
+          The Problem: Silent 250ms Sequencer Desync & Stale "200 OK" Reads
+        </h2>
+        <p class="text-base sm:text-lg text-slate-400">
+          Standard cloud load balancers (AWS ALB, NGINX, Cloudflare) check transport health: TCP socket connectivity and HTTP 200 status codes. On Arbitrum Nitro and fast EVM rollups, this blindspot is catastrophic.
+        </p>
+      </div>
+
+      <!-- Problem Breakdown 3-Card Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-14">
+        
+        <!-- Card 1 -->
+        <div class="p-7 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-red-500/40 transition-all duration-300 relative group">
+          <div class="w-12 h-12 rounded-xl bg-red-950/50 border border-red-800/50 text-red-400 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-3 flex items-center justify-between">
+            <span>Silent 250ms Sequencer Desync</span>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">Critical</span>
+          </h3>
+          <p class="text-slate-400 text-sm leading-relaxed mb-4">
+            Arbitrum Nitro sequencer feeds push micro-batches every ~250ms. When a full node replica suffers transient peer throttling, NVMe disk I/O stalls, or websocket drops, it falls dozens of blocks behind tip in seconds.
+          </p>
+          <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-400">
+            <span class="text-red-400">&#10006; Result:</span> Client reads canonical head from 30 seconds ago while upstream reports "Healthy".
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="p-7 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-amber-500/40 transition-all duration-300 relative group">
+          <div class="w-12 h-12 rounded-xl bg-amber-950/50 border border-amber-800/50 text-amber-400 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-3 flex items-center justify-between">
+            <span>The Deceptive "HTTP 200 OK"</span>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">Deceptive</span>
+          </h3>
+          <p class="text-slate-400 text-sm leading-relaxed mb-4">
+            An RPC node in background catch-up (<code class="text-brand-300 font-mono">eth_syncing = true</code>) continues to respond with <code class="text-white font-mono">HTTP 200 OK</code> to queries like <code class="text-slate-300 font-mono">eth_getBalance</code>, <code class="text-slate-300 font-mono">eth_call</code>, and <code class="text-slate-300 font-mono">eth_blockNumber</code>.
+          </p>
+          <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-400">
+            <span class="text-amber-400">&#9888; Result:</span> Arbitrage bots read obsolete state; user transactions revert with <code class="text-amber-300">nonce too low</code>.
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="p-7 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-brand-500/40 transition-all duration-300 relative group">
+          <div class="w-12 h-12 rounded-xl bg-brand-950/50 border border-brand-800/50 text-brand-400 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-3 flex items-center justify-between">
+            <span>The DriftGuard Sentry Solution</span>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-brand-950 text-brand-400 border border-brand-800">Fixed</span>
+          </h3>
+          <p class="text-slate-400 text-sm leading-relaxed mb-4">
+            DriftGuard's asynchronous Sentinel continuously cross-references Primary, Fallback, and an independent Reference head. If drift exceeds 2 blocks (500ms), HAProxy drains the server via UNIX admin socket in &lt;130ms.
+          </p>
+          <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-400">
+            <span class="text-brand-400">&#10004; Result:</span> Guaranteed monotonic head progression; zero dropped requests or cache poisoning.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Comparison Matrix -->
+      <div class="rounded-2xl border border-slate-800 bg-slate-950/90 overflow-hidden shadow-2xl">
+        <div class="px-6 py-4 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+            <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
+            <div class="w-3 h-3 rounded-full bg-brand-500/80"></div>
+            <span class="text-xs font-mono text-slate-400 ml-2">Health Detection Comparison Matrix</span>
+          </div>
+          <span class="text-xs font-mono text-brand-400">Nitro Micro-Block Benchmark</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-900/40 text-slate-400 font-mono text-xs uppercase border-b border-slate-800">
+              <tr>
+                <th class="px-6 py-3.5">Failure Scenario</th>
+                <th class="px-6 py-3.5">Standard NGINX / Cloudflare</th>
+                <th class="px-6 py-3.5">Naive HTTP 200 Prober</th>
+                <th class="px-6 py-3.5 text-brand-400">DriftGuard Nitro Sentry</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 font-sans text-xs sm:text-sm">
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-6 py-4 font-medium text-slate-200">Sequencer Stall (Behind 50 blocks)</td>
+                <td class="px-6 py-4 text-red-400 font-mono">Missed (TCP UP)</td>
+                <td class="px-6 py-4 text-red-400 font-mono">Missed (Returns 200)</td>
+                <td class="px-6 py-4 text-brand-400 font-semibold font-mono flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand-400"></span> Drained in &lt;130ms
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-6 py-4 font-medium text-slate-200">Restarted Node Catching Up (<code class="font-mono text-slate-300">eth_syncing</code>)</td>
+                <td class="px-6 py-4 text-red-400 font-mono">Missed (TCP UP)</td>
+                <td class="px-6 py-4 text-red-400 font-mono">Missed (Returns 200)</td>
+                <td class="px-6 py-4 text-brand-400 font-semibold font-mono flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand-400"></span> Blocked at Ingress
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-6 py-4 font-medium text-slate-200">Wrong Chain ID (Fork/Misconfiguration)</td>
+                <td class="px-6 py-4 text-red-400 font-mono">Missed (HTTP 200)</td>
+                <td class="px-6 py-4 text-red-400 font-mono">Missed (HTTP 200)</td>
+                <td class="px-6 py-4 text-brand-400 font-semibold font-mono flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand-400"></span> Instant Ejection
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-6 py-4 font-medium text-slate-200">Incident Alerting (<code class="font-mono text-slate-300">#bot-stats</code>)</td>
+                <td class="px-6 py-4 text-slate-500 font-mono">None</td>
+                <td class="px-6 py-4 text-slate-500 font-mono">Spammy Pagers</td>
+                <td class="px-6 py-4 text-brand-400 font-semibold font-mono flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand-400"></span> Debounced Discord Webhook
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Section: Visual Demo -->
+  <section id="demo" class="relative z-10 py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-12">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-400 text-xs font-mono uppercase tracking-wider mb-4">
+          <span>Live Reviewer Testing Protocol</span>
+        </div>
+        <h2 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-4">
+          Terminal Chaos Drill & Failover Proof
+        </h2>
+        <p class="text-base sm:text-lg text-slate-400">
+          Uncut recording of an active upstream blackout drill. Notice zero dropped JSON-RPC reads and immediate transparent promotion of the fallback pool with sub-130ms L7 socket drainage.
+        </p>
+      </div>
+
+      <!-- Terminal Window Container -->
+      <div class="max-w-4xl mx-auto rounded-2xl bg-slate-950 border border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden gradient-border">
+        
+        <!-- Terminal Top Bar -->
+        <div class="px-5 py-3.5 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full bg-red-500/80 inline-block"></span>
+            <span class="w-3.5 h-3.5 rounded-full bg-yellow-500/80 inline-block"></span>
+            <span class="w-3.5 h-3.5 rounded-full bg-emerald-500/80 inline-block"></span>
+            <span class="text-xs font-mono text-slate-400 ml-3 hidden sm:inline">scripts/test_failover.sh &bull; 80x24</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-950 text-brand-400 border border-brand-800 text-[11px] font-mono font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse"></span>
+              AsciiCast Replay
+            </span>
+          </div>
+        </div>
+
+        <!-- Embedded GIF Demo -->
+        <div class="p-2 sm:p-4 bg-slate-950 flex items-center justify-center">
+          <img src="evidence/failover-demo.gif" alt="DriftGuard Failover Demo" class="w-full h-auto rounded-lg shadow-inner border border-slate-900" loading="lazy">
+        </div>
+
+        <!-- Bottom Execution Phases -->
+        <div class="px-6 py-4 bg-slate-900/50 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
+          <div class="flex items-start gap-2.5">
+            <span class="text-brand-400 font-bold">01.</span>
+            <span class="text-slate-300">Baseline queries route to <code class="text-brand-300">x-upstream: primary</code></span>
+          </div>
+          <div class="flex items-start gap-2.5">
+            <span class="text-amber-400 font-bold">02.</span>
+            <span class="text-slate-300">Sentinel detects simulated drift, issues HAProxy <code class="text-amber-300">maint</code> socket drain</span>
+          </div>
+          <div class="flex items-start gap-2.5">
+            <span class="text-cyan-400 font-bold">03.</span>
+            <span class="text-slate-300">Seamless cutover to <code class="text-cyan-300">x-upstream: fallback</code> with 100% HTTP 200</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick evaluation callout -->
+      <div class="text-center mt-8">
+        <a href="/rpc" class="inline-flex items-center gap-2 text-sm font-semibold text-brand-400 hover:text-brand-300 transition-colors">
+          <span>Test the live endpoints yourself in the RPC Playground</span>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Section: Architecture & Tech Stack -->
+  <section id="architecture" class="relative z-10 py-20 bg-slate-900/30 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-400 text-xs font-mono uppercase tracking-wider mb-4">
+          <span>Engineered for Determinism</span>
+        </div>
+        <h2 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-4">
+          Dual-Process Isolation Architecture
+        </h2>
+        <p class="text-base sm:text-lg text-slate-400">
+          Heavy consensus validation should never sit in the hot data path. DriftGuard keeps JSON-RPC routing at sub-millisecond wire speed while an asynchronous sentinel supervises consensus health out-of-band.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+        <!-- HAProxy L7 Gateway Box -->
+        <div class="p-8 rounded-2xl bg-slate-950 border border-slate-800 relative">
+          <div class="flex items-center justify-between mb-4">
+            <span class="px-2.5 py-1 rounded bg-slate-900 text-slate-300 border border-slate-700 text-xs font-mono font-semibold">Process 1: Ingress Gateway</span>
+            <span class="text-xs font-mono text-brand-400">C-Engine / 64M limit</span>
+          </div>
+          <h3 class="text-2xl font-bold text-white mb-2">HAProxy L7 JSON-RPC Gateway</h3>
+          <p class="text-slate-400 text-sm mb-6 leading-relaxed">
+            Runs dedicated active-passive pools per chain (Arbitrum One, Nova, Sepolia, Base). Routes queries based on URL paths (<code class="font-mono text-slate-300">/arb</code>, <code class="font-mono text-slate-300">/nova</code>, etc.), strips trailing slashes, and injects observability headers like <code class="font-mono text-brand-300">x-driftguard-gateway: HAProxy-L7</code>.
+          </p>
+          <ul class="space-y-2.5 text-xs font-mono text-slate-300">
+            <li class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span>Sub-millisecond connection proxying with zero JSON-parsing overhead</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span>Dynamically managed via UNIX domain runtime socket (<code class="text-slate-400">/run/haproxy/admin.sock</code>)</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span>Built-in fallback routing prevents any packet loss during failovers</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Asynchronous Sentinel Box -->
+        <div class="p-8 rounded-2xl bg-slate-950 border border-slate-800 relative">
+          <div class="flex items-center justify-between mb-4">
+            <span class="px-2.5 py-1 rounded bg-slate-900 text-slate-300 border border-slate-700 text-xs font-mono font-semibold">Process 2: Out-of-Band Supervisor</span>
+            <span class="text-xs font-mono text-brand-400">Python 3.12 / 96M limit</span>
+          </div>
+          <h3 class="text-2xl font-bold text-white mb-2">Async Consensus Sentinel</h3>
+          <p class="text-slate-400 text-sm mb-6 leading-relaxed">
+            Non-blocking event loop concurrently polling Primary, Fallback, and independent Reference endpoints every 2 seconds. Evaluates block delta, syncing flags, and chain ID validity without touching the client hot path.
+          </p>
+          <ul class="space-y-2.5 text-xs font-mono text-slate-300">
+            <li class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span>Three-way comparator rejects lagging heads before consensus forks propagate</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span>Debounced Discord webhook alerting to <code class="text-indigo-400">#bot-stats</code> with rich embeds</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span>Redis telemetry storage for historical consensus drift timeseries</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CTA Banner to /rpc -->
+  <section class="relative z-10 py-16 bg-gradient-to-b from-slate-950 to-slate-900 border-t border-slate-800">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div class="p-8 sm:p-12 rounded-3xl bg-slate-900/80 border border-brand-500/30 relative overflow-hidden shadow-glow-emerald">
+        <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">
+          Ready to Test Live Multi-Chain Ingress?
+        </h2>
+        <p class="text-slate-300 max-w-2xl mx-auto mb-8 text-sm sm:text-base leading-relaxed">
+          Query live Arbitrum One, Nova, Sepolia, and Base blocks with real-time latency diagnostics and copy ready-to-use snippets for Foundry, Hardhat, and MetaMask.
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-4">
+          <a href="/rpc" class="px-8 py-4 rounded-xl bg-brand-500 hover:bg-brand-400 text-slate-950 font-bold text-base shadow-glow-emerald transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
+            <span>Open RPC Playground & Endpoints</span>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </a>
+          <a href="https://github.com/maskalfreeup-glitch/driftguard" target="_blank" rel="noopener noreferrer" class="px-6 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-base border border-slate-700 transition-all">
+            Browse Source Code
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Discord #bot-stats Modal -->
+  <div id="discord-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-indigo-500/40 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+      <button onclick="closeDiscordModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-700 flex items-center justify-center text-indigo-400">
+          <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">Discord Incident Stream (#bot-stats)</h3>
+          <p class="text-xs text-slate-400">DriftGuard Sentinel Out-of-Band Incident Dispatch</p>
+        </div>
+      </div>
+
+      <!-- Live Discord Embed Preview -->
+      <div class="mb-5 rounded-lg bg-[#313338] p-4 text-xs font-sans text-slate-200 border-l-4 border-red-500 shadow-md">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="font-bold text-white text-sm">DriftGuard Sentinel</span>
+          <span class="px-1.5 py-0.2 rounded bg-[#5865F2] text-white text-[10px] font-semibold uppercase">APP</span>
+          <span class="text-slate-400 text-[11px]">Today at 07:02 UTC &bull; #bot-stats</span>
+        </div>
+        <div class="font-bold text-red-400 text-sm mb-1">&#9888; Consensus Drift Tripped: Arbitrum One</div>
+        <p class="text-slate-300 text-xs mb-3">Primary upstream lagged canonical head beyond 2-block drift threshold.</p>
+        <div class="grid grid-cols-2 gap-2 text-[11px] bg-[#2b2d31] p-2.5 rounded">
+          <div><span class="text-slate-400">Delta Blocks:</span> <span class="font-mono text-amber-400 font-bold">14 blocks</span></div>
+          <div><span class="text-slate-400">Failover Action:</span> <span class="font-mono text-emerald-400">Drained &rarr; Fallback</span></div>
+          <div><span class="text-slate-400">Primary Head:</span> <span class="font-mono text-slate-200"># 258,490,120</span></div>
+          <div><span class="text-slate-400">Canonical Head:</span> <span class="font-mono text-slate-200"># 258,490,134</span></div>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-400 leading-relaxed mb-6">
+        Configured via <code class="text-slate-300 font-mono">DISCORD_WEBHOOK_URL</code> in <code class="text-slate-300 font-mono">.env</code>. Emits zero-overhead non-blocking HTTP 204 alerts with automatic 10-second anti-flapping debounce.
+      </p>
+
+      <div class="flex gap-3">
+        <a href="https://discord.gg" target="_blank" rel="noopener noreferrer" class="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-center text-xs transition-colors flex items-center justify-center gap-2">
+          <span>Join DriftGuard Discord</span>
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        </a>
+        <button onclick="closeDiscordModal()" class="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+          Dismiss
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Footer -->
+  <footer class="relative z-10 bg-slate-950 border-t border-slate-800 text-slate-400 text-sm py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 border border-brand-500/30 flex items-center justify-center text-brand-400">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <div>
+            <div class="text-white font-semibold">DriftGuard</div>
+            <div class="text-xs text-slate-500">Nitro Consensus & RPC Sentry &bull; MIT License</div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-6 text-xs font-medium text-slate-400">
+          <a href="/rpc" class="text-brand-400 hover:text-brand-300 transition-colors">RPC Playground</a>
+          <a href="https://github.com/maskalfreeup-glitch/driftguard" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">GitHub Repository</a>
+          <a href="javascript:void(0)" onclick="openDiscordModal()" class="hover:text-indigo-400 transition-colors">Discord (#bot-stats)</a>
+          <a href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/ARBITRUM_GRANT_PROPOSAL.md" target="_blank" class="hover:text-white transition-colors">Arbitrum Proposal</a>
+          <a href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/LICENSE" target="_blank" class="hover:text-white transition-colors">License (MIT)</a>
+        </div>
+      </div>
+      
+      <div class="mt-8 pt-8 border-t border-slate-900 text-center text-xs text-slate-600">
+        &copy; 2026 DriftGuard Open-Source Project. Built for high-reliability Arbitrum Nitro & EVM infrastructure.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function toggleMobileNav() {
+      const menu = document.getElementById('mobile-menu');
+      menu.classList.toggle('hidden');
+    }
+
+    function openDiscordModal() {
+      document.getElementById('discord-modal').classList.remove('hidden');
+    }
+
+    function closeDiscordModal() {
+      document.getElementById('discord-modal').classList.add('hidden');
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closeDiscordModal();
+      }
+    });
+  </script>
+</body>
+</html>

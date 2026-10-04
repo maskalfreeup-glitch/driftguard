@@ -1,6 +1,7 @@
 # DriftGuard
 
 [![Status](https://img.shields.io/badge/status-active-emerald.svg)](https://github.com/maskalfreeup-glitch/driftguard)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/DZBDJSsSzN)
 [![Container limits](https://img.shields.io/badge/container%20memory%20limits-120MiB-blue.svg)](https://github.com/maskalfreeup-glitch/driftguard)
 [![License: MIT](https://img.shields.io/badge/license-MIT-gray.svg)](LICENSE)
 [![Patreon](https://img.shields.io/badge/patreon-sponsor-orange.svg?logo=patreon)](https://patreon.com/maskal)

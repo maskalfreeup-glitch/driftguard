@@ -221,13 +221,14 @@ export function App() {
           {/* External Links */}
           <div className="flex items-center gap-2 border-l border-sky-950/80 pl-2 sm:pl-3">
             <a
-              href="https://discord.gg/arb"
+              href="https://discord.gg/DZBDJSsSzN"
               target="_blank"
               rel="noreferrer"
-              className="hidden lg:flex items-center gap-1.5 text-xs text-zinc-400 hover:text-[#28A0F0] transition-colors px-2 py-1 rounded-md hover:bg-[#0F172A]"
+              className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-[#28A0F0] transition-colors px-2 py-1 rounded-md hover:bg-[#0F172A]"
+              title="Join DriftGuard Discord"
             >
               <MessageSquare className="size-3.5" />
-              <span>#bot-stats</span>
+              <span className="hidden sm:inline">Discord</span>
             </a>
             <a
               href="https://github.com/maskalfreeup-glitch/driftguard"
@@ -888,6 +889,18 @@ MAX_ALLOWED_BLOCK_DRIFT=2`}</pre>
                 <p className="text-xs text-zinc-400 leading-relaxed">
                   Failover alerts contain the delinquent node IP, drift delta in blocks/milliseconds, and confirmation of automatic fallback takeover.
                 </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                  <span className="text-zinc-500">Need help configuring alerts or want live node telemetry?</span>
+                  <a
+                    href="https://discord.gg/DZBDJSsSzN"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#28A0F0] hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <MessageSquare className="size-3" />
+                    <span>Join our Discord community →</span>
+                  </a>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -913,6 +926,16 @@ MAX_ALLOWED_BLOCK_DRIFT=2`}</pre>
               <Settings className="size-3.5" />
               <span>Docs &amp; Tutorial</span>
             </button>
+            <a
+              href="https://discord.gg/DZBDJSsSzN"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-[#28A0F0] transition-colors flex items-center gap-1"
+              title="Join DriftGuard Discord"
+            >
+              <MessageSquare className="size-3.5" />
+              <span>Discord</span>
+            </a>
             <a
               href="https://github.com/maskalfreeup-glitch/driftguard"
               target="_blank"

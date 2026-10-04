@@ -160,9 +160,19 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col selection:bg-[#28A0F0]/20 selection:text-[#28A0F0] font-sans">
+    <div className="relative min-h-screen bg-[#09090b] text-zinc-100 flex flex-col selection:bg-[#28A0F0]/20 selection:text-[#28A0F0] font-sans overflow-x-hidden">
+      {/* ── Background EVM / Arbitrum Atmospheric Textures ── */}
+      {/* 1. Top Ethereal Cyan Radial Aurora */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[600px] bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(40,160,240,0.15),transparent_75%)] z-0" />
+      {/* 2. Micro Grid Pattern with Radial Mask */}
+      <div className="pointer-events-none absolute inset-0 bg-grid-mesh [mask-image:radial-gradient(ellipse_70%_50%_at_50%_20%,#000_20%,transparent_100%)] opacity-80 z-0" />
+      {/* 3. Cyber Dot Matrix Glow behind Hero */}
+      <div className="pointer-events-none absolute top-12 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[400px] bg-dot-mesh [mask-image:radial-gradient(ellipse_50%_50%_at_50%_40%,#000_20%,transparent_100%)] opacity-60 z-0" />
+      {/* 4. Film Grain / Cryptographic Noise Texture */}
+      <div className="pointer-events-none fixed inset-0 bg-noise opacity-35 z-40" />
+
       {/* ── 1. Navigation Bar (Mobile-First Minimalist Cleanup) ── */}
-      <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 bg-[#09090b]/80 backdrop-blur-md">
+      <header className="relative z-20 sticky top-0 w-full border-b border-zinc-800/80 bg-[#09090b]/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: Logo icon + "DriftGuard" text only (Hide secondary badge on screens < md) */}
           <div className="cursor-pointer shrink-0" onClick={() => setActiveTab("overview")}>
@@ -227,8 +237,8 @@ export function App() {
         </div>
       </header>
 
-      {/* ── Main View Container ── */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      {/* ── Main View Container with Precision Architectural Rails ── */}
+      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 border-x border-zinc-800/30">
         {/* ══════════════════════════════════════════════════════════
             VIEW 1: OVERVIEW (MINIMALIST LINEAR/VERCEL STYLE)
            ══════════════════════════════════════════════════════════ */}
@@ -298,8 +308,8 @@ export function App() {
               </div>
             </div>
 
-            {/* Terminal Evidence (Clean, edge-to-edge container on mobile) */}
-            <div className="rounded-xl border border-zinc-800/80 bg-black/60 overflow-hidden shadow-2xl">
+            {/* Terminal Evidence (Clean, edge-to-edge container on mobile with specular highlight) */}
+            <div className="specular-border rounded-xl border border-zinc-800/80 bg-zinc-950/70 overflow-hidden shadow-2xl backdrop-blur-sm">
               {/* Window Titlebar */}
               <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-zinc-800/80 bg-zinc-950/60">
                 <div className="flex items-center gap-2">
@@ -336,7 +346,7 @@ export function App() {
         {activeTab === "rpc" && (
           <div className="space-y-8">
             {/* Live Interactive Query Tester */}
-            <Card className="bg-zinc-900/40 border-zinc-800/80 shadow-xl">
+            <Card className="specular-border bg-zinc-900/40 border-zinc-800/80 shadow-xl backdrop-blur-sm">
               <CardHeader className="border-b border-zinc-800/80 pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>

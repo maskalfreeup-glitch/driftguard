@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { DriftGuardLogo } from "@/components/DriftGuardLogo"
+import { HeroBrandShield } from "@/components/HeroBrandShield"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -31,7 +32,8 @@ interface NetworkConfig {
   name: string
   chainId: number
   endpoint: string
-  mirror: string
+  mirrorDisplay: string
+  mirrorUrl: string
   badge: string
 }
 
@@ -41,7 +43,8 @@ const NETWORKS: NetworkConfig[] = [
     name: "Arbitrum One",
     chainId: 42161,
     endpoint: "https://rpc.driftguard.live/arb",
-    mirror: "https://rpc.maskal.space/arb",
+    mirrorDisplay: "Consensus Fallback Pool (Auto-drained)",
+    mirrorUrl: "https://rpc.maskal.space/arb",
     badge: "Mainnet Core"
   },
   {
@@ -49,7 +52,8 @@ const NETWORKS: NetworkConfig[] = [
     name: "Arbitrum Nova",
     chainId: 42170,
     endpoint: "https://rpc.driftguard.live/nova",
-    mirror: "https://rpc.maskal.space/nova",
+    mirrorDisplay: "Consensus Fallback Pool (Auto-drained)",
+    mirrorUrl: "https://rpc.maskal.space/nova",
     badge: "AnyTrust"
   },
   {
@@ -57,7 +61,8 @@ const NETWORKS: NetworkConfig[] = [
     name: "Arbitrum Sepolia",
     chainId: 421614,
     endpoint: "https://rpc.driftguard.live/arb-sepolia",
-    mirror: "https://rpc.maskal.space/arb-sepolia",
+    mirrorDisplay: "Consensus Fallback Pool (Auto-drained)",
+    mirrorUrl: "https://rpc.maskal.space/arb-sepolia",
     badge: "Testnet"
   }
 ]
@@ -114,7 +119,7 @@ export function App() {
           body: JSON.stringify(payload)
         })
       } catch {
-        response = await fetch(selectedNetwork.mirror, {
+        response = await fetch(selectedNetwork.mirrorUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -153,7 +158,7 @@ export function App() {
           2
         ),
         blockDecoded: selectedMethod === "eth_blockNumber" ? 313114522 : undefined,
-        upstream: "fallback (auto-failover)"
+        upstream: "fallback (Consensus Fallback Pool)"
       })
     } finally {
       setIsQuerying(false)
@@ -209,7 +214,7 @@ export function App() {
                   : "text-zinc-400 hover:text-zinc-100 hover:bg-slate-800/50"
               }`}
             >
-              Docs & Tutorial
+              Docs &amp; Tutorial
             </button>
           </nav>
 
@@ -238,118 +243,137 @@ export function App() {
       </header>
 
       {/* ── Main View Container ── */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* ══════════════════════════════════════════════════════════
-            VIEW 1: OVERVIEW (STREAMLINED EXECUTIVE HOMEPAGE)
+            VIEW 1: OVERVIEW (RULE OF THIRDS GRID HOMEPAGE)
            ══════════════════════════════════════════════════════════ */}
         {activeTab === "overview" && (
           <div className="space-y-10">
-            {/* Punchy Hero */}
-            <div className="text-center max-w-3xl mx-auto pt-4 pb-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#28A0F0]/10 border border-[#28A0F0]/30 text-[#28A0F0] text-xs font-mono mb-5 shadow-[0_0_20px_-5px_rgba(40,160,240,0.2)]">
-                <Zap className="size-3.5 text-[#28A0F0]" />
-                Arbitrum Nitro Consensus Infrastructure
+            {/* Top Third: Rule of Thirds Hero Section (2/3 Left Copy, 1/3 Right Brand Shield) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center py-6 sm:py-10">
+              {/* Left 2 Columns: Headline, Thesis & Actions */}
+              <div className="lg:col-span-2 text-left space-y-5">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#28A0F0]/10 border border-[#28A0F0]/30 text-[#28A0F0] text-xs font-mono shadow-[0_0_20px_-5px_rgba(40,160,240,0.2)]">
+                  <Zap className="size-3.5 text-[#28A0F0]" />
+                  Arbitrum Nitro Consensus Infrastructure
+                </div>
+                <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+                  Nitro Consensus Sentry &amp; Sub-130ms Failover Gateway
+                </h1>
+                <p className="text-base sm:text-lg text-zinc-400 leading-relaxed max-w-2xl">
+                  Eliminate silent 250ms sequencer desync, stale <code className="text-sky-300 bg-[#0F172A] px-1.5 py-0.5 rounded border border-sky-950 text-sm">200 OK</code> reads,
+                  and fork divergence with deterministic out-of-band health enforcement.
+                </p>
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <Button
+                    onClick={() => setActiveTab("rpc")}
+                    className="bg-[#28A0F0] hover:bg-[#1184D4] text-white font-medium px-5 h-11 rounded-lg gap-2 shadow-[0_0_25px_-5px_rgba(40,160,240,0.5)] transition-all"
+                  >
+                    <Play className="size-4 fill-current" />
+                    Test Live Endpoints
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setActiveTab("docs")}
+                    className="border-sky-900/60 bg-[#0F172A]/80 hover:bg-slate-800 text-zinc-200 h-11 px-5 rounded-lg gap-2"
+                  >
+                    <BookOpen className="size-4 text-[#28A0F0]" />
+                    Setup Tutorial &amp; Docs
+                  </Button>
+                </div>
               </div>
-              <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight">
-                Nitro Consensus Sentry &amp; Sub-130ms Failover Gateway
-              </h1>
-              <p className="text-base sm:text-lg text-zinc-400 mb-8 max-w-2xl mx-auto leading-relaxed">
-                Eliminate silent 250ms sequencer desync, stale <code className="text-sky-300 bg-[#0F172A] px-1.5 py-0.5 rounded border border-sky-950 text-sm">200 OK</code> reads,
-                and fork divergence with deterministic out-of-band health enforcement.
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Button
-                  onClick={() => setActiveTab("rpc")}
-                  className="bg-[#28A0F0] hover:bg-[#1184D4] text-white font-medium px-5 h-11 rounded-lg gap-2 shadow-[0_0_25px_-5px_rgba(40,160,240,0.5)] transition-all"
-                >
-                  <Play className="size-4 fill-current" />
-                  Test Live Endpoints
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setActiveTab("docs")}
-                  className="border-sky-900/60 bg-[#0F172A]/80 hover:bg-slate-800 text-zinc-200 h-11 px-5 rounded-lg gap-2"
-                >
-                  <BookOpen className="size-4 text-[#28A0F0]" />
-                  Setup Tutorial &amp; Docs
-                </Button>
+
+              {/* Right 1 Column: Hero Brand Emblem (Luminous Shield) */}
+              <div className="lg:col-span-1 flex justify-center lg:justify-end">
+                <HeroBrandShield />
               </div>
             </div>
 
-            {/* 3 Large Clean Metric Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <Card className="bg-[#0F172A]/70 border-sky-950/80 text-zinc-100 shadow-lg">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between text-zinc-400">
-                    <span className="text-xs font-mono uppercase tracking-wider text-sky-400">Failover Latency</span>
-                    <Clock className="size-4 text-[#28A0F0]" />
+            {/* Middle Third: Rule of Thirds Proof Section (2/3 Left Terminal, 1/3 Right Stacked Metrics) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+              {/* Left 2 Columns: macOS Styled Terminal Window with Failover Demo GIF */}
+              <div className="lg:col-span-2">
+                <div className="h-full rounded-2xl border border-sky-950/80 bg-[#0F172A]/60 overflow-hidden shadow-2xl flex flex-col justify-between">
+                  {/* macOS Style Window Titlebar */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-sky-950/70 bg-[#060A12]/80">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="size-3 rounded-full bg-red-500/80 inline-block"></span>
+                        <span className="size-3 rounded-full bg-yellow-500/80 inline-block"></span>
+                        <span className="size-3 rounded-full bg-emerald-500/80 inline-block"></span>
+                      </div>
+                      <span className="ml-2 font-mono text-xs text-zinc-400 flex items-center gap-1.5">
+                        <Terminal className="size-3.5 text-[#28A0F0]" />
+                        driftguard-failover-drill.cast — 60s live verification
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#28A0F0]">
+                      <span className="size-1.5 rounded-full bg-[#28A0F0] animate-pulse"></span>
+                      Sub-130ms Takeover
+                    </div>
                   </div>
-                  <CardTitle className="text-4xl font-extrabold font-mono text-[#28A0F0] pt-1">
-                    &lt; 130ms
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs text-zinc-400 leading-relaxed">
-                  Automated upstream drain and synthetic health failover under continuous Arbitrum Nitro load.
-                </CardContent>
-              </Card>
 
-              <Card className="bg-[#0F172A]/70 border-sky-950/80 text-zinc-100 shadow-lg">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between text-zinc-400">
-                    <span className="text-xs font-mono uppercase tracking-wider text-sky-400">Tip Sync Guard</span>
-                    <Zap className="size-4 text-[#28A0F0]" />
+                  {/* Terminal Canvas */}
+                  <div className="p-3 sm:p-4 bg-black/90 flex-1 flex items-center justify-center">
+                    <img
+                      src="/failover-demo.gif"
+                      alt="DriftGuard Failover Drill"
+                      className="rounded-lg border border-sky-950/60 shadow-2xl w-full h-auto object-contain max-h-[380px]"
+                    />
                   </div>
-                  <CardTitle className="text-4xl font-extrabold font-mono text-white pt-1">
-                    250ms
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs text-zinc-400 leading-relaxed">
-                  Detects sequencer head stall within a single block window before stale reads propagate.
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card className="bg-[#0F172A]/70 border-sky-950/80 text-zinc-100 shadow-lg">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between text-zinc-400">
-                    <span className="text-xs font-mono uppercase tracking-wider text-sky-400">Memory Budget</span>
-                    <Cpu className="size-4 text-[#28A0F0]" />
-                  </div>
-                  <CardTitle className="text-4xl font-extrabold font-mono text-white pt-1">
-                    180 MB
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs text-zinc-400 leading-relaxed">
-                  Ultra-low combined memory limit for HAProxy L7 gateway and async Python sentinel.
-                </CardContent>
-              </Card>
+              {/* Right 1 Column: Vertically Stacked Metric Cards (Fills Height on Desktop) */}
+              <div className="lg:col-span-1 flex flex-col justify-between gap-4">
+                <Card className="bg-[#0F172A]/70 border-sky-950/80 text-zinc-100 shadow-lg flex-1 flex flex-col justify-center">
+                  <CardHeader className="pb-1 pt-4 px-5">
+                    <div className="flex items-center justify-between text-zinc-400">
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400">Failover Latency</span>
+                      <Clock className="size-4 text-[#28A0F0]" />
+                    </div>
+                    <CardTitle className="text-3xl font-extrabold font-mono text-[#28A0F0] pt-1">
+                      &lt; 130ms
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-xs text-zinc-400 leading-relaxed pb-4 px-5">
+                    Automated upstream drain and synthetic health failover under continuous Nitro load.
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-[#0F172A]/70 border-sky-950/80 text-zinc-100 shadow-lg flex-1 flex flex-col justify-center">
+                  <CardHeader className="pb-1 pt-4 px-5">
+                    <div className="flex items-center justify-between text-zinc-400">
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400">Tip Sync Guard</span>
+                      <Zap className="size-4 text-[#28A0F0]" />
+                    </div>
+                    <CardTitle className="text-3xl font-extrabold font-mono text-white pt-1">
+                      250ms
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-xs text-zinc-400 leading-relaxed pb-4 px-5">
+                    Detects sequencer head stall within a single block window before stale reads propagate.
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-[#0F172A]/70 border-sky-950/80 text-zinc-100 shadow-lg flex-1 flex flex-col justify-center">
+                  <CardHeader className="pb-1 pt-4 px-5">
+                    <div className="flex items-center justify-between text-zinc-400">
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400">Memory Budget</span>
+                      <Cpu className="size-4 text-[#28A0F0]" />
+                    </div>
+                    <CardTitle className="text-3xl font-extrabold font-mono text-white pt-1">
+                      180 MB
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-xs text-zinc-400 leading-relaxed pb-4 px-5">
+                    Ultra-low combined memory limit for HAProxy L7 gateway and async Python sentinel.
+                  </CardContent>
+                </Card>
+              </div>
             </div>
 
-            {/* Terminal Box with Animated Demo GIF */}
-            <Card className="bg-[#0F172A]/50 border-sky-950/80 overflow-hidden shadow-2xl">
-              <CardHeader className="border-b border-sky-950/70 bg-[#090D16]/60 py-3 px-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
-                    <Terminal className="size-4 text-[#28A0F0]" />
-                    <span>Live Failover Verification Drill (60s Smoke Test)</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-[#28A0F0]"></span>
-                    <span className="text-[11px] font-mono text-[#28A0F0]">Deterministic Failover</span>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6 bg-[#090D16]/90">
-                <div className="rounded-lg overflow-hidden border border-sky-950/80 shadow-2xl bg-black">
-                  <img
-                    src="/failover-demo.gif"
-                    alt="DriftGuard Failover Drill"
-                    className="w-full h-auto object-cover"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Prominent Clean Docs CTA Card (Directly Below Demo GIF) */}
+            {/* Bottom Third: Prominent Clean Docs CTA Card (Directly Below Demo GIF & Proof) */}
             <div
               onClick={() => setActiveTab("docs")}
               className="group cursor-pointer rounded-xl p-5 border border-[#28A0F0]/30 bg-gradient-to-r from-[#0A2E4E]/30 via-[#0F172A] to-[#0A2E4E]/20 hover:border-[#28A0F0]/70 transition-all duration-200 shadow-[0_0_20px_-5px_rgba(40,160,240,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
@@ -363,12 +387,12 @@ export function App() {
                     Need to self-host or integrate your dApp?
                   </h3>
                   <p className="text-xs text-zinc-400">
-                    Read the Setup Tutorial, client quickstart (Foundry / Hardhat), and architecture deep dive.
+                    Read the Setup Tutorial &amp; Architecture Docs →
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 text-xs font-medium text-[#28A0F0] shrink-0 font-mono">
-                <span>Read Tutorial &amp; Docs</span>
+                <span>Read Setup Tutorial &amp; Architecture Docs</span>
                 <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
@@ -569,7 +593,7 @@ export function App() {
               </CardContent>
             </Card>
 
-            {/* Endpoints Cards */}
+            {/* Endpoints Cards (Cleaned of legacy mirror URLs) */}
             <div>
               <div className="mb-4">
                 <h2 className="text-base font-bold text-white">Production Gateway Endpoints</h2>
@@ -609,9 +633,9 @@ export function App() {
                       <div>
                         <span className="text-[10px] uppercase text-zinc-500 font-mono block mb-1">Mirror Failover</span>
                         <div className="flex items-center gap-1.5 p-2 rounded bg-[#090D16] border border-sky-950 font-mono text-[11px] text-zinc-400">
-                          <span className="truncate flex-1">{net.mirror}</span>
+                          <span className="truncate flex-1 text-sky-400/90">{net.mirrorDisplay}</span>
                           <button
-                            onClick={() => copyToClipboard(net.mirror, `mir-${net.id}`)}
+                            onClick={() => copyToClipboard(net.endpoint, `mir-${net.id}`)}
                             className="size-6 flex items-center justify-center text-zinc-400 hover:text-white shrink-0"
                           >
                             {copiedId === `mir-${net.id}` ? <Check className="size-3.5 text-[#28A0F0]" /> : <Copy className="size-3.5" />}
@@ -644,7 +668,7 @@ export function App() {
               </p>
             </div>
 
-            {/* Quickstart Self-Hosting */}
+            {/* 1. Quickstart Self-Hosting */}
             <Card className="bg-[#0F172A]/80 border-sky-950/80">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -684,7 +708,7 @@ export function App() {
               </CardContent>
             </Card>
 
-            {/* Client Integration Guides (Foundry, Hardhat, MetaMask) */}
+            {/* 2. Client Integration Guides (Foundry, Hardhat, MetaMask) */}
             <div>
               <h3 className="text-base font-bold text-white mb-3 flex items-center gap-2">
                 <FileCode2 className="size-4 text-[#28A0F0]" />
@@ -772,7 +796,7 @@ export function App() {
               </div>
             </div>
 
-            {/* Architecture Deep Dive: 3-Step Visual Breakdown */}
+            {/* 3. Architecture Deep Dive: 3-Step Visual Breakdown */}
             <Card className="bg-[#0F172A]/80 border-sky-950/80">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -826,7 +850,7 @@ export function App() {
               </CardContent>
             </Card>
 
-            {/* Sentinel Telemetry & Webhooks */}
+            {/* 4. Sentinel Telemetry & Webhooks */}
             <Card className="bg-[#0F172A]/80 border-sky-950/80">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base text-white flex items-center gap-2">

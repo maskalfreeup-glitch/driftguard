@@ -251,15 +251,15 @@ export function App() {
             <div className="text-center space-y-4 max-w-2xl mx-auto pt-2 sm:pt-6">
               <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-zinc-900/80 border border-zinc-800 text-[11px] font-mono text-zinc-400 tracking-wider uppercase">
                 <span className="size-1.5 rounded-full bg-[#28A0F0] animate-pulse" />
-                Arbitrum Orbit L3 &amp; Game Studio Sidecar
+                Arbitrum Orbit L3 &amp; High-Throughput Ingress
               </div>
 
               <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight text-white leading-tight">
-                Turnkey Consensus Sentry &amp; L7 Ingress Sidecar for Arbitrum Orbit Chains &amp; High-Frequency Web3 Engines
+                Turnkey Consensus Sentry &amp; L7 Ingress Sidecar for Arbitrum Orbit Chains, Session Relayers &amp; High-Throughput dApps
               </h1>
 
               <p className="text-sm sm:text-base text-zinc-400 max-w-xl mx-auto leading-relaxed">
-                Eliminate silent 250ms sequencer desync, stale 200 OK reads, and ghost items with deterministic out-of-band health enforcement. Sub-130ms failover with 0 dropped packets.
+                Eliminate silent 250ms sequencer desync, stale 200 OK reads, and relayer nonce failures with deterministic out-of-band health enforcement. Sub-130ms failover with 0 dropped packets.
               </p>
 
               <div className="flex items-center justify-center gap-3 pt-2">
@@ -558,20 +558,20 @@ export function App() {
               </p>
             </div>
 
-            {/* 1. Arbitrum Orbit L3 & Studio Deployment (1-Command Sidecar) */}
+            {/* 1. Arbitrum Orbit L3 & High-Throughput Ingress (1-Command Sidecar) */}
             <Card className="specular-border bg-zinc-900/40 border-zinc-800/80 shadow-xl">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
                     <Gamepad2 className="size-4 text-[#28A0F0]" />
-                    1. Arbitrum Orbit L3 &amp; Studio Deployment (1-Command Sidecar)
+                    1. Arbitrum Orbit L3 &amp; High-Throughput Ingress (1-Command Sidecar)
                   </CardTitle>
                   <Badge variant="outline" className="border-zinc-800 text-[#28A0F0] text-xs font-mono">
                     Zero Client Changes
                   </Badge>
                 </div>
                 <CardDescription className="text-xs text-zinc-400">
-                  Drop DriftGuard directly into your Orbit validator or game server docker-compose stack. Run local L7 ingress at <code className="text-zinc-300 font-mono">http://localhost:8545</code> with sub-130ms failover.
+                  Drop DriftGuard directly into your Orbit validator, session relayer, or game server docker-compose stack. Run local L7 ingress at <code className="text-zinc-300 font-mono">http://localhost:8545</code> with sub-130ms failover.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -595,7 +595,7 @@ export function App() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
                   <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800/60">
-                    <div className="text-[11px] font-semibold text-white mb-1">Local Ingress (:8545)</div>
+                    <div className="text-[11px] font-semibold text-white mb-1">Local JSON-RPC Ingress (:8545)</div>
                     <div className="text-[11px] text-zinc-400 leading-snug">
                       High-throughput HAProxy L7 sidecar listening on loopback with &lt;1ms C-runtime routing overhead.
                     </div>
@@ -603,26 +603,26 @@ export function App() {
                   <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800/60">
                     <div className="text-[11px] font-semibold text-white mb-1">Silent Stall Guard</div>
                     <div className="text-[11px] text-zinc-400 leading-snug">
-                      Drains delinquent sequencer nodes via UNIX socket when drift exceeds 4 blocks (~1s) before players desync.
+                      Drains delinquent sequencer nodes via UNIX socket when drift exceeds 4 blocks (~1s) before relayers desync.
                     </div>
                   </div>
                   <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800/60">
-                    <div className="text-[11px] font-semibold text-white mb-1">Zero Code Changes</div>
+                    <div className="text-[11px] font-semibold text-white mb-1">Zero Relayer Changes</div>
                     <div className="text-[11px] text-zinc-400 leading-snug">
-                      Point Viem, Ethers, Unity C#, or Unreal Engine directly to localhost without custom failover wrappers.
+                      Point Viem, Ethers, Go-Ethereum, or C# Nethereum directly to localhost without custom failover wrappers.
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
                   <a
-                    href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/guides/ORBIT_GAMING_INTEGRATION.md"
+                    href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md"
                     target="_blank"
                     rel="noreferrer"
                     className="text-xs text-[#28A0F0] hover:underline flex items-center gap-1 font-medium"
                   >
                     <BookOpen className="size-3" />
-                    <span>Read 3-Step Orbit Game Studio Setup Guide →</span>
+                    <span>Read High-Throughput Ingress Guide →</span>
                   </a>
                   <a
                     href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/PILOT_PARTNER_LOI.md"
@@ -930,7 +930,7 @@ MAX_ALLOWED_BLOCK_DRIFT=2`}</pre>
           <div className="flex items-center gap-2">
             <span className="font-medium text-zinc-300">DriftGuard</span>
             <span>•</span>
-            <span className="text-zinc-400">Orbit L3 &amp; Web3 Gaming Sidecar Ingress</span>
+            <span className="text-zinc-400">Orbit L3, Session Relayers &amp; High-Throughput Sidecar Ingress</span>
             <span>•</span>
             <span>MIT License</span>
           </div>

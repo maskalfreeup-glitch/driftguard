@@ -2,34 +2,34 @@
 
 **Document Reference:** `LOI-2026-ORBIT-001`  
 **Effective Date:** October 2026  
-**Subject:** Technical Evaluation & Pilot Deployment of DriftGuard Sidecar Ingress for Arbitrum Orbit L3 Gaming Chains  
+**Subject:** Technical Evaluation & Pilot Deployment of DriftGuard Sidecar Ingress for Arbitrum Orbit Chains, Dedicated Game Servers & Session Relayers  
 **Status:** Active Pilot Evaluation (Phase 1)
 
 ---
 
 ## 1. Parties & Background
 
-This Letter of Intent and Technical Evaluation Agreement is established between the **DriftGuard Core Maintainers** and the **Orbit Gaming Studio Pilot Working Group** (representing developers of high-frequency on-chain gaming ecosystems and autonomous worlds deploying dedicated Arbitrum Orbit rollups).
+This Letter of Intent and Technical Evaluation Agreement is established between the **DriftGuard Core Maintainers** and the **Orbit Appchain & Dedicated Game Server Working Group** (representing developers of high-frequency on-chain ecosystems, authoritative game server clusters, and session relayer networks deploying dedicated Arbitrum Orbit rollups).
 
 ### Background & Context
-Web3 game engines operating on Arbitrum Orbit L3 rollups rely on sub-250ms Nitro block velocity to deliver real-time on-chain interactions (such as character movement, inventory item trading, skill actions, and match matchmaking). 
+Authoritative game servers (Node.js, Go, C# Nethereum), ERC-4337 bundlers, and session key relayers operating on Arbitrum Orbit L3 rollups rely on sub-250ms Nitro block velocity to process high volumes of concurrent transactions. All client communication with the blockchain is conducted over standard EVM JSON-RPC (HTTP and WebSockets).
 
-During intense gameplay sessions, game servers and player clients submit hundreds of concurrent transactions per second to the local sequencer or RPC cluster. If an RPC node experiences even a momentary 2-second sequencer head stall while continuing to respond with `HTTP 200 OK` (the "Silent 200 OK" problem), catastrophic player-facing failures occur:
-1. **Transaction Reversion ("Nonce Too Low"):** Outdated nonce reads cause transaction pipelines to choke and revert on-chain.
-2. **Ghost Items & Inventory Inconsistency:** Players see missing or duplicated assets during high-frequency client polling.
-3. **Player Churn & Game Engine Freezes:** Clients enter infinite retry loops, freezing user interfaces and breaking session continuity.
+During peak workloads, backend game servers and account abstraction relayers dispatch hundreds of concurrent transactions per second to the local sequencer or RPC cluster. If an upstream RPC node experiences even a momentary 2-second sequencer head stall while continuing to respond with `HTTP 200 OK` (the "Silent 200 OK" problem), catastrophic failures occur:
+1. **Relayer Nonce Desynchronization ("Nonce Too Low"):** `eth_getTransactionCount` returns outdated nonces from the stalled node. Concurrently signed transactions are rejected by the canonical sequencer with `nonce too low`, blocking the relayer's transaction pipeline.
+2. **State Inconsistency & Ghost Items:** High-frequency balance, inventory, and session key verification calls return pre-transaction state, causing state divergence.
+3. **Cascading Server Retries:** Backend queues back up, triggering unhandled connection timeouts and session disconnections.
 
-Traditional cloud load balancers (AWS ALB, Cloudflare, standard Nginx) lack consensus awareness and cannot detect silent sequencer stalls. DriftGuard provides a turnkey, low-footprint sidecar that solves this without requiring any modifications to the game client or game server code.
+Traditional cloud load balancers (AWS ALB, Cloudflare, standard NGINX) lack consensus awareness and cannot detect silent sequencer stalls. DriftGuard provides a turnkey, low-footprint sidecar that protects backend game servers, paymasters, and relayers from stale nonce desyncs without requiring any modifications to client libraries or server application logic.
 
 ---
 
 ## 2. Purpose & Objectives of Pilot Evaluation
 
-The purpose of this pilot engagement is to evaluate and validate DriftGuard as the default, turnkey ingress sidecar across Orbit L3 gaming infrastructure. 
+The purpose of this pilot engagement is to evaluate and validate DriftGuard as the default, turnkey ingress sidecar across Orbit L3 validator nodes, dedicated game servers, and session relayers.
 
 ### Key Objectives:
 1. **Zero-Drop Failover:** Verify that DriftGuard intercepts sequencer stalls and automatically redirects JSON-RPC read/write traffic to secondary fallback nodes in under 150ms with 0.00% dropped HTTP connections.
-2. **Zero Code Modifications:** Confirm that game clients (Unity, Unreal Engine, WebGL) and backend game services (Node.js, Go, Rust) point to `http://localhost:8545` without requiring custom Web3 failover libraries or SDK wrappers.
+2. **Zero Code Modifications:** Confirm that authoritative game servers (Node.js, Go, C#) and relayer daemons point to `http://localhost:8545` over standard JSON-RPC without requiring custom Web3 failover libraries or SDK wrappers.
 3. **Lightweight Resource Budget:** Ensure the complete DriftGuard sidecar stack (HAProxy data plane + Async Python Sentinel + Redis cache) runs reliably within a strict 180 MiB container memory ceiling alongside the studio's Orbit Nitro validator nodes.
 4. **Actionable Operational Alerting:** Validate automated Discord/Slack incident dispatches during consensus anomalies to ensure studio DevOps teams receive immediate, actionable context.
 
@@ -40,7 +40,7 @@ The purpose of this pilot engagement is to evaluate and validate DriftGuard as t
 The evaluation covers three deployment environments:
 
 ### Environment A: Local Development & CI/CD Game Server Stack
-- **Topology:** `docker-compose` stack running the game server backend, a local Nitro dev node, and DriftGuard as an ingress sidecar.
+- **Topology:** `docker-compose` stack running the dedicated game server backend, a local Nitro dev node, and DriftGuard as an ingress sidecar.
 - **Verification:** Chaos injection using `./scripts/test_failover.sh` during automated integration test runs.
 
 ### Environment B: Staging Orbit L3 Rollup Cluster
@@ -48,7 +48,7 @@ The evaluation covers three deployment environments:
 - **Load Profile:** Sustained high-frequency synthetic player traffic generated by `autocannon` (500–2,000 req/s) with intermittent node restarts and synthetic block drift injection.
 
 ### Environment C: Production Canary Ingress
-- **Topology:** Dedicated canary RPC ingress routing a slice of live player traffic on the studio's public Orbit L3 mainnet.
+- **Topology:** Dedicated canary RPC ingress routing a slice of live relayer and server traffic on the studio's public Orbit L3 mainnet.
 
 ---
 
@@ -62,7 +62,7 @@ To achieve production certification and full ecosystem deployment, DriftGuard mu
 | **Client Error Rate Under Failover** | **0.00% (Zero 5xx)** | Autocannon load testing during primary drain | **PASSED (0 drops / 827 reqs)** |
 | **Silent Desync Detection** | **≤ 4 Nitro blocks** | Injected 14-block Arbitrum One stall | **PASSED (Incident INC-20261004-ARB1)** |
 | **Total Memory Overhead** | **< 180 MiB RAM** | `docker stats` continuous RSS measurement | **PASSED (~42–66 MiB RSS)** |
-| **Zero Client Changes** | **100% Drop-in** | Viem / Ethers / Unity Web3 SDK unmodified config | **PASSED (`http://localhost:8545`)** |
+| **Zero Relayer Changes** | **100% Drop-in** | Viem / Ethers / Go / C# standard JSON-RPC config | **PASSED (`http://localhost:8545`)** |
 | **Automated Audit Telemetry** | **Sub-second alert** | Discord webhook with block delta & cutover time | **PASSED (`sentinel/alerts.py`)** |
 
 ---
@@ -74,8 +74,8 @@ To achieve production certification and full ecosystem deployment, DriftGuard mu
   - Verification of autocannon benchmark suite (20.9 req/s baseline, 0% drops, p50 237ms).
   - Validation of October 4, 2026 Arbitrum One live desync triage post-mortem ([docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md](reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md)).
 
-- **Milestone 2: Orbit L3 Integration Guide & Docker Preset (Current)**
-  - Publication of turnkey 3-step Docker Compose integration guide for game studios ([docs/guides/ORBIT_GAMING_INTEGRATION.md](guides/ORBIT_GAMING_INTEGRATION.md)).
+- **Milestone 2: High-Throughput Ingress Guide & Docker Preset (Current)**
+  - Publication of turnkey 3-step Docker Compose integration guide for game servers & relayers ([docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md](guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md)).
   - Harmonization of Arbitrum Orbit L3 chain configuration presets in `sentinel/config/chains.yaml`.
 
 - **Milestone 3: Staging Orbit Cluster Testing (Q4 2026)**
@@ -98,6 +98,6 @@ To achieve production certification and full ecosystem deployment, DriftGuard mu
 Date: October 2026  
 
 **For Orbit Ecosystem Gaming Studio Working Group:**  
-*Head of Infrastructure & Web3 Game Systems*  
-`Gaming Studio Infrastructure Lead`  
+*Head of Infrastructure & Web3 Systems*  
+`Appchain Infrastructure Lead`  
 Date: October 2026  

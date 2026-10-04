@@ -1,4 +1,4 @@
-# DriftGuard: Turnkey Consensus Sentry & L7 Ingress Sidecar for Arbitrum Orbit Rollups & Web3 Game Engines
+# DriftGuard: Turnkey Consensus Sentry & L7 Ingress Sidecar for Arbitrum Orbit Rollups, Session Relayers & High-Throughput dApps
 
 [![Status](https://img.shields.io/badge/status-active-emerald.svg)](https://github.com/maskalfreeup-glitch/driftguard)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/DZBDJSsSzN)
@@ -7,13 +7,13 @@
 [![Patreon](https://img.shields.io/badge/patreon-sponsor-orange.svg?logo=patreon)](https://patreon.com/maskal)
 [![GitHub Sponsors](https://img.shields.io/badge/sponsor-GitHub-ea4aaa.svg?logo=github)](https://github.com/sponsors/maskalfreeup-glitch)
 
-> **Note on Architecture & Scope:** DriftGuard is an open-source, deploy-and-forget sidecar package (Docker / Helm / Systemd) designed for Orbit L3 chains, validator clusters, and gaming studios to run in front of their own nodes. The endpoints at `driftguard.live` and `rpc.driftguard.live` serve exclusively as a free, publicly auditable reference testbed demonstrating zero-packet-drop failover under production load.
+> **Note on Architecture & Scope:** DriftGuard is an open-source, deploy-and-forget sidecar package (Docker / Helm / Systemd) designed for Orbit L3 chains, validator clusters, session relayers, and dedicated game servers to run in front of their own nodes. The endpoints at `driftguard.live` and `rpc.driftguard.live` serve exclusively as a free, publicly auditable reference testbed demonstrating zero-packet-drop failover under production load.
 
 ---
 
 DriftGuard combines an ultra-fast HAProxy JSON-RPC L7 gateway with an asynchronous Python consensus sentinel (FastAPI + asyncio + Redis). It continuously monitors chain identity, Nitro sequencer head velocity, syncing state, and an independent canonical reference anchor before HAProxy marks an upstream healthy. 
 
-Engineered specifically as a lightweight local sidecar (<180 MiB RAM), DriftGuard shields Web3 game engines, autonomous worlds, and Orbit L3 validator clusters from silent RPC stalls, preserving continuous transaction submission and consistent client reads without requiring client SDK modifications.
+Client communication is standard EVM JSON-RPC over HTTP and WebSockets: DriftGuard protects backend game servers, ERC-4337 paymasters, session relayers, and trading daemons from stale nonce desyncs and sequencer head stalls. Engineered specifically as a lightweight local sidecar (<180 MiB RAM), DriftGuard shields high-throughput dApps and Orbit validator clusters from silent RPC stalls, preserving continuous transaction submission and consistent client reads without requiring client SDK modifications.
 
 ---
 
@@ -84,18 +84,18 @@ cd ~/driftguard
 
 ---
 
-## 🎯 The Core Problem: Silent 200 OK Staleness in Orbit & Web3 Gaming
+## 🎯 The Core Problem: Silent 200 OK Staleness in Orbit Rollups & High-Throughput Relayers
 
 Arbitrum Nitro sequencers process micro-batches at rapid ~250ms cadence. Standard cloud load balancers (AWS ALB, Cloudflare, standard NGINX) rely strictly on transport health (`TCP connect`, `HTTP 200 OK`). 
 
 When an Orbit L3 chain node or validator ingress encounters a sequencer stall or internal buffer saturation, it produces catastrophic, silent failures that traditional balancers cannot see:
 
 1. **Nonce Desynchronization ("Nonce Too Low" Reverts):**  
-   If a node freezes even 10 blocks behind (~2.5s) while continuing to return `HTTP 200 OK`, `eth_getTransactionCount` calls return obsolete nonces. Player transactions submitted through the game engine immediately revert with `nonce too low`, locking up account transaction queues.
-2. **Inventory & State Desyncs ("Ghost Items"):**  
-   High-frequency player clients continuously poll the RPC endpoint for inventory transfers, cooldowns, and combat results. When routed to a stalled node, newly minted items disappear from player inventories ("ghost items") or duplicate transactions get dispatched.
+   If a node freezes even 10 blocks behind (~2.5s) while continuing to return `HTTP 200 OK`, `eth_getTransactionCount` calls return obsolete nonces. Concurrently signed transactions dispatched through session relayers, paymasters, or backend game servers immediately revert on-chain with `nonce too low`, stalling account transaction queues.
+2. **State & Inventory Desyncs ("Ghost Items"):**  
+   High-frequency client polling and authoritative server tick loops receive pre-transaction state. Transferred items or updated session states disappear from immediate reads, triggering unhandled retry loops or duplicate submissions.
 3. **Unpredictable Failover Latency in Custom Rollup Environments:**  
-   In custom Orbit L3 architectures with dedicated sequencers and batch posters, naive load balancers take 10–30 seconds to trip HTTP health-check timeouts. This stall window causes game clients to hang, session keys to fail validation, and players to disconnect.
+   In custom Orbit L3 architectures with dedicated sequencers and batch posters, naive load balancers take 10–30 seconds to trip HTTP health-check timeouts. This stall window causes relayer backpressure, session keys to fail validation, and player dropouts.
 
 DriftGuard eliminates this entirely: an out-of-band asynchronous consensus sentinel checks tip progression and canonical anchors every 200ms, commanding HAProxy via a UNIX domain socket to drain stalled upstreams in **< 130ms** with zero dropped packets.
 
@@ -142,19 +142,19 @@ npx autocannon -c 10 -r 20 -d 30 -m POST \
 
 ---
 
-## 🕹️ Orbit L3 & Studio Integration (Zero Code Changes)
+## 🕹️ Orbit L3, Session Relayer & High-Throughput dApp Integration (Zero Code Changes)
 
-Game studios and Orbit L3 node operators can deploy DriftGuard as a local sidecar in front of their validator nodes or game backend servers with zero modifications to game code or Web3 SDKs.
+Infrastructure engineers, relayer operators, and dedicated game servers can deploy DriftGuard as a local sidecar in front of their validator nodes or backend daemons with zero modifications to client code or Web3 SDKs. Client communication operates over standard EVM JSON-RPC (HTTP and WebSockets).
 
-- **Full Setup Guide:** See the 3-step walk-through in [`docs/guides/ORBIT_GAMING_INTEGRATION.md`](docs/guides/ORBIT_GAMING_INTEGRATION.md).
+- **Full Setup Guide:** See the 3-step transport-layer walk-through in [`docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md`](docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md).
 
 ```typescript
-// Ethers / Viem / Web3.js in your game engine:
-// Simply point to your local DriftGuard sidecar!
+// Viem / Ethers / Web3.js in your authoritative game server or session relayer:
+// Simply point standard JSON-RPC transport to your local DriftGuard sidecar!
 import { createPublicClient, http } from "viem";
 
 export const client = createPublicClient({
-  transport: http("http://localhost:8545/arb"), // Zero code changes needed
+  transport: http("http://localhost:8545/arb"), // Standard JSON-RPC on loopback
 });
 ```
 
@@ -166,7 +166,7 @@ export const client = createPublicClient({
 
 ```
                       +-----------------------+
-                      | Game Client / Indexer | (Unity / Unreal / Browser / dApp)
+                      | Relayers & App Backends | (Game Servers / Viem / Go / C#)
                       +-----------+-----------+
                                   |
                                   v
@@ -207,7 +207,7 @@ export const client = createPublicClient({
 
 ```mermaid
 flowchart TD
-    Client["Game Clients (Unity / Unreal / Wallets)"] -->|HTTP JSON-RPC| HAP["HAProxy L7 Sidecar\n(:8545, mem_limit: 64M)"]
+    Client["Session Relayers & Dedicated Game Servers\n(Standard JSON-RPC :8545)"] -->|HTTP / WS JSON-RPC| HAP["HAProxy L7 Sidecar\n(:8545, mem_limit: 64M)"]
     
     HAP -->|Active Routing: Healthy| P["Primary RPC / Sequencer\n(Local Orbit Sequencer)"]
     HAP -.->|Failover: <130ms Socket Maint| F["Fallback RPC Pool\n(Backup Nitro Replica / Hosted)"]
@@ -407,9 +407,9 @@ make test
 ## 🤝 Ecosystem & Pilot Partners
 
 - **Grant Application Dossier:** Read the official Arbitrum Foundation grant application in [`ARBITRUM_GRANT_PROPOSAL.md`](ARBITRUM_GRANT_PROPOSAL.md).
-- **Pilot Partner LOI:** Review the gaming studio evaluation record in [`docs/PILOT_PARTNER_LOI.md`](docs/PILOT_PARTNER_LOI.md).
+- **Pilot Partner LOI:** Review the ecosystem evaluation record in [`docs/PILOT_PARTNER_LOI.md`](docs/PILOT_PARTNER_LOI.md).
 - **Incident Post-Mortem:** Read the October 4, 2026 14-block desync engineering report in [`docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md`](docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md).
-- **Studio Setup Guide:** Follow the 3-step sidecar deployment guide in [`docs/guides/ORBIT_GAMING_INTEGRATION.md`](docs/guides/ORBIT_GAMING_INTEGRATION.md).
+- **High-Throughput Ingress Guide:** Follow the 3-step sidecar deployment guide in [`docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md`](docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md).
 
 ---
 

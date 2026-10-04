@@ -13,7 +13,7 @@
 
 On October 4, 2026, at 18:42:12 UTC, the primary Arbitrum One upstream provider suffered an internal sequencer feed ingestion stall. For an interval of **3.5 seconds (~14 Arbitrum Nitro blocks)**, the primary provider's HTTP ingress continued responding with `HTTP 200 OK` while serving a frozen block tip of **`#511619835`**. Concurrently, the canonical Arbitrum One sequencer tip had advanced to **`#511619849`**.
 
-Under standard L4/L7 load balancers (such as AWS ALB, Cloudflare round-robin, or vanilla NGINX), this scenario represents a catastrophic **"Silent 200 OK" staleness failure**. High-frequency Web3 clients, dApps, and on-chain gaming runtimes querying the endpoint would have received stale nonces and outdated game state, causing subsequent player transactions to revert with `nonce too low` and desynchronizing inventory states ("ghost items").
+Under standard L4/L7 load balancers (such as AWS ALB, Cloudflare round-robin, or vanilla NGINX), this scenario represents a catastrophic **"Silent 200 OK" staleness failure**. Session relayers, ERC-4337 bundlers, dedicated game servers, and high-throughput dApps querying the endpoint would have received stale nonces and outdated contract state, causing subsequent relayer/user transactions to revert with `nonce too low` and desynchronizing on-chain states ("ghost items").
 
 DriftGuard's out-of-band asynchronous consensus sentinel detected the 14-block consensus divergence in its active polling loop, classified the primary node as delinquent, commanded the HAProxy L7 runtime engine via UNIX domain socket to drain the primary, and promoted the backup pool in **122.8 milliseconds**. Across 800+ concurrent requests sampled during the event, **zero requests were dropped (0.00% 5xx error rate)** and all player/client queries received valid canonical blocks. A structured audit embed was immediately dispatched to the Discord incident channel.
 
@@ -76,10 +76,10 @@ The upstream provider's ingress layer (Nginx/Envoy reverse proxy) was functionin
 ```
 However, the upstream node's Nitro sequence feed subscriber thread had deadlocked during a re-connection event. Consequently, the node stopped applying state updates to its local state database, but continued happily serving stale reads.
 
-### Impact on Web3 Games and Orbit L3 Rollups
-If an on-chain game engine (e.g. an Orbit L3 gaming chain or high-frequency game backend) had queried this node during those 3.5 seconds:
-1. **Nonce Desynchronization:** The client engine requests `eth_getTransactionCount(player_address, 'latest')`. The node returns nonce `142`. However, the player already executed an action in block `#511619842` bumping the on-chain nonce to `143`. The game engine signs and submits the transaction with nonce `142`, resulting in an instant on-chain revert: `nonce too low`.
-2. **State & Inventory "Ghost Items":** High-frequency inventory polling queries return pre-trade state. Items purchased 2 seconds earlier appear missing, prompting player confusion or duplicate purchase submissions.
+### Impact on Session Relayers, Game Servers & Orbit Rollups
+If an authoritative game server, paymaster, or session relayer had queried this node during those 3.5 seconds over standard JSON-RPC:
+1. **Nonce Desynchronization:** The relayer requests `eth_getTransactionCount(sender_address, 'latest')`. The node returns nonce `142`. However, a prior transaction already executed in block `#511619842` bumping the canonical on-chain nonce to `143`. The relayer signs and submits the transaction with nonce `142`, resulting in an instant on-chain revert: `nonce too low`.
+2. **State & Inventory "Ghost Items":** High-frequency inventory polling queries return pre-trade state. Items transferred 2 seconds earlier appear missing, prompting relayer retry loops or duplicate transaction submissions.
 3. **Session Key Invalidation:** Ephemeral session keys authorized in block `#511619840` return `unauthorized` when checked against block `#511619835`.
 
 ---
@@ -89,7 +89,7 @@ If an on-chain game engine (e.g. an Orbit L3 gaming chain or high-frequency game
 DriftGuard resolved this failure through a three-stage decoupled pipeline:
 
 ```
-[ Inbound Game Client / Player Requests ]
+[ Inbound JSON-RPC: Relayers / Game Servers / dApps ]
                   │
                   ▼
        ┌─────────────────────┐
@@ -167,8 +167,8 @@ Immediately upon initiating the socket drain, DriftGuard's alerting subsystem (`
 
 ---
 
-## 7. Conclusions & Recommendations for Orbit L3 / Game Studio Operators
+## 7. Conclusions & Recommendations for Orbit L3, Relayer & Game Server Operators
 
-1. **Deploy DriftGuard as a Local Sidecar:** Do not expose naked RPC endpoints directly to game servers or player clients. Running DriftGuard on `127.0.0.1:8545` or as a Kubernetes sidecar in front of studio nodes guarantees that internal sequencer stalls never leak into the game loop.
+1. **Deploy DriftGuard as a Local Sidecar:** Do not expose naked RPC endpoints directly to game servers, session relayers, or bundlers. Running DriftGuard on `127.0.0.1:8545` or as a Kubernetes sidecar in front of studio nodes guarantees that internal sequencer stalls never leak into transaction signing pipelines.
 2. **Tune Drift Threshold for Block Time:** For Orbit L3 chains operating with 100ms or 250ms block times, set `drift_threshold: 4` to catch stalls within 1 second.
 3. **Always Configure an Independent Fallback:** Even the most reliable node providers experience micro-stalls. A lightweight fallback pool (such as a local backup Nitro replica or hosted provider) combined with DriftGuard ensures 100% uptime with zero client code modifications.

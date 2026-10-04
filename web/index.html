@@ -266,7 +266,7 @@
           <span>Root Cause Analysis</span>
         </div>
         <h2 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-4">
-          The Problem: Silent 250ms Sequencer Desync & Stale "200 OK" Reads
+          The Problem: Silent 250ms Sequencer Drift & Stale "200 OK" Reads
         </h2>
         <p class="text-base sm:text-lg text-slate-400">
           Standard cloud load balancers (AWS ALB, NGINX, Cloudflare) check transport health: TCP socket connectivity and HTTP 200 status codes. On Arbitrum Nitro and fast EVM rollups, this blindspot is catastrophic.
@@ -284,7 +284,7 @@
             </svg>
           </div>
           <h3 class="text-xl font-bold text-white mb-3 flex items-center justify-between">
-            <span>Silent 250ms Sequencer Desync</span>
+            <span>Silent 250ms Sequencer Drift & Desync</span>
             <span class="text-xs font-mono px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">Critical</span>
           </h3>
           <p class="text-slate-400 text-sm leading-relaxed mb-4">
@@ -434,7 +434,7 @@
 
         <!-- Embedded GIF Demo -->
         <div class="p-2 sm:p-4 bg-slate-950 flex items-center justify-center">
-          <img src="evidence/failover-demo.gif" alt="DriftGuard Failover Demo" class="w-full h-auto rounded-lg shadow-inner border border-slate-900" loading="lazy">
+          <img src="failover-demo.gif" alt="DriftGuard Failover Demo" class="w-full h-auto rounded-lg shadow-inner border border-slate-900" loading="lazy">
         </div>
 
         <!-- Bottom Execution Phases -->

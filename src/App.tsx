@@ -17,7 +17,6 @@ import {
   AlertTriangle,
   Radio,
   FileCode2,
-  Gamepad2,
   ShieldCheck,
   ExternalLink
 } from "lucide-react"
@@ -558,20 +557,20 @@ export function App() {
               </p>
             </div>
 
-            {/* 1. Arbitrum Orbit L3 & High-Throughput Ingress (1-Command Sidecar) */}
+            {/* Step 1: Quickstart: 1-Command Ingress Sidecar */}
             <Card className="specular-border bg-zinc-900/40 border-zinc-800/80 shadow-xl">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
-                    <Gamepad2 className="size-4 text-[#28A0F0]" />
-                    1. Arbitrum Orbit L3 &amp; High-Throughput Ingress (1-Command Sidecar)
+                    <Terminal className="size-4 text-zinc-300" />
+                    1. Quickstart: 1-Command Ingress Sidecar
                   </CardTitle>
                   <Badge variant="outline" className="border-zinc-800 text-[#28A0F0] text-xs font-mono">
-                    Zero Client Changes
+                    Under 30s • Zero Relayer Changes
                   </Badge>
                 </div>
                 <CardDescription className="text-xs text-zinc-400">
-                  Drop DriftGuard directly into your Orbit validator, session relayer, or game server docker-compose stack. Run local L7 ingress at <code className="text-zinc-300 font-mono">http://localhost:8545</code> with sub-130ms failover.
+                  Spin up the HAProxy L7 gateway and async Python consensus sentinel in front of your Orbit validator, session relayer, or game server stack.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -583,13 +582,13 @@ export function App() {
                     onClick={() =>
                       copyToClipboard(
                         "git clone https://github.com/maskalfreeup-glitch/driftguard && cd driftguard && docker compose up -d",
-                        "quickstart-orbit"
+                        "quickstart-sidecar"
                       )
                     }
                     className="p-1 rounded text-zinc-400 hover:text-white bg-zinc-800/60 shrink-0"
                     title="Copy Command"
                   >
-                    {copiedId === "quickstart-orbit" ? <Check className="size-3.5 text-[#28A0F0]" /> : <Copy className="size-3.5" />}
+                    {copiedId === "quickstart-sidecar" ? <Check className="size-3.5 text-[#28A0F0]" /> : <Copy className="size-3.5" />}
                   </button>
                 </div>
 
@@ -614,7 +613,11 @@ export function App() {
                   </div>
                 </div>
 
-                <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-zinc-400 leading-relaxed pt-1">
+                  The gateway listens on <code className="text-zinc-300 bg-zinc-950 px-1 py-0.5 rounded border border-zinc-800 font-mono">http://localhost:8545/arb</code>. Upstream URLs, chain IDs, polling intervals, and alert webhooks are configured via <code className="text-zinc-300 bg-zinc-950 px-1 py-0.5 rounded border border-zinc-800 font-mono">.env</code>.
+                </p>
+
+                <div className="pt-1 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-800/60">
                   <a
                     href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md"
                     target="_blank"
@@ -637,119 +640,11 @@ export function App() {
               </CardContent>
             </Card>
 
-            {/* 2. Empirical Production Proof & Incident Audit */}
-            <Card className="specular-border bg-zinc-900/40 border-zinc-800/80 shadow-xl">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
-                    <ShieldCheck className="size-4 text-emerald-400" />
-                    2. Empirical Production Proof &amp; Incident Audit
-                  </CardTitle>
-                  <Badge variant="outline" className="border-emerald-900/80 bg-emerald-950/40 text-emerald-400 text-xs font-mono">
-                    SEV-2 Mitigated • 0 Drops
-                  </Badge>
-                </div>
-                <CardDescription className="text-xs text-zinc-400">
-                  Field-verified operational metrics from the October 4, 2026 live Arbitrum One 14-block sequencer desync and automated autocannon load benchmarks.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-lg bg-zinc-950 border border-zinc-800/80 font-mono text-xs">
-                  <div>
-                    <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Mitigated Stall</span>
-                    <span className="font-semibold text-white">14 Blocks (3.5s)</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Cutover Latency</span>
-                    <span className="font-semibold text-[#28A0F0]">122.8 ms</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Packet Drops</span>
-                    <span className="font-semibold text-emerald-400">0.00% (827/827)</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Discord Audit</span>
-                    <span className="font-semibold text-white">Instant Embed</span>
-                  </div>
-                </div>
-
-                <div className="relative rounded-md bg-zinc-950 p-3 border border-zinc-800/80 font-mono text-xs text-zinc-300">
-                  <div className="text-zinc-500 text-[11px] mb-1">// Incident INC-20261004-ARB1 Socket Drain Action</div>
-                  <code>echo "set server be_arb/primary state maint" | socat - /run/haproxy/admin.sock</code>
-                  <div className="text-emerald-400/90 text-[11px] mt-1.5 flex items-center gap-1.5">
-                    <CheckCircle2 className="size-3" />
-                    <span>Canonical Head #511619849 vs Delinquent #511619835 &rarr; Transparent Fallback Active (122.8ms)</span>
-                  </div>
-                </div>
-
-                <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
-                  <a
-                    href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-medium"
-                  >
-                    <BookOpen className="size-3" />
-                    <span>Read Oct 4 Engineering Post-Mortem Report →</span>
-                  </a>
-                  <a
-                    href="https://discord.gg/DZBDJSsSzN"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1 font-mono"
-                  >
-                    <MessageSquare className="size-3" />
-                    <span>View Discord Alert Log</span>
-                  </a>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 3. Quickstart Self-Hosting */}
-            <Card className="bg-zinc-900/40 border-zinc-800/80">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
-                    <Terminal className="size-4 text-zinc-300" />
-                    3. Quickstart: Self-Hosting (Docker Compose)
-                  </CardTitle>
-                  <Badge variant="outline" className="border-zinc-800 text-zinc-400 text-xs font-mono">
-                    Under 30s
-                  </Badge>
-                </div>
-                <CardDescription className="text-xs text-zinc-400">
-                  Spin up the HAProxy L7 gateway and async Python sentinel in a single command.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="relative rounded-md bg-zinc-950 p-3.5 border border-zinc-800/80 font-mono text-xs text-zinc-200 flex items-center justify-between gap-4">
-                  <code className="text-zinc-300 overflow-x-auto">
-                    git clone https://github.com/maskalfreeup-glitch/driftguard &amp;&amp; cd driftguard &amp;&amp; docker compose up -d
-                  </code>
-                  <button
-                    onClick={() =>
-                      copyToClipboard(
-                        "git clone https://github.com/maskalfreeup-glitch/driftguard && cd driftguard && docker compose up -d",
-                        "quickstart-docker"
-                      )
-                    }
-                    className="p-1 rounded text-zinc-400 hover:text-white bg-zinc-800/60 shrink-0"
-                    title="Copy Command"
-                  >
-                    {copiedId === "quickstart-docker" ? <Check className="size-3.5 text-[#28A0F0]" /> : <Copy className="size-3.5" />}
-                  </button>
-                </div>
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  The gateway listens on <code className="text-zinc-300 bg-zinc-950 px-1 py-0.5 rounded border border-zinc-800 font-mono">http://localhost:8545/arb</code>. Upstream URLs, chain IDs, polling intervals, and alert webhooks can be configured via <code className="text-zinc-300 bg-zinc-950 px-1 py-0.5 rounded border border-zinc-800 font-mono">.env</code>.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* 4. Client Integration Guides (Foundry, Hardhat, MetaMask) */}
+            {/* Step 2: Client & Relayer Integration Guides (Foundry, Hardhat, MetaMask) */}
             <div>
               <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-400 mb-3 flex items-center gap-1.5">
                 <FileCode2 className="size-3.5" />
-                4. Client Integration Guides
+                2. Client &amp; Relayer Integration Guides
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {/* Foundry Card */}
@@ -829,20 +724,20 @@ export function App() {
               </div>
             </div>
 
-            {/* 5. Architecture Deep Dive */}
+            {/* Step 3: Architecture Deep Dive */}
             <Card className="bg-zinc-900/40 border-zinc-800/80">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
                     <AlertTriangle className="size-4 text-zinc-300" />
-                    5. Architecture: Eliminating the "Silent 200 OK"
+                    3. Architecture: Eliminating the "Silent 200 OK"
                   </CardTitle>
                   <Badge variant="outline" className="border-zinc-800 text-zinc-400 text-xs font-mono">
                     Out-of-Band
                   </Badge>
                 </div>
                 <CardDescription className="text-xs text-zinc-400">
-                  Why standard HTTP health checks fail on Arbitrum Nitro, and how DriftGuard guarantees zero stale reads.
+                  Data Plane vs Control Plane breakdown: why standard HTTP health checks fail on Arbitrum Nitro, and how DriftGuard guarantees zero stale reads.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -874,12 +769,12 @@ export function App() {
               </CardContent>
             </Card>
 
-            {/* 6. Sentinel Telemetry & Alert Webhooks */}
+            {/* Step 4: Sentinel Telemetry & Alert Webhooks */}
             <Card className="bg-zinc-900/40 border-zinc-800/80">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
                   <Radio className="size-4 text-zinc-300" />
-                  6. Sentinel Telemetry &amp; Alert Webhooks
+                  4. Sentinel Telemetry &amp; Alert Webhooks
                 </CardTitle>
                 <CardDescription className="text-xs text-zinc-400">
                   Receive instant notifications in Discord or Slack when an upstream node enters degraded or failover state.
@@ -920,6 +815,86 @@ MAX_ALLOWED_BLOCK_DRIFT=2`}</pre>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Visual Separator & Empirical Production Proof */}
+            <div className="pt-6 border-t border-zinc-800/80 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                    <ShieldCheck className="size-3.5 text-emerald-400" />
+                    Empirical Production Proof &amp; Incident Record
+                  </h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Field-verified operational telemetry from live Arbitrum Nitro consensus desyncs.
+                  </p>
+                </div>
+                <Badge variant="outline" className="border-emerald-900/80 bg-emerald-950/40 text-emerald-400 text-xs font-mono w-fit">
+                  SEV-2 Mitigated • 0 Drops
+                </Badge>
+              </div>
+
+              <Card className="specular-border bg-zinc-900/40 border-zinc-800/80 shadow-xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
+                    <ShieldCheck className="size-4 text-emerald-400" />
+                    October 4, 2026 Live Arbitrum One Triage (INC-20261004-ARB1)
+                  </CardTitle>
+                  <CardDescription className="text-xs text-zinc-400">
+                    Field-verified operational metrics from the October 4, 2026 live Arbitrum One 14-block sequencer desync and automated autocannon load benchmarks.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-lg bg-zinc-950 border border-zinc-800/80 font-mono text-xs">
+                    <div>
+                      <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Mitigated Stall</span>
+                      <span className="font-semibold text-white">14 Blocks (3.5s)</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Cutover Latency</span>
+                      <span className="font-semibold text-[#28A0F0]">122.8 ms</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Packet Drops</span>
+                      <span className="font-semibold text-emerald-400">0.00% (827/827)</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Discord Audit</span>
+                      <span className="font-semibold text-white">Instant Embed</span>
+                    </div>
+                  </div>
+
+                  <div className="relative rounded-md bg-zinc-950 p-3 border border-zinc-800/80 font-mono text-xs text-zinc-300">
+                    <div className="text-zinc-500 text-[11px] mb-1">// Incident INC-20261004-ARB1 Socket Drain Action</div>
+                    <code>echo "set server be_arb/primary state maint" | socat - /run/haproxy/admin.sock</code>
+                    <div className="text-emerald-400/90 text-[11px] mt-1.5 flex items-center gap-1.5">
+                      <CheckCircle2 className="size-3" />
+                      <span>Canonical Head #511619849 vs Delinquent #511619835 &rarr; Transparent Fallback Active (122.8ms)</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
+                    <a
+                      href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-medium"
+                    >
+                      <BookOpen className="size-3" />
+                      <span>Read Oct 4 Engineering Post-Mortem Report →</span>
+                    </a>
+                    <a
+                      href="https://discord.gg/DZBDJSsSzN"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1 font-mono"
+                    >
+                      <MessageSquare className="size-3" />
+                      <span>View Discord Alert Log</span>
+                    </a>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
       </main>

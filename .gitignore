@@ -42,3 +42,8 @@ redis_data/
 *.swp
 *.swo
 .DS_Store
+
+# Node / Frontend
+node_modules/
+.npm/
+

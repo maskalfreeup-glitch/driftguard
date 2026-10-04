@@ -103,11 +103,11 @@ export function DriftGuardLogo({
       {/* Brand Typography & Arbitrum Nitro Pill Badge */}
       {showText && (
         <div className="flex items-center gap-2">
-          <span className="font-bold text-base tracking-tight text-white hover:text-sky-300 transition-colors">
+          <span className="font-semibold text-sm sm:text-base tracking-tight text-white">
             DriftGuard
           </span>
           {showBadge && (
-            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-[#28A0F0]/10 border border-[#28A0F0]/30 text-[#28A0F0] shadow-[0_0_10px_-2px_rgba(40,160,240,0.3)]">
+            <span className="hidden md:inline-flex text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400">
               Arbitrum Nitro
             </span>
           )}

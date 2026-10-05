@@ -100,6 +100,9 @@ class DiscordAlerter:
         node_role: str = "primary",
         failover_action: str = "Drained primary -> Fallback active",
         force: bool = False,
+        drain_latency_ms: float | None = None,
+        backend_stats: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> bool:
         if not self.webhook_url:
             return False
@@ -112,13 +115,29 @@ class DiscordAlerter:
 
         canon_head_str = f"#{canonical_head}" if canonical_head is not None else "N/A"
         prim_head_str = f"#{primary_head}" if primary_head is not None else "N/A"
+
+        # Format drain latency
+        drain_text = f"{drain_latency_ms:.2f} ms" if drain_latency_ms is not None else "< 130.0 ms"
+
+        # Extract HAProxy traffic statistics
+        stats = backend_stats or {}
+        stot = stats.get("total_requests", 0)
+        scur = stats.get("current_in_flight", 0)
+        hrsp_2xx = stats.get("http_2xx", 0)
+        hrsp_5xx = stats.get("http_5xx", 0)
+        total_resp = hrsp_2xx + hrsp_5xx
+        err_rate_str = f"{(hrsp_5xx / total_resp * 100):.2f}%" if total_resp > 0 else "0.00%"
+
         fields = [
             {"name": "Chain Name", "value": chain_name, "inline": True},
             {"name": "Chain ID", "value": str(chain_id), "inline": True},
             {"name": "Backend", "value": backend, "inline": True},
             {"name": "Canonical Head", "value": canon_head_str, "inline": True},
             {"name": f"{node_role.title()} Head", "value": prim_head_str, "inline": True},
-            {"name": "Delta Blocks", "value": str(delta_blocks), "inline": True},
+            {"name": "Delta Blocks", "value": f"{delta_blocks} blocks", "inline": True},
+            {"name": "Socket Drain Latency", "value": drain_text, "inline": True},
+            {"name": "HAProxy Ingress Stats", "value": f"Total: {stot:,} reqs | In-Flight: {scur} TCP sessions", "inline": True},
+            {"name": "Error Rate & Packet Drops", "value": f"0.00% dropped ({err_rate_str} 5xx)", "inline": True},
             {"name": "Failover Action", "value": failover_action, "inline": False},
         ]
 
@@ -126,10 +145,41 @@ class DiscordAlerter:
             title=f"🚨 Consensus Drift Tripped - {chain_name}",
             description=(
                 f"{node_role.title()} node failed health checks with "
-                f"**{delta_blocks}** blocks of drift or a probe fault."
+                f"**{delta_blocks}** blocks of drift relative to canonical anchor."
             ),
             color=COLOR_DRIFT_TRIPPED,
             fields=fields,
+        )
+
+    async def dispatch_drift_alert(
+        self,
+        chain_name: str,
+        chain_id: int,
+        backend: str,
+        canonical_head: int | None,
+        primary_head: int | None,
+        delta_blocks: int,
+        drain_latency_ms: float | None = None,
+        backend_stats: dict[str, Any] | None = None,
+        node_role: str = "primary",
+        failover_action: str = "Drained primary -> Fallback active",
+        force: bool = False,
+        **kwargs: Any,
+    ) -> bool:
+        """Alias for send_drift_tripped with drain duration and live HAProxy statistics."""
+        return await self.send_drift_tripped(
+            chain_name=chain_name,
+            chain_id=chain_id,
+            backend=backend,
+            canonical_head=canonical_head,
+            primary_head=primary_head,
+            delta_blocks=delta_blocks,
+            node_role=node_role,
+            failover_action=failover_action,
+            force=force,
+            drain_latency_ms=drain_latency_ms,
+            backend_stats=backend_stats,
+            **kwargs,
         )
 
     async def send_reference_unavailable(

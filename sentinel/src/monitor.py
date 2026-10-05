@@ -8,7 +8,7 @@ from prometheus_client import Counter, Gauge
 from sentinel.alerts import DiscordAlerter
 
 from .config import ChainConfig, Settings, load_chains_config
-from .haproxy_client import set_server_state
+from .haproxy_client import get_backend_stats, set_server_state
 from .rpc_client import NodeSample, RpcClient
 from .storage import StorageEngine
 
@@ -211,13 +211,24 @@ class ChainMonitor:
             node.consecutive_successes = 0
             node.reason = reason
             if node.consecutive_failures >= self.failure_threshold:
+                cutover_latency_ms = None
+                if node.current_haproxy_state != "maint":
+                    server = "primary" if node is self.primary else "fallback"
+                    t0 = time.perf_counter()
+                    drained = await set_server_state(self.socket_path, self.chain.backend, server, "maint")
+                    cutover_latency_ms = (time.perf_counter() - t0) * 1000.0
+                    if drained:
+                        node.current_haproxy_state = "maint"
+
+                backend_stats = await get_backend_stats(self.chain.backend, socket_path=self.socket_path)
+
                 if node.status != "UNHEALTHY":
                     METRIC_FAILOVERS.labels(node=node.name).inc()
                     logger.warning(
                         f"\033[91m[ALERT] [{self.chain.name}] Node '{node.name}' transitioned to UNHEALTHY! "
                         f"Failures: {node.consecutive_failures}, Reason: {reason}\033[0m"
                     )
-                    # Dispatch Discord incident embed
+                    # Dispatch Discord incident embed with live HAProxy traffic stats & drain latency
                     await self.alerter.send_drift_tripped(
                         chain_name=self.chain.name,
                         chain_id=self.chain.chain_id,
@@ -226,12 +237,10 @@ class ChainMonitor:
                         primary_head=sample.block_number,
                         delta_blocks=drift,
                         node_role="primary" if node is self.primary else "fallback",
+                        drain_latency_ms=cutover_latency_ms,
+                        backend_stats=backend_stats,
                     )
                 node.status = "UNHEALTHY"
-                if node.current_haproxy_state != "maint":
-                    server = "primary" if node is self.primary else "fallback"
-                    if await set_server_state(self.socket_path, self.chain.backend, server, "maint"):
-                        node.current_haproxy_state = "maint"
         else:
             node.consecutive_successes += 1
             node.consecutive_failures = 0

@@ -53,6 +53,9 @@ services:
       REDIS_URL: "redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}@redis:6379/0"
       HAPROXY_SOCKET_PATH: /run/haproxy/admin.sock
       CHAINS_CONFIG_PATH: /app/sentinel/config/chains.yaml
+      ANCHOR_ARB_ONE: ${ANCHOR_ARB_ONE:-}
+      ANCHOR_ARB_NOVA: ${ANCHOR_ARB_NOVA:-}
+      ANCHOR_ARB_SEPOLIA: ${ANCHOR_ARB_SEPOLIA:-}
     volumes:
       - ./sentinel/config/chains.yaml:/app/sentinel/config/chains.yaml:ro
       - haproxy_socket:/run/haproxy

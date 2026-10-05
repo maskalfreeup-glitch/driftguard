@@ -1,5 +1,7 @@
 import json
+from datetime import datetime
 from unittest.mock import patch
+
 import httpx
 import pytest
 
@@ -49,8 +51,11 @@ async def test_dispatch_drift_alert_with_haproxy_stats_and_drain_latency():
     assert len(dispatched) == 1
     embed = dispatched[0]["embeds"][0]
 
-    # Verify footer timestamp format
+    # Verify footer and ISO-8601 UTC timestamp format
     assert "UTC" in embed["footer"]["text"]
+    assert "timestamp" in embed
+    ts = datetime.fromisoformat(embed["timestamp"])
+    assert ts.tzinfo is not None
 
     field_map = {f["name"]: f["value"] for f in embed["fields"]}
     assert field_map["Chain Name"] == "Arbitrum One"
@@ -74,9 +79,12 @@ async def test_get_backend_stats_parser():
         "status,weight,act,bck,chkfail,chkdown,lastchg,downtime,qlimit,pid,iid,sid,throttle,lbtot,tracked,"
         "type,rate,rate_lim,rate_max,check_status,check_code,check_duration,hrsp_1xx,hrsp_2xx,hrsp_3xx,"
         "hrsp_4xx,hrsp_5xx,hrsp_other\n"
-        "be_arb,primary,0,0,2,10,,500,100,200,,0,,0,0,0,0,UP,1,1,0,0,0,100,0,,1,5,1,,500,,2,0,,10,L7OK,200,30,0,498,0,2,0,0\n"
-        "be_arb,fallback,0,0,1,5,,250,50,100,,0,,0,0,0,0,UP,1,1,0,0,0,100,0,,1,5,2,,250,,2,0,,5,L7OK,200,30,0,249,0,1,0,0\n"
-        "be_arb,BACKEND,0,0,3,15,410,750,150,300,0,0,,0,0,0,0,UP,1,1,1,,0,100,0,,1,5,0,,750,,1,0,,15,,,,0,747,0,3,0,0\n"
+        "be_arb,primary,0,0,2,10,,500,100,200,,0,,0,0,0,0,UP,1,1,0,0,0,100,0,,1,5,1,,500,,2,0,,10,L7OK,200,30,0,"
+        "498,0,2,0,0\n"
+        "be_arb,fallback,0,0,1,5,,250,50,100,,0,,0,0,0,0,UP,1,1,0,0,0,100,0,,1,5,2,,250,,2,0,,5,L7OK,200,30,0,"
+        "249,0,1,0,0\n"
+        "be_arb,BACKEND,0,0,3,15,410,750,150,300,0,0,,0,0,0,0,UP,1,1,1,,0,100,0,,1,5,0,,750,,1,0,,15,,,,0,"
+        "747,0,3,0,0\n"
     )
 
     with patch("os.path.exists", return_value=True):

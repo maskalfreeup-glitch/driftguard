@@ -6,7 +6,7 @@ chains:
     fallback_url: "https://arbitrum-one-rpc.publicnode.com"
     reference_url: "https://arbitrum.gateway.tenderly.co"
     drift_threshold: 4
-    poll_interval: 2.0
+    poll_interval: 0.2
   - name: "arbitrum-nova"
     chain_id: 42170
     backend: "be_nova"
@@ -14,7 +14,7 @@ chains:
     fallback_url: "https://arbitrum-nova-rpc.publicnode.com"
     reference_url: "https://arbitrum-nova.drpc.org"
     drift_threshold: 4
-    poll_interval: 2.0
+    poll_interval: 0.2
   - name: "arbitrum-sepolia"
     chain_id: 421614
     backend: "be_arb_sepolia"
@@ -22,4 +22,4 @@ chains:
     fallback_url: "https://arbitrum-sepolia-rpc.publicnode.com"
     reference_url: "https://arbitrum-sepolia.drpc.org"
     drift_threshold: 6
-    poll_interval: 2.0
+    poll_interval: 0.2

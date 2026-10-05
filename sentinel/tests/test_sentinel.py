@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -254,6 +255,10 @@ async def test_discord_alerter_embed_payload():
     assert len(dispatched) == 1
     embed = dispatched[0]["embeds"][0]
     assert embed["color"] == COLOR_DRIFT_TRIPPED  # 0xE02424
+    assert "timestamp" in embed
+    ts = datetime.fromisoformat(embed["timestamp"])
+    assert ts.tzinfo is not None
+    assert "UTC" in embed["footer"]["text"]
     field_names = [f["name"] for f in embed["fields"]]
     assert "Chain Name" in field_names
     assert "Chain ID" in field_names
@@ -261,6 +266,9 @@ async def test_discord_alerter_embed_payload():
     assert "Canonical Head" in field_names
     assert "Primary Head" in field_names
     assert "Delta Blocks" in field_names
+    assert "Socket Drain Latency" in field_names
+    assert "HAProxy Ingress Stats" in field_names
+    assert "Error Rate & Packet Drops" in field_names
     assert "Failover Action" in field_names
 
     # 2. Test Cooldown / Debounce suppression
@@ -286,6 +294,10 @@ async def test_discord_alerter_embed_payload():
     assert len(dispatched) == 2
     rec_embed = dispatched[1]["embeds"][0]
     assert rec_embed["color"] == COLOR_RECOVERED  # 0x31C48D
+    assert "timestamp" in rec_embed
+    rec_ts = datetime.fromisoformat(rec_embed["timestamp"])
+    assert rec_ts.tzinfo is not None
+    assert "UTC" in rec_embed["footer"]["text"]
     rec_fields = {f["name"]: f["value"] for f in rec_embed["fields"]}
     assert rec_fields["Chain Name"] == "Base Mainnet"
     assert rec_fields["Status"] == "Synced to Tip"
@@ -308,3 +320,42 @@ async def test_multi_chain_monitor_loads_all_chains():
     unique = monitor.unique_monitors()
     assert len(unique) == len(chains)
     assert "arbitrum-one" in unique
+
+
+def test_chains_config_poll_interval_sub_250ms():
+    from sentinel.src.config import load_chains_config
+    chains = load_chains_config("sentinel/config/chains.yaml")
+    for chain in chains:
+        assert chain.poll_interval == 0.2, (
+            f"{chain.name} poll_interval should be 0.2s (200ms), got {chain.poll_interval}"
+        )
+
+
+def test_anchor_environment_variable_overrides(monkeypatch):
+    from sentinel.src.config import load_chains_config
+
+    monkeypatch.setenv("ANCHOR_ARB_ONE", "https://custom-alchemy-one.example/v2/secret-key")
+    monkeypatch.setenv("ANCHOR_ARB_NOVA", "https://custom-drpc-nova.example/secret-key")
+    monkeypatch.setenv("ANCHOR_ARB_SEPOLIA", "https://custom-alchemy-sepolia.example/v2/secret-key")
+
+    chains = load_chains_config("sentinel/config/chains.yaml")
+    chain_map = {c.name: c for c in chains}
+
+    assert chain_map["arbitrum-one"].reference_url == "https://custom-alchemy-one.example/v2/secret-key"
+    assert chain_map["arbitrum-nova"].reference_url == "https://custom-drpc-nova.example/secret-key"
+    assert chain_map["arbitrum-sepolia"].reference_url == "https://custom-alchemy-sepolia.example/v2/secret-key"
+
+
+def test_anchor_environment_variable_fallback_when_unset(monkeypatch):
+    from sentinel.src.config import load_chains_config
+
+    monkeypatch.delenv("ANCHOR_ARB_ONE", raising=False)
+    monkeypatch.delenv("ANCHOR_ARB_NOVA", raising=False)
+    monkeypatch.delenv("ANCHOR_ARB_SEPOLIA", raising=False)
+
+    chains = load_chains_config("sentinel/config/chains.yaml")
+    chain_map = {c.name: c for c in chains}
+
+    assert chain_map["arbitrum-one"].reference_url == "https://arbitrum.gateway.tenderly.co"
+    assert chain_map["arbitrum-nova"].reference_url == "https://arbitrum-nova.drpc.org"
+    assert chain_map["arbitrum-sepolia"].reference_url == "https://arbitrum-sepolia.drpc.org"

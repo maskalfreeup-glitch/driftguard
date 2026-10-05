@@ -79,7 +79,7 @@ async def get_backend_stats(
         matching_rows: list[dict[str, str]] = []
         for line in lines[1:]:
             parts = [p.strip() for p in line.split(",")]
-            row = dict(zip(headers, parts))
+            row = dict(zip(headers, parts, strict=False))
             if row.get("pxname") == backend_name:
                 matching_rows.append(row)
 

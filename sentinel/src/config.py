@@ -4,10 +4,45 @@ import re
 from urllib.parse import urlsplit
 
 import yaml
+from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+load_dotenv()
+
 logger = logging.getLogger("driftguard.config")
+
+ANCHOR_ENV_OVERRIDES: dict[str | int, str] = {
+    "arbitrum-one": "ANCHOR_ARB_ONE",
+    42161: "ANCHOR_ARB_ONE",
+    "be_arb": "ANCHOR_ARB_ONE",
+    "arbitrum-nova": "ANCHOR_ARB_NOVA",
+    42170: "ANCHOR_ARB_NOVA",
+    "be_nova": "ANCHOR_ARB_NOVA",
+    "arbitrum-sepolia": "ANCHOR_ARB_SEPOLIA",
+    421614: "ANCHOR_ARB_SEPOLIA",
+    "be_arb_sepolia": "ANCHOR_ARB_SEPOLIA",
+}
+
+
+def _resolve_anchor_override(chain_entry: dict) -> dict:
+    data = dict(chain_entry)
+    name = data.get("name")
+    chain_id = data.get("chain_id")
+    backend = data.get("backend")
+
+    env_var = (
+        ANCHOR_ENV_OVERRIDES.get(name)
+        or ANCHOR_ENV_OVERRIDES.get(chain_id)
+        or ANCHOR_ENV_OVERRIDES.get(backend)
+    )
+    if env_var:
+        override_val = os.environ.get(env_var, "").strip()
+        if override_val:
+            data["reference_url"] = override_val
+            logger.info("Overriding reference_url for chain '%s' from %s", name, env_var)
+
+    return data
 
 
 class ChainConfig(BaseModel):
@@ -20,7 +55,7 @@ class ChainConfig(BaseModel):
     fallback_url: str
     reference_url: str
     drift_threshold: int = 2
-    poll_interval: float = 2.0
+    poll_interval: float = 0.2
 
     @model_validator(mode="after")
     def validate_identity_and_urls(self):
@@ -56,6 +91,9 @@ class Settings(BaseSettings):
     host: str = Field(default="0.0.0.0", alias="SENTINEL_HOST")
     port: int = Field(default=8000, alias="SENTINEL_PORT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    anchor_arb_one: str = Field(default="", alias="ANCHOR_ARB_ONE")
+    anchor_arb_nova: str = Field(default="", alias="ANCHOR_ARB_NOVA")
+    anchor_arb_sepolia: str = Field(default="", alias="ANCHOR_ARB_SEPOLIA")
 
 
 def load_chains_config(config_path: str | None = None) -> list[ChainConfig]:
@@ -90,7 +128,7 @@ def load_chains_config(config_path: str | None = None) -> list[ChainConfig]:
                     if not has_chains or not parsed["chains"]:
                         raise ValueError("configuration must contain a non-empty chains list")
 
-                    chains = [ChainConfig(**c) for c in parsed["chains"]]
+                    chains = [ChainConfig(**_resolve_anchor_override(c)) for c in parsed["chains"]]
                     names = {c.name for c in chains}
                     backends = {c.backend for c in chains}
                     if (len(names) != len(chains) or len(backends) != len(chains)
@@ -105,38 +143,39 @@ def load_chains_config(config_path: str | None = None) -> list[ChainConfig]:
     if configured_path:
         raise FileNotFoundError(f"Configured chains file not found: {configured_path}")
     logger.warning("No chains.yaml file found; using built-in multi-chain defaults.")
-    return [
-        ChainConfig(
-            name="base-mainnet",
-            chain_id=8453,
-            backend="be_base",
-            primary_url="https://mainnet.base.org",
-            fallback_url="https://base-rpc.publicnode.com",
-            reference_url="https://base.gateway.tenderly.co",
-            drift_threshold=2,
-            poll_interval=2.0,
-        ),
-        ChainConfig(
-            name="arbitrum-one",
-            chain_id=42161,
-            backend="be_arb",
-            primary_url="https://arb1.arbitrum.io/rpc",
-            fallback_url="https://arbitrum-one-rpc.publicnode.com",
-            reference_url="https://arbitrum.gateway.tenderly.co",
-            drift_threshold=4,
-            poll_interval=2.0,
-        ),
-        ChainConfig(
-            name="sepolia-testnet",
-            chain_id=11155111,
-            backend="be_sepolia",
-            primary_url="https://ethereum-sepolia-rpc.publicnode.com",
-            fallback_url="https://sepolia.gateway.tenderly.co",
-            reference_url="https://rpc.sepolia.ethpandaops.io",
-            drift_threshold=2,
-            poll_interval=2.0,
-        ),
+    fallback_defaults = [
+        {
+            "name": "base-mainnet",
+            "chain_id": 8453,
+            "backend": "be_base",
+            "primary_url": "https://mainnet.base.org",
+            "fallback_url": "https://base-rpc.publicnode.com",
+            "reference_url": "https://base.gateway.tenderly.co",
+            "drift_threshold": 2,
+            "poll_interval": 0.2,
+        },
+        {
+            "name": "arbitrum-one",
+            "chain_id": 42161,
+            "backend": "be_arb",
+            "primary_url": "https://arb1.arbitrum.io/rpc",
+            "fallback_url": "https://arbitrum-one-rpc.publicnode.com",
+            "reference_url": "https://arbitrum.gateway.tenderly.co",
+            "drift_threshold": 4,
+            "poll_interval": 0.2,
+        },
+        {
+            "name": "sepolia-testnet",
+            "chain_id": 11155111,
+            "backend": "be_sepolia",
+            "primary_url": "https://ethereum-sepolia-rpc.publicnode.com",
+            "fallback_url": "https://sepolia.gateway.tenderly.co",
+            "reference_url": "https://rpc.sepolia.ethpandaops.io",
+            "drift_threshold": 2,
+            "poll_interval": 0.2,
+        },
     ]
+    return [ChainConfig(**_resolve_anchor_override(d)) for d in fallback_defaults]
 
 
 settings = Settings()

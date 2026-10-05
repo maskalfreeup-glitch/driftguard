@@ -67,7 +67,10 @@ class DiscordAlerter:
                     "color": color,
                     "fields": fields,
                     "footer": {
-                        "text": f"DriftGuard High-Availability EVM Gateway • {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                        "text": (
+                            "DriftGuard High-Availability EVM Gateway • "
+                            f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                        )
                     },
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
@@ -136,7 +139,11 @@ class DiscordAlerter:
             {"name": f"{node_role.title()} Head", "value": prim_head_str, "inline": True},
             {"name": "Delta Blocks", "value": f"{delta_blocks} blocks", "inline": True},
             {"name": "Socket Drain Latency", "value": drain_text, "inline": True},
-            {"name": "HAProxy Ingress Stats", "value": f"Total: {stot:,} reqs | In-Flight: {scur} TCP sessions", "inline": True},
+            {
+                "name": "HAProxy Ingress Stats",
+                "value": f"Total: {stot:,} reqs | In-Flight: {scur} TCP sessions",
+                "inline": True,
+            },
             {"name": "Error Rate & Packet Drops", "value": f"0.00% dropped ({err_rate_str} 5xx)", "inline": True},
             {"name": "Failover Action", "value": failover_action, "inline": False},
         ]

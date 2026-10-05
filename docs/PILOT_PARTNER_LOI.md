@@ -19,13 +19,13 @@ During peak workloads, backend game servers and account abstraction relayers dis
 2. **State Inconsistency & Ghost Items:** High-frequency balance, inventory, and session key verification calls return pre-transaction state, causing state divergence.
 3. **Cascading Server Retries:** Backend queues back up, triggering unhandled connection timeouts and session disconnections.
 
-Traditional cloud load balancers (AWS ALB, Cloudflare, standard NGINX) lack consensus awareness and cannot detect silent sequencer stalls. DriftGuard provides a turnkey, low-footprint sidecar that protects backend game servers, paymasters, and relayers from stale nonce desyncs without requiring any modifications to client libraries or server application logic.
+Traditional cloud load balancers (AWS ALB, Cloudflare, standard NGINX) lack consensus awareness and cannot detect silent sequencer stalls. DriftGuard provides a low-footprint sidecar controller that protects backend game servers, paymasters, and relayers from stale nonce desyncs without requiring any modifications to client libraries or server application logic.
 
 ---
 
 ## 2. Purpose & Objectives of Pilot Evaluation
 
-The purpose of this pilot engagement is to evaluate and validate DriftGuard as the default, turnkey ingress sidecar across Orbit L3 validator nodes, dedicated game servers, and session relayers.
+The purpose of this pilot engagement is to evaluate and validate DriftGuard as the default, deterministic ingress sidecar across Orbit L3 validator nodes, dedicated game servers, and session relayers.
 
 ### Key Objectives:
 1. **Zero-Drop Failover:** Verify that DriftGuard intercepts sequencer stalls and automatically redirects JSON-RPC read/write traffic to secondary fallback nodes in under 150ms with 0.00% dropped HTTP connections.
@@ -75,7 +75,7 @@ To achieve production certification and full ecosystem deployment, DriftGuard mu
   - Validation of October 4, 2026 Arbitrum One live desync triage post-mortem ([docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md](reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md)).
 
 - **Milestone 2: High-Throughput Ingress Guide & Docker Preset (Current)**
-  - Publication of turnkey 3-step Docker Compose integration guide for game servers & relayers ([docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md](guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md)).
+  - Publication of production 3-step Docker Compose integration guide for game servers & relayers ([docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md](guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md)).
   - Harmonization of Arbitrum Orbit L3 chain configuration presets in `sentinel/config/chains.yaml`.
 
 - **Milestone 3: Staging Orbit Cluster Testing (Q4 2026)**

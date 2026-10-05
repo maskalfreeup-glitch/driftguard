@@ -18,7 +18,7 @@
 - RPC request through the public URL while the primary was down:
 
   ```text
-  POST https://rpc.maskal.space
+  POST https://rpc.driftguard.live
   {"jsonrpc":"2.0","id":1,"result":"0xb440c1"}
   HTTP 200
   ```
@@ -39,8 +39,8 @@ The backup is `rpc.sepolia.ethpandaops.io`. The previous dRPC endpoint returned 
 ![DriftGuard Failover Demo](failover-demo.gif)
 
 A live demonstration recording is captured in [evidence/failover-demo.cast](failover-demo.cast), demonstrating:
-1. Live Arbitrum One head query over `https://rpc.maskal.space/arb` (`x-upstream: primary`).
-2. Sentinel consensus monitor probe (`https://rpc.maskal.space/healthz`).
+1. Live Arbitrum One head query over `https://rpc.driftguard.live/arb` (`x-upstream: primary`).
+2. Sentinel consensus monitor probe (`https://rpc.driftguard.live/healthz`).
 3. Draining the primary node via the Sentinel socket / simulated consensus drift fault.
 4. Immediate transparent cutover to fallback (`x-upstream: fallback`) with zero dropped requests (HTTP 200).
 5. Primary node recovery back to active routing.

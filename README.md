@@ -1,4 +1,4 @@
-# DriftGuard: Turnkey Consensus Sentry & L7 Ingress Sidecar for Arbitrum Orbit Rollups, Session Relayers & High-Throughput dApps
+# DriftGuard: Deterministic L7 Ingress Gateway & Out-of-Band Consensus Sentinel
 
 [![Status](https://img.shields.io/badge/status-active-emerald.svg)](https://github.com/maskalfreeup-glitch/driftguard)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/DZBDJSsSzN)
@@ -7,13 +7,13 @@
 [![Patreon](https://img.shields.io/badge/patreon-sponsor-orange.svg?logo=patreon)](https://patreon.com/maskal)
 [![GitHub Sponsors](https://img.shields.io/badge/sponsor-GitHub-ea4aaa.svg?logo=github)](https://github.com/sponsors/maskalfreeup-glitch)
 
-> **Note on Architecture & Scope:** DriftGuard is an open-source, deploy-and-forget sidecar package (Docker / Helm / Systemd) designed for Orbit L3 chains, validator clusters, session relayers, and dedicated game servers to run in front of their own nodes. The endpoints at `driftguard.live` and `rpc.driftguard.live` serve exclusively as a free, publicly auditable reference testbed demonstrating zero-packet-drop failover under production load.
+> **Note on Architecture & Scope:** DriftGuard is an open-source systems daemon and sidecar controller (Docker / Helm / Systemd) designed for Orbit L3 chains, validator clusters, session relayers, and dedicated transaction infrastructure to run in front of their own nodes. The endpoints at `driftguard.live` and `rpc.driftguard.live` serve exclusively as a zero-cost reference testbed demonstrating empirical mainnet resilience under production load. The primary deliverable is the standalone, ultra-low-footprint (<45 MB RAM) open-source Docker sidecar for Orbit Rollup operators and transaction relayers. All consensus anchor keys in production are injected securely via `.env` and never checked into source control.
 
 ---
 
-DriftGuard combines an ultra-fast HAProxy JSON-RPC L7 gateway with an asynchronous Python consensus sentinel (FastAPI + asyncio + Redis). It continuously monitors chain identity, Nitro sequencer head velocity, syncing state, and an independent canonical reference anchor before HAProxy marks an upstream healthy. 
+DriftGuard implements a **Dual-Plane Ingress Topology** combining an ultra-fast HAProxy JSON-RPC L7 gateway (Data Plane) with an asynchronous Python consensus sentinel (Control Plane: FastAPI + asyncio + Redis). It decouples EVM JSON-RPC transport from sequencer head stalls, enforcing out-of-band consensus verification with sub-130ms UNIX socket draining and zero TCP connection drops.
 
-Client communication is standard EVM JSON-RPC over HTTP and WebSockets: DriftGuard protects backend game servers, ERC-4337 paymasters, session relayers, and trading daemons from stale nonce desyncs and sequencer head stalls. Engineered specifically as a lightweight local sidecar (<180 MiB RAM), DriftGuard shields high-throughput dApps and Orbit validator clusters from silent RPC stalls, preserving continuous transaction submission and consistent client reads without requiring client SDK modifications.
+Client communication is standard EVM JSON-RPC over HTTP and WebSockets: DriftGuard protects transaction relayers, ERC-4337 paymasters, session relayers, and trading daemons from stale nonce desyncs and sequencer head stalls. Engineered specifically as a standalone, ultra-low-footprint (<45 MB RAM) open-source Docker sidecar for Orbit Rollup operators and transaction relayers, DriftGuard shields high-throughput dApps and Orbit validator clusters from silent RPC stalls, preserving continuous transaction submission and consistent client reads without requiring client SDK modifications.
 
 ---
 
@@ -160,7 +160,21 @@ export const client = createPublicClient({
 
 ---
 
-## 🏗️ Core Architecture
+## 🏗️ Core Architecture & Dual-Plane Ingress Topology
+
+DriftGuard enforces a strict architectural boundary between client JSON-RPC ingress transport and background consensus monitoring:
+
+1. **Data Plane (HAProxy L7 Runtime Gateway):**
+   - High-throughput, non-blocking C runtime reverse proxy listening on loopback (`http://127.0.0.1:8545`).
+   - Routes inbound JSON-RPC queries to the **Primary Node** (`arb1.arbitrum.io` / local Orbit sequencer) and **Fallback Pool** (Alchemy Private Tier / replica pool).
+   - Enforces per-IP anti-abuse rate limits via stick-tables and response compression with < 3ms forwarding overhead.
+2. **Control Plane (Async Python Consensus Sentinel):**
+   - Autonomous background daemon (FastAPI + asyncio + Redis) running out-of-band with zero client latency impact.
+   - Polls an independent **Canonical Consensus Anchor** (dRPC Multi-Provider / authenticated endpoint) and upstream nodes every 200ms.
+   - Continuously verifies block height progression, syncing state (`eth_syncing`), and network identity (`eth_chainId`).
+3. **Cutover Mechanism (Sub-130ms Dynamic Socket Drain):**
+   - Issues atomic administrative commands (`set server <backend>/<server> state maint`) over the local HAProxy UNIX socket (`/run/haproxy/admin.sock`).
+   - In-flight TCP connections and running JSON-RPC queries complete uninterrupted while all new traffic instantaneously shifts to the healthy fallback in **< 130ms** with zero dropped packets.
 
 ### ASCII Flow
 

@@ -55,8 +55,50 @@ interface LedgerIncident {
 
 const LEDGER_INCIDENTS: LedgerIncident[] = [
   {
+    id: "INC-20261005-11",
+    timestamp: "2026-10-05 10:48 UTC",
+    chainId: 42161,
+    chainName: "Arbitrum One",
+    networkTag: "42161 · arbitrum-one",
+    stallDelta: "5 blocks / 1.25s stall",
+    latency: "121.4 ms",
+    actionStatus: "DRAINED",
+    actionLabel: "DRAINED · FALLBACK ACTIVE",
+    socketCommand: 'echo "set server be_arb/primary state maint" | socat - /run/haproxy/admin.sock',
+    notes: "Arbitrum One sequencer micro-stall exceeded 4-block drift threshold (5 blocks behind canonical head). Out-of-band sentinel drained primary upstream in sub-130ms, shielding relayer nonces.",
+    category: "arb"
+  },
+  {
+    id: "INC-20261005-10",
+    timestamp: "2026-10-05 10:42 UTC",
+    chainId: 421614,
+    chainName: "Arbitrum Sepolia",
+    networkTag: "421614 · arbitrum-sepolia",
+    stallDelta: "9 blocks / 2.25s stall",
+    latency: "120.8 ms",
+    actionStatus: "DRAINED",
+    actionLabel: "DRAINED · FALLBACK ACTIVE",
+    socketCommand: 'echo "set server be_arb_sepolia/primary state maint" | socat - /run/haproxy/admin.sock',
+    notes: "Sepolia Nitro testnet sequencer lagged 9 blocks behind canonical consensus anchor. Drained primary backend to fallback route without dropping client queries.",
+    category: "arb-sepolia"
+  },
+  {
+    id: "INC-20261005-09",
+    timestamp: "2026-10-05 10:25 UTC (Recovered 10:29 UTC)",
+    chainId: 421614,
+    chainName: "Arbitrum Sepolia",
+    networkTag: "421614 · arbitrum-sepolia",
+    stallDelta: "21 blocks / 5.25s stall",
+    latency: "122.5 ms",
+    actionStatus: "RECOVERED",
+    actionLabel: "DRAINED · RECOVERED (10:29 UTC)",
+    socketCommand: 'echo "set server be_arb_sepolia/primary state ready" | socat - /run/haproxy/admin.sock',
+    notes: "Sequencer ingestion backlog caused 21-block drift. Traffic routed to secondary fallback for 4 minutes until verified tip re-sync restored primary routing at 10:29 UTC.",
+    category: "arb-sepolia"
+  },
+  {
     id: "INC-20261005-08",
-    timestamp: "Oct 5, 2026 · 15:21 IST",
+    timestamp: "2026-10-05 09:51 UTC",
     chainId: 421614,
     chainName: "Arbitrum Sepolia",
     networkTag: "421614 · arbitrum-sepolia",
@@ -70,7 +112,7 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
   },
   {
     id: "INC-20261005-07",
-    timestamp: "Oct 5, 2026 · 14:51 IST",
+    timestamp: "2026-10-05 09:21 UTC",
     chainId: 42161,
     chainName: "Arbitrum One",
     networkTag: "42161 · arbitrum-one",
@@ -84,65 +126,65 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
   },
   {
     id: "INC-20261005-06",
-    timestamp: "Oct 5, 2026 · 12:27 IST",
+    timestamp: "2026-10-05 06:57 UTC (Recovered 08:34 UTC)",
     chainId: 42161,
     chainName: "Arbitrum One",
     networkTag: "42161 · arbitrum-one",
     stallDelta: "13 blocks / 3.25s stall",
     latency: "123.5 ms",
     actionStatus: "RECOVERED",
-    actionLabel: "DRAINED · RECOVERED (14:04 IST)",
+    actionLabel: "DRAINED · RECOVERED (08:34 UTC)",
     socketCommand: 'echo "set server be_arb/primary state ready" | socat - /run/haproxy/admin.sock',
-    notes: "Sustained upstream node desynchronization. DriftGuard maintained continuous fallback routing for 97 minutes, automatically restoring primary weight at 14:04 IST after 2 consecutive verified consensus checks.",
+    notes: "Sustained upstream node desynchronization. DriftGuard maintained continuous fallback routing for 97 minutes, automatically restoring primary weight at 08:34 UTC after 2 consecutive verified consensus checks.",
     category: "arb",
     isCaseStudy: true,
     caseStudyTag: "[Deep-Dive Post-Mortem Available]"
   },
   {
     id: "INC-20261005-05",
-    timestamp: "Oct 5, 2026 · 10:51 IST",
+    timestamp: "2026-10-05 05:21 UTC (Recovered 05:22 UTC)",
     chainId: 42170,
     chainName: "Arbitrum Nova",
     networkTag: "42170 · arbitrum-nova",
     stallDelta: "AnyTrust jitter / 4 blocks",
     latency: "118.6 ms",
     actionStatus: "RECOVERED",
-    actionLabel: "AUTO-DRAINED · RECOVERED (10:52 IST)",
+    actionLabel: "AUTO-DRAINED · RECOVERED (05:22 UTC)",
     socketCommand: 'echo "set server be_nova/primary state ready" | socat - /run/haproxy/admin.sock',
     notes: "Temporary jitter on AnyTrust data availability committee ingress. Sentinel safely auto-drained the primary backend and restored routing within 60 seconds.",
     category: "nova"
   },
   {
     id: "INC-20261005-04",
-    timestamp: "Oct 5, 2026 · 09:42 IST",
+    timestamp: "2026-10-05 04:12 UTC (Recovered 04:16 UTC)",
     chainId: 421614,
     chainName: "Arbitrum Sepolia",
     networkTag: "421614 · arbitrum-sepolia",
     stallDelta: "21 blocks / 5.25s stall",
     latency: "121.2 ms",
     actionStatus: "RECOVERED",
-    actionLabel: "DRAINED · RECOVERED (09:46 IST)",
+    actionLabel: "DRAINED · RECOVERED (04:16 UTC)",
     socketCommand: 'echo "set server be_arb_sepolia/primary state maint" | socat - /run/haproxy/admin.sock',
-    notes: "Consecutive testnet sequencer anomaly. Drained dynamically to secondary pool; restored at 09:46 IST after consistent head synchronization.",
+    notes: "Consecutive testnet sequencer anomaly. Drained dynamically to secondary pool; restored at 04:16 UTC after consistent head synchronization.",
     category: "arb-sepolia"
   },
   {
     id: "INC-20261005-03",
-    timestamp: "Oct 5, 2026 · 09:40 IST",
+    timestamp: "2026-10-05 04:10 UTC (Recovered 04:12 UTC)",
     chainId: 421614,
     chainName: "Arbitrum Sepolia",
     networkTag: "421614 · arbitrum-sepolia",
     stallDelta: "22 blocks / 5.5s stall",
     latency: "119.4 ms",
     actionStatus: "RECOVERED",
-    actionLabel: "DRAINED · RECOVERED (09:42 IST)",
+    actionLabel: "DRAINED · RECOVERED (04:12 UTC)",
     socketCommand: 'echo "set server be_arb_sepolia/primary state maint" | socat - /run/haproxy/admin.sock',
-    notes: "Sepolia Nitro testnet node lagged 22 blocks behind canonical head. Drained and restored at 09:42 IST with zero dropped client queries.",
+    notes: "Sepolia Nitro testnet node lagged 22 blocks behind canonical head. Drained and restored at 04:12 UTC with zero dropped client queries.",
     category: "arb-sepolia"
   },
   {
     id: "INC-20261004-02",
-    timestamp: "Oct 4, 2026 · 22:24 IST",
+    timestamp: "2026-10-04 16:54 UTC (Recovered 19:04 UTC)",
     chainId: 42161,
     chainName: "Arbitrum One",
     networkTag: "42161 · arbitrum-one",
@@ -151,12 +193,12 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     actionStatus: "RECOVERED",
     actionLabel: "RECOVERED (2H 10M SUSTAINED PROTECTION)",
     socketCommand: 'echo "set server be_arb/primary state ready" | socat - /run/haproxy/admin.sock',
-    notes: "Primary provider stalled under elevated mainnet traffic. Drained instantly; sustained failover protection maintained for 2 hours and 10 minutes until upstream fully re-synced.",
+    notes: "Primary provider stalled under elevated mainnet traffic. Drained instantly; sustained failover protection maintained for 2 hours and 10 minutes until upstream fully re-synced at 19:04 UTC.",
     category: "arb"
   },
   {
     id: "INC-20261004-01",
-    timestamp: "Oct 4, 2026 · 18:32 IST",
+    timestamp: "2026-10-04 13:02 UTC",
     chainId: 42161,
     chainName: "Arbitrum One",
     networkTag: "42161 · arbitrum-one",
@@ -1072,12 +1114,12 @@ MAX_ALLOWED_BLOCK_DRIFT=2`}</pre>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider">TOTAL MITIGATED</div>
-                <div className="text-lg font-semibold text-white mt-0.5">8 Events</div>
+                <div className="text-lg font-semibold text-white mt-0.5">11 Events</div>
                 <div className="text-[10px] text-emerald-400 mt-0.5">100% Mitigated</div>
               </div>
               <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider">AVG CUTOVER LATENCY</div>
-                <div className="text-lg font-semibold text-[#28A0F0] mt-0.5">124.1 ms</div>
+                <div className="text-lg font-semibold text-[#28A0F0] mt-0.5">123.8 ms</div>
                 <div className="text-[10px] text-zinc-400 mt-0.5">&lt; 130ms SLA Met</div>
               </div>
               <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
@@ -1092,13 +1134,24 @@ MAX_ALLOWED_BLOCK_DRIFT=2`}</pre>
               </div>
             </div>
 
+            {/* Global Canonical UTC Standardization Badge */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 pb-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-[11px] font-mono text-zinc-300">
+                <span className="size-1.5 rounded-full bg-[#28A0F0]" />
+                <span>ALL TIMESTAMPS SYNCHRONIZED TO CANONICAL UTC (ISO-8601)</span>
+              </div>
+              <span className="text-[11px] font-mono text-zinc-500">
+                11 Field Incidents · Sub-130ms Deterministic Cutovers
+              </span>
+            </div>
+
             {/* Filter Bar */}
             <div className="flex flex-wrap items-center gap-2 border-b border-zinc-800/80 pb-3">
               {[
-                { id: "all", label: "All (8)" },
-                { id: "arb", label: "Arbitrum One (4)" },
+                { id: "all", label: "All (11)" },
+                { id: "arb", label: "Arbitrum One (5)" },
                 { id: "nova", label: "Arbitrum Nova (1)" },
-                { id: "arb-sepolia", label: "Arbitrum Sepolia (3)" },
+                { id: "arb-sepolia", label: "Arbitrum Sepolia (5)" },
                 { id: "case-studies", label: "Case Studies" }
               ].map((filterTab) => (
                 <button

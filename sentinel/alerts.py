@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -65,8 +66,10 @@ class DiscordAlerter:
                     "description": description,
                     "color": color,
                     "fields": fields,
-                    "footer": {"text": "DriftGuard High-Availability EVM Gateway"},
-                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "footer": {
+                        "text": f"DriftGuard High-Availability EVM Gateway • {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                    },
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
             ],
         }

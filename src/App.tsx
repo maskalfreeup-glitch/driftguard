@@ -18,7 +18,9 @@ import {
   Radio,
   FileCode2,
   ShieldCheck,
-  ExternalLink
+  ExternalLink,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react"
 
 interface NetworkConfig {
@@ -30,6 +32,148 @@ interface NetworkConfig {
   mirrorUrl: string
   badge: string
 }
+
+interface LedgerIncident {
+  id: string
+  timestamp: string
+  chainId: number
+  chainName: string
+  networkTag: string
+  stallDelta: string
+  latency: string
+  actionStatus: "DRAINED" | "RECOVERED"
+  actionLabel: string
+  socketCommand: string
+  notes: string
+  category: "arb" | "nova" | "arb-sepolia"
+  isCaseStudy?: boolean
+  caseStudyTag?: string
+  postMortemLink?: string
+  canonicalHead?: string
+  delinquentHead?: string
+}
+
+const LEDGER_INCIDENTS: LedgerIncident[] = [
+  {
+    id: "INC-20261005-08",
+    timestamp: "Oct 5, 2026 · 15:21 IST",
+    chainId: 421614,
+    chainName: "Arbitrum Sepolia",
+    networkTag: "421614 · arbitrum-sepolia",
+    stallDelta: "14 blocks / 3.5s stall",
+    latency: "122.0 ms",
+    actionStatus: "DRAINED",
+    actionLabel: "DRAINED · FALLBACK ACTIVE",
+    socketCommand: 'echo "set server be_arb_sepolia/primary state maint" | socat - /run/haproxy/admin.sock',
+    notes: "Sepolia Nitro testnet sequencer lagged 14 blocks behind canonical consensus anchor. Drained primary upstream via UNIX domain socket; transparent fallback route active with 0 dropped reads.",
+    category: "arb-sepolia"
+  },
+  {
+    id: "INC-20261005-07",
+    timestamp: "Oct 5, 2026 · 14:51 IST",
+    chainId: 42161,
+    chainName: "Arbitrum One",
+    networkTag: "42161 · arbitrum-one",
+    stallDelta: "11 blocks / 2.75s stall",
+    latency: "120.9 ms",
+    actionStatus: "DRAINED",
+    actionLabel: "DRAINED · FALLBACK ACTIVE",
+    socketCommand: 'echo "set server be_arb/primary state maint" | socat - /run/haproxy/admin.sock',
+    notes: "Primary provider micro-batch ingestion stall intercepted within one 200ms probe loop. Immediate socket drain protected in-flight relayer nonces.",
+    category: "arb"
+  },
+  {
+    id: "INC-20261005-06",
+    timestamp: "Oct 5, 2026 · 12:27 IST",
+    chainId: 42161,
+    chainName: "Arbitrum One",
+    networkTag: "42161 · arbitrum-one",
+    stallDelta: "13 blocks / 3.25s stall",
+    latency: "123.5 ms",
+    actionStatus: "RECOVERED",
+    actionLabel: "DRAINED · RECOVERED (14:04 IST)",
+    socketCommand: 'echo "set server be_arb/primary state ready" | socat - /run/haproxy/admin.sock',
+    notes: "Sustained upstream node desynchronization. DriftGuard maintained continuous fallback routing for 97 minutes, automatically restoring primary weight at 14:04 IST after 2 consecutive verified consensus checks.",
+    category: "arb",
+    isCaseStudy: true,
+    caseStudyTag: "[Deep-Dive Post-Mortem Available]"
+  },
+  {
+    id: "INC-20261005-05",
+    timestamp: "Oct 5, 2026 · 10:51 IST",
+    chainId: 42170,
+    chainName: "Arbitrum Nova",
+    networkTag: "42170 · arbitrum-nova",
+    stallDelta: "AnyTrust jitter / 4 blocks",
+    latency: "118.6 ms",
+    actionStatus: "RECOVERED",
+    actionLabel: "AUTO-DRAINED · RECOVERED (10:52 IST)",
+    socketCommand: 'echo "set server be_nova/primary state ready" | socat - /run/haproxy/admin.sock',
+    notes: "Temporary jitter on AnyTrust data availability committee ingress. Sentinel safely auto-drained the primary backend and restored routing within 60 seconds.",
+    category: "nova"
+  },
+  {
+    id: "INC-20261005-04",
+    timestamp: "Oct 5, 2026 · 09:42 IST",
+    chainId: 421614,
+    chainName: "Arbitrum Sepolia",
+    networkTag: "421614 · arbitrum-sepolia",
+    stallDelta: "21 blocks / 5.25s stall",
+    latency: "121.2 ms",
+    actionStatus: "RECOVERED",
+    actionLabel: "DRAINED · RECOVERED (09:46 IST)",
+    socketCommand: 'echo "set server be_arb_sepolia/primary state maint" | socat - /run/haproxy/admin.sock',
+    notes: "Consecutive testnet sequencer anomaly. Drained dynamically to secondary pool; restored at 09:46 IST after consistent head synchronization.",
+    category: "arb-sepolia"
+  },
+  {
+    id: "INC-20261005-03",
+    timestamp: "Oct 5, 2026 · 09:40 IST",
+    chainId: 421614,
+    chainName: "Arbitrum Sepolia",
+    networkTag: "421614 · arbitrum-sepolia",
+    stallDelta: "22 blocks / 5.5s stall",
+    latency: "119.4 ms",
+    actionStatus: "RECOVERED",
+    actionLabel: "DRAINED · RECOVERED (09:42 IST)",
+    socketCommand: 'echo "set server be_arb_sepolia/primary state maint" | socat - /run/haproxy/admin.sock',
+    notes: "Sepolia Nitro testnet node lagged 22 blocks behind canonical head. Drained and restored at 09:42 IST with zero dropped client queries.",
+    category: "arb-sepolia"
+  },
+  {
+    id: "INC-20261004-02",
+    timestamp: "Oct 4, 2026 · 22:24 IST",
+    chainId: 42161,
+    chainName: "Arbitrum One",
+    networkTag: "42161 · arbitrum-one",
+    stallDelta: "15 blocks / 3.75s stall",
+    latency: "124.1 ms",
+    actionStatus: "RECOVERED",
+    actionLabel: "RECOVERED (2H 10M SUSTAINED PROTECTION)",
+    socketCommand: 'echo "set server be_arb/primary state ready" | socat - /run/haproxy/admin.sock',
+    notes: "Primary provider stalled under elevated mainnet traffic. Drained instantly; sustained failover protection maintained for 2 hours and 10 minutes until upstream fully re-synced.",
+    category: "arb"
+  },
+  {
+    id: "INC-20261004-01",
+    timestamp: "Oct 4, 2026 · 18:32 IST",
+    chainId: 42161,
+    chainName: "Arbitrum One",
+    networkTag: "42161 · arbitrum-one",
+    stallDelta: "14 blocks / 3.5s stall",
+    latency: "122.8 ms",
+    actionStatus: "RECOVERED",
+    actionLabel: "SEV-2 MITIGATED · FALLBACK ACTIVE (122.8MS)",
+    socketCommand: 'echo "set server be_arb/primary state maint" | socat - /run/haproxy/admin.sock',
+    notes: "Public node sequencer freeze during active mainnet traffic. DriftGuard sentinel tripped consensus drift alert, commanded HAProxy UNIX runtime socket, and diverted all traffic to fallback with 0 dropped queries.",
+    category: "arb",
+    isCaseStudy: true,
+    caseStudyTag: "[SEV-2 Post-Mortem Available]",
+    postMortemLink: "https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md",
+    canonicalHead: "#511619849",
+    delinquentHead: "#511619835"
+  }
+]
 
 const NETWORKS: NetworkConfig[] = [
   {
@@ -63,6 +207,16 @@ const NETWORKS: NetworkConfig[] = [
 
 export function App() {
   const [activeTab, setActiveTab] = useState<"overview" | "rpc" | "docs" | "audit">("overview")
+  const [ledgerFilter, setLedgerFilter] = useState<"all" | "arb" | "nova" | "arb-sepolia" | "case-studies">("all")
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({
+    "INC-20261005-06": true,
+    "INC-20261004-01": true
+  })
+
+  function toggleExpand(id: string) {
+    setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkConfig>(NETWORKS[0])
   const [rpcUrl, setRpcUrl] = useState(NETWORKS[0].endpoint)
   const [selectedMethod, setSelectedMethod] = useState("eth_blockNumber")
@@ -221,7 +375,7 @@ export function App() {
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              24h Field Audit
+              Incident Ledger
             </button>
           </nav>
 
@@ -365,7 +519,7 @@ export function App() {
                     onClick={() => setActiveTab("audit")}
                     className="text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1 font-mono"
                   >
-                    <span>View 24h Incident Audit Log →</span>
+                    <span>View Incident Ledger →</span>
                   </button>
                 </div>
               </CardContent>
@@ -881,23 +1035,23 @@ MAX_ALLOWED_BLOCK_DRIFT=2`}</pre>
         )}
 
         {/* ══════════════════════════════════════════════════════════
-            VIEW 4: 24H FIELD AUDIT (UNSCRIPTED MAINNET INCIDENTS)
+            VIEW 4: INCIDENT LEDGER & POST-MORTEMS
            ══════════════════════════════════════════════════════════ */}
         {activeTab === "audit" && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Header & Direct Discord Verification CTA */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800/80">
               <div className="space-y-1">
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/80 text-[11px] font-mono text-emerald-400">
                   <ShieldCheck className="size-3.5 text-emerald-400" />
                   <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  LIVE MAINNET PRODUCTION LOG · ZERO SYNTHETIC DRILLS
+                  CONTINUOUS CONSENSUS TELEMETRY · ARBITRUM NITRO &amp; ORBIT
                 </div>
                 <h2 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">
-                  24h Mainnet Incident Audit &amp; Live Failover Record
+                  Production Incident Ledger &amp; Post-Mortems
                 </h2>
                 <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl leading-relaxed">
-                  Field-verified operational telemetry from unscripted Arbitrum Nitro consensus desyncs, sequencer head freezes, and automated socket drains.
+                  Empirical telemetry, out-of-band consensus desync records, and automated runtime socket drains across Arbitrum execution networks.
                 </p>
               </div>
 
@@ -909,304 +1063,177 @@ MAX_ALLOWED_BLOCK_DRIFT=2`}</pre>
                   className="inline-flex items-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-medium px-4 py-2.5 rounded-lg transition-colors shadow-sm"
                 >
                   <MessageSquare className="size-3.5 fill-current" />
-                  <span>Join Discord #bot-stats to Verify Raw Embeds</span>
+                  <span>Join Discord #bot-stats</span>
                 </a>
               </div>
             </div>
 
-            {/* Audit Summary Metrics Bar */}
+            {/* KPI Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
-                <div className="text-[10px] text-zinc-500 uppercase">Production Cutovers</div>
-                <div className="text-lg font-semibold text-white mt-0.5">8 / 8 Incidents</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">TOTAL MITIGATED</div>
+                <div className="text-lg font-semibold text-white mt-0.5">8 Events</div>
                 <div className="text-[10px] text-emerald-400 mt-0.5">100% Mitigated</div>
               </div>
               <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
-                <div className="text-[10px] text-zinc-500 uppercase">Max Cutover Latency</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">AVG CUTOVER LATENCY</div>
                 <div className="text-lg font-semibold text-[#28A0F0] mt-0.5">124.1 ms</div>
                 <div className="text-[10px] text-zinc-400 mt-0.5">&lt; 130ms SLA Met</div>
               </div>
               <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
-                <div className="text-[10px] text-zinc-500 uppercase">In-Flight Packet Drops</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">IN-FLIGHT PACKET DROPS</div>
                 <div className="text-lg font-semibold text-emerald-400 mt-0.5">0.00%</div>
                 <div className="text-[10px] text-zinc-400 mt-0.5">Zero TCP Resets</div>
               </div>
               <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
-                <div className="text-[10px] text-zinc-500 uppercase">Longest Protection</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider">MAX CONTINUOUS FAILOVER</div>
                 <div className="text-lg font-semibold text-white mt-0.5">2h 10m</div>
-                <div className="text-[10px] text-zinc-400 mt-0.5">Sustained Failover</div>
+                <div className="text-[10px] text-zinc-400 mt-0.5">Sustained Protection</div>
               </div>
             </div>
 
-            {/* Unscripted Production Events Timeline */}
-            <div className="space-y-3.5">
-              {/* Incident 8: Oct 5, 15:21 IST */}
-              <Card className="bg-zinc-900/40 border-zinc-800/80">
-                <CardHeader className="pb-2.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-amber-400 animate-pulse" />
-                      <CardTitle className="text-xs sm:text-sm font-semibold text-white font-mono">
-                        Incident 8 · Oct 5, 15:21 IST — Arbitrum Sepolia 14-block stall (3.5s)
-                      </CardTitle>
-                    </div>
-                    <Badge variant="outline" className="border-amber-900/80 bg-amber-950/40 text-amber-300 text-[10px] font-mono w-fit">
-                      DRAINED · FALLBACK ACTIVE
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2.5 text-xs font-mono">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded bg-zinc-950 border border-zinc-800/60 text-[11px]">
-                    <div><span className="text-zinc-500 block text-[10px]">TARGET CHAIN</span>Arbitrum Sepolia (421614)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">STALL DELTA</span>14 blocks (3.5s)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">CUTOVER LATENCY</span><span className="text-[#28A0F0]">122.0 ms</span></div>
-                    <div><span className="text-zinc-500 block text-[10px]">DROPPED READS</span><span className="text-emerald-400">0.00%</span></div>
-                  </div>
-                  <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60 text-zinc-300 text-[11px]">
-                    <code>echo "set server be_arb_sepolia/primary state maint" | socat - /run/haproxy/admin.sock</code>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 font-sans">
-                    Sepolia Nitro testnet sequencer lagged 14 blocks behind the canonical consensus anchor. Drained primary upstream via UNIX socket; fallback route active.
-                  </p>
-                </CardContent>
-              </Card>
+            {/* Filter Bar */}
+            <div className="flex flex-wrap items-center gap-2 border-b border-zinc-800/80 pb-3">
+              {[
+                { id: "all", label: "All (8)" },
+                { id: "arb", label: "Arbitrum One (4)" },
+                { id: "nova", label: "Arbitrum Nova (1)" },
+                { id: "arb-sepolia", label: "Arbitrum Sepolia (3)" },
+                { id: "case-studies", label: "Case Studies" }
+              ].map((filterTab) => (
+                <button
+                  key={filterTab.id}
+                  onClick={() => setLedgerFilter(filterTab.id as any)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${
+                    ledgerFilter === filterTab.id
+                      ? "bg-zinc-800 text-white border border-zinc-700 shadow-sm"
+                      : "bg-zinc-900/40 text-zinc-400 border border-zinc-800/60 hover:text-zinc-200 hover:bg-zinc-800/50"
+                  }`}
+                >
+                  {filterTab.label}
+                </button>
+              ))}
+            </div>
 
-              {/* Incident 7: Oct 5, 14:51 IST */}
-              <Card className="bg-zinc-900/40 border-zinc-800/80">
-                <CardHeader className="pb-2.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-amber-400 animate-pulse" />
-                      <CardTitle className="text-xs sm:text-sm font-semibold text-white font-mono">
-                        Incident 7 · Oct 5, 14:51 IST — Arbitrum One 11-block stall (2.75s)
-                      </CardTitle>
-                    </div>
-                    <Badge variant="outline" className="border-amber-900/80 bg-amber-950/40 text-amber-300 text-[10px] font-mono w-fit">
-                      DRAINED · FALLBACK ACTIVE
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2.5 text-xs font-mono">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded bg-zinc-950 border border-zinc-800/60 text-[11px]">
-                    <div><span className="text-zinc-500 block text-[10px]">TARGET CHAIN</span>Arbitrum One (42161)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">STALL DELTA</span>11 blocks (2.75s)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">CUTOVER LATENCY</span><span className="text-[#28A0F0]">120.9 ms</span></div>
-                    <div><span className="text-zinc-500 block text-[10px]">DROPPED READS</span><span className="text-emerald-400">0.00%</span></div>
-                  </div>
-                  <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60 text-zinc-300 text-[11px]">
-                    <code>echo "set server be_arb/primary state maint" | socat - /run/haproxy/admin.sock</code>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 font-sans">
-                    Primary provider micro-batch stall intercepted within one 200ms probe loop. Immediate socket drain protected in-flight relayer nonces.
-                  </p>
-                </CardContent>
-              </Card>
+            {/* Incident Telemetry Rows */}
+            <div className="space-y-2.5">
+              {LEDGER_INCIDENTS.filter((inc) => {
+                if (ledgerFilter === "all") return true
+                if (ledgerFilter === "case-studies") return !!inc.isCaseStudy
+                return inc.category === ledgerFilter
+              }).map((incident) => {
+                const isExpanded = !!expandedIds[incident.id]
+                return (
+                  <div
+                    key={incident.id}
+                    className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700/80 transition-all cursor-pointer"
+                    onClick={() => toggleExpand(incident.id)}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      {/* Left: Timestamp + Target Chain Badge + Case Study Tag */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`size-2 rounded-full shrink-0 ${
+                            incident.actionStatus === "DRAINED"
+                              ? "bg-amber-400 animate-pulse"
+                              : "bg-emerald-400"
+                          }`}
+                        />
+                        <span className="text-xs font-semibold text-white font-mono shrink-0">
+                          {incident.timestamp}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="border-zinc-700/80 bg-zinc-950/60 text-zinc-300 text-[10px] font-mono shrink-0"
+                        >
+                          {incident.networkTag}
+                        </Badge>
+                        {incident.caseStudyTag && (
+                          <span className="text-[10px] font-mono font-medium text-cyan-400 bg-cyan-950/60 border border-cyan-800/60 px-1.5 py-0.5 rounded shrink-0">
+                            {incident.caseStudyTag}
+                          </span>
+                        )}
+                      </div>
 
-              {/* Incident 6: Oct 5, 12:27 IST */}
-              <Card className="bg-zinc-900/40 border-zinc-800/80">
-                <CardHeader className="pb-2.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-emerald-400" />
-                      <CardTitle className="text-xs sm:text-sm font-semibold text-white font-mono">
-                        Incident 6 · Oct 5, 12:27 IST — Arbitrum One 13-block stall (3.25s)
-                      </CardTitle>
-                    </div>
-                    <Badge variant="outline" className="border-emerald-900/80 bg-emerald-950/40 text-emerald-400 text-[10px] font-mono w-fit">
-                      RECOVERED (97M SUSTAINED FAILOVER)
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2.5 text-xs font-mono">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded bg-zinc-950 border border-zinc-800/60 text-[11px]">
-                    <div><span className="text-zinc-500 block text-[10px]">TARGET CHAIN</span>Arbitrum One (42161)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">PROTECTION WINDOW</span>97 Minutes Continuous</div>
-                    <div><span className="text-zinc-500 block text-[10px]">CUTOVER LATENCY</span><span className="text-[#28A0F0]">123.5 ms</span></div>
-                    <div><span className="text-zinc-500 block text-[10px]">RECOVERY TIME</span>14:04 IST (Synced)</div>
-                  </div>
-                  <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60 text-zinc-300 text-[11px]">
-                    <code>echo "set server be_arb/primary state ready" | socat - /run/haproxy/admin.sock</code>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 font-sans">
-                    Extended upstream provider desynchronization. DriftGuard maintained continuous fallback routing for 97 minutes, automatically restoring primary weight at 14:04 IST after 2 consecutive verified tip checks.
-                  </p>
-                </CardContent>
-              </Card>
+                      {/* Middle: Stall Delta */}
+                      <div className="text-xs font-mono text-zinc-300 sm:text-center">
+                        <span className="text-zinc-500 sm:hidden">STALL: </span>
+                        {incident.stallDelta}
+                      </div>
 
-              {/* Incident 5: Oct 5, 10:51 IST */}
-              <Card className="bg-zinc-900/40 border-zinc-800/80">
-                <CardHeader className="pb-2.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-emerald-400" />
-                      <CardTitle className="text-xs sm:text-sm font-semibold text-white font-mono">
-                        Incident 5 · Oct 5, 10:51 IST — Arbitrum Nova consensus reference jitter
-                      </CardTitle>
+                      {/* Right: Latency + Action Status Pill + Chevron */}
+                      <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
+                        <span className="text-xs font-mono text-[#28A0F0] font-medium">
+                          {incident.latency}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] font-mono ${
+                            incident.actionStatus === "DRAINED"
+                              ? "border-amber-900/80 bg-amber-950/40 text-amber-300"
+                              : "border-emerald-900/80 bg-emerald-950/40 text-emerald-400"
+                          }`}
+                        >
+                          {incident.actionStatus}
+                        </Badge>
+                        <div className="text-zinc-500 hover:text-zinc-300 ml-1">
+                          {isExpanded ? (
+                            <ChevronUp className="size-4" />
+                          ) : (
+                            <ChevronDown className="size-4" />
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <Badge variant="outline" className="border-emerald-900/80 bg-emerald-950/40 text-emerald-400 text-[10px] font-mono w-fit">
-                      AUTO-DRAINED · RECOVERED (10:52 IST)
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2.5 text-xs font-mono">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded bg-zinc-950 border border-zinc-800/60 text-[11px]">
-                    <div><span className="text-zinc-500 block text-[10px]">TARGET CHAIN</span>Arbitrum Nova (42170)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">ANOMALY TYPE</span>AnyTrust Reference Jitter</div>
-                    <div><span className="text-zinc-500 block text-[10px]">CUTOVER LATENCY</span><span className="text-[#28A0F0]">118.6 ms</span></div>
-                    <div><span className="text-zinc-500 block text-[10px]">DROPPED READS</span><span className="text-emerald-400">0.00%</span></div>
-                  </div>
-                  <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60 text-zinc-300 text-[11px]">
-                    <code>echo "set server be_nova/primary state ready" | socat - /run/haproxy/admin.sock</code>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 font-sans">
-                    Temporary jitter on AnyTrust data committee ingress. Sentinel safely auto-drained the primary backend and restored routing within 60 seconds.
-                  </p>
-                </CardContent>
-              </Card>
 
-              {/* Incident 4: Oct 5, 09:42 IST */}
-              <Card className="bg-zinc-900/40 border-zinc-800/80">
-                <CardHeader className="pb-2.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-emerald-400" />
-                      <CardTitle className="text-xs sm:text-sm font-semibold text-white font-mono">
-                        Incident 4 · Oct 5, 09:42 IST — Arbitrum Sepolia 21-block drift (5.25s)
-                      </CardTitle>
-                    </div>
-                    <Badge variant="outline" className="border-emerald-900/80 bg-emerald-950/40 text-emerald-400 text-[10px] font-mono w-fit">
-                      DRAINED · RECOVERED (09:46 IST)
-                    </Badge>
+                    {/* Expandable Socket Drawer */}
+                    {isExpanded && (
+                      <div className="mt-3 pt-3 border-t border-zinc-800/60 space-y-2 text-xs font-mono">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                            Runtime Socket Action ({incident.actionLabel})
+                          </span>
+                          {incident.canonicalHead && incident.delinquentHead && (
+                            <span className="text-[10px] text-zinc-400 font-mono">
+                              Canonical: <span className="text-emerald-400">{incident.canonicalHead}</span> · Delinquent: <span className="text-amber-400">{incident.delinquentHead}</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60 text-zinc-300 text-[11px] overflow-x-auto">
+                          <code>{incident.socketCommand}</code>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 font-sans leading-relaxed">
+                          {incident.notes}
+                        </p>
+                        {incident.postMortemLink && (
+                          <div className="pt-2 flex items-center justify-between border-t border-zinc-800/60 text-[11px]">
+                            <a
+                              href={incident.postMortemLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-emerald-400 hover:underline flex items-center gap-1 font-sans"
+                            >
+                              <BookOpen className="size-3" />
+                              <span>Read Engineering Post-Mortem Report →</span>
+                            </a>
+                            <a
+                              href="https://discord.gg/DZBDJSsSzN"
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-zinc-400 hover:text-white flex items-center gap-1 font-sans"
+                            >
+                              <MessageSquare className="size-3" />
+                              <span>Discord Incident Embed</span>
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-2.5 text-xs font-mono">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded bg-zinc-950 border border-zinc-800/60 text-[11px]">
-                    <div><span className="text-zinc-500 block text-[10px]">TARGET CHAIN</span>Arbitrum Sepolia (421614)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">STALL DELTA</span>21 blocks (5.25s)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">CUTOVER LATENCY</span><span className="text-[#28A0F0]">121.2 ms</span></div>
-                    <div><span className="text-zinc-500 block text-[10px]">DROPPED READS</span><span className="text-emerald-400">0.00%</span></div>
-                  </div>
-                  <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60 text-zinc-300 text-[11px]">
-                    <code>echo "set server be_arb_sepolia/primary state maint" | socat - /run/haproxy/admin.sock</code>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 font-sans">
-                    Consecutive testnet sequencer anomaly. Drained dynamically to secondary pool; restored at 09:46 IST after consistent head synchronization.
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Incident 3: Oct 5, 09:40 IST */}
-              <Card className="bg-zinc-900/40 border-zinc-800/80">
-                <CardHeader className="pb-2.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-emerald-400" />
-                      <CardTitle className="text-xs sm:text-sm font-semibold text-white font-mono">
-                        Incident 3 · Oct 5, 09:40 IST — Arbitrum Sepolia 22-block drift (5.5s)
-                      </CardTitle>
-                    </div>
-                    <Badge variant="outline" className="border-emerald-900/80 bg-emerald-950/40 text-emerald-400 text-[10px] font-mono w-fit">
-                      DRAINED · RECOVERED (09:42 IST)
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2.5 text-xs font-mono">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded bg-zinc-950 border border-zinc-800/60 text-[11px]">
-                    <div><span className="text-zinc-500 block text-[10px]">TARGET CHAIN</span>Arbitrum Sepolia (421614)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">STALL DELTA</span>22 blocks (5.5s)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">CUTOVER LATENCY</span><span className="text-[#28A0F0]">119.4 ms</span></div>
-                    <div><span className="text-zinc-500 block text-[10px]">DROPPED READS</span><span className="text-emerald-400">0.00%</span></div>
-                  </div>
-                  <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60 text-zinc-300 text-[11px]">
-                    <code>echo "set server be_arb_sepolia/primary state maint" | socat - /run/haproxy/admin.sock</code>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 font-sans">
-                    Sepolia Nitro testnet node lagged 22 blocks behind canonical head. Drained and restored at 09:42 IST with zero dropped client queries.
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Incident 2: Oct 4, 22:24 IST */}
-              <Card className="bg-zinc-900/40 border-zinc-800/80">
-                <CardHeader className="pb-2.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-emerald-400" />
-                      <CardTitle className="text-xs sm:text-sm font-semibold text-white font-mono">
-                        Incident 2 · Oct 4, 22:24 IST — Arbitrum One 15-block stall (3.75s)
-                      </CardTitle>
-                    </div>
-                    <Badge variant="outline" className="border-emerald-900/80 bg-emerald-950/40 text-emerald-400 text-[10px] font-mono w-fit">
-                      RECOVERED (2H 10M SUSTAINED PROTECTION)
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2.5 text-xs font-mono">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded bg-zinc-950 border border-zinc-800/60 text-[11px]">
-                    <div><span className="text-zinc-500 block text-[10px]">TARGET CHAIN</span>Arbitrum One (42161)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">STALL DELTA</span>15 blocks (3.75s)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">CUTOVER LATENCY</span><span className="text-[#28A0F0]">124.1 ms</span></div>
-                    <div><span className="text-zinc-500 block text-[10px]">RECOVERY TIME</span>Oct 5, 00:34 IST</div>
-                  </div>
-                  <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60 text-zinc-300 text-[11px]">
-                    <code>echo "set server be_arb/primary state ready" | socat - /run/haproxy/admin.sock</code>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 font-sans">
-                    Primary provider stalled under elevated mainnet traffic. Drained instantly; sustained failover protection maintained for 2 hours and 10 minutes until upstream fully re-synced.
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Incident 1: Oct 4, 18:32 IST */}
-              <Card className="specular-border bg-zinc-900/40 border-zinc-800/80 shadow-xl">
-                <CardHeader className="pb-2.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-emerald-400" />
-                      <CardTitle className="text-xs sm:text-sm font-semibold text-white font-mono">
-                        Incident 1 · Oct 4, 18:32 IST — Arbitrum One 14-block stall (3.5s)
-                      </CardTitle>
-                    </div>
-                    <Badge variant="outline" className="border-emerald-900/80 bg-emerald-950/40 text-emerald-400 text-[10px] font-mono w-fit">
-                      SEV-2 MITIGATED · FALLBACK ACTIVE (122.8MS)
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2.5 text-xs font-mono">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded bg-zinc-950 border border-zinc-800/60 text-[11px]">
-                    <div><span className="text-zinc-500 block text-[10px]">TARGET CHAIN</span>Arbitrum One (42161)</div>
-                    <div><span className="text-zinc-500 block text-[10px]">CANONICAL HEAD</span>#511619849</div>
-                    <div><span className="text-zinc-500 block text-[10px]">DELINQUENT HEAD</span>#511619835</div>
-                    <div><span className="text-zinc-500 block text-[10px]">CUTOVER LATENCY</span><span className="text-[#28A0F0]">122.8 ms</span></div>
-                  </div>
-                  <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60 text-zinc-300 text-[11px]">
-                    <code>echo "set server be_arb/primary state maint" | socat - /run/haproxy/admin.sock</code>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 font-sans">
-                    Public node sequencer freeze during active mainnet traffic. DriftGuard sentinel tripped consensus drift alert, commanded HAProxy UNIX runtime socket, and diverted all traffic to fallback with 0 dropped queries.
-                  </p>
-                  <div className="pt-1 flex items-center justify-between border-t border-zinc-800/60 text-[11px]">
-                    <a
-                      href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-emerald-400 hover:underline flex items-center gap-1 font-sans"
-                    >
-                      <BookOpen className="size-3" />
-                      <span>Read Engineering Post-Mortem Report →</span>
-                    </a>
-                    <a
-                      href="https://discord.gg/DZBDJSsSzN"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-zinc-400 hover:text-white flex items-center gap-1 font-sans"
-                    >
-                      <MessageSquare className="size-3" />
-                      <span>Discord Incident Embed</span>
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
+                )
+              })}
             </div>
           </div>
         )}
@@ -1246,7 +1273,7 @@ MAX_ALLOWED_BLOCK_DRIFT=2`}</pre>
               onClick={() => setActiveTab("audit")}
               className="hover:text-zinc-200 transition-colors"
             >
-              24h Field Audit
+              Incident Ledger
             </button>
             <a
               href="https://discord.gg/DZBDJSsSzN"

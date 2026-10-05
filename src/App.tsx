@@ -407,7 +407,7 @@ export function App() {
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              Docs
+              Specifications
             </button>
             <button
               onClick={() => setActiveTab("audit")}
@@ -801,36 +801,36 @@ export function App() {
         )}
 
         {/* ══════════════════════════════════════════════════════════
-            VIEW 3: DOCS & TUTORIAL
+            VIEW 3: SPECIFICATIONS (SYSTEMS ENGINEERING ARCHITECTURE)
            ══════════════════════════════════════════════════════════ */}
         {activeTab === "docs" && (
           <div className="space-y-8">
-            <div>
-              <h2 className="text-xl font-semibold text-white tracking-tight mb-1">
-                Setup Tutorial &amp; Integration Guide
+            <div className="border-b border-zinc-800/80 pb-4">
+              <h2 className="text-xl sm:text-2xl font-semibold text-white tracking-tight mb-1">
+                Runtime Deployment &amp; Client Integration Specification
               </h2>
-              <p className="text-xs sm:text-sm text-zinc-400">
-                Deploy DriftGuard on your own infrastructure or connect your dApp, indexer, or trading bot in seconds.
+              <p className="text-xs sm:text-sm text-zinc-400 max-w-3xl leading-relaxed">
+                Reference deployment topologies, local sidecar daemon orchestration, and deterministic upstream failover configuration for Arbitrum Nitro and Orbit execution clients.
               </p>
             </div>
 
-            {/* Step 1: Quickstart: 1-Command Ingress Sidecar */}
+            {/* 01 / Sidecar Daemon Orchestration */}
             <Card className="specular-border bg-zinc-900/40 border-zinc-800/80 shadow-xl">
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <CardTitle className="text-sm font-semibold text-white flex items-center gap-2 font-mono">
                     <Terminal className="size-4 text-zinc-300" />
-                    1. Quickstart: 1-Command Ingress Sidecar
+                    01 / Sidecar Daemon Orchestration
                   </CardTitle>
-                  <Badge variant="outline" className="border-zinc-800 text-[#28A0F0] text-xs font-mono">
-                    Under 30s • Zero Relayer Changes
+                  <Badge variant="outline" className="border-zinc-800 bg-zinc-950/60 text-[#28A0F0] text-[10px] font-mono tracking-wider">
+                    CONTAINERIZED SIDECAR · IPC UNIX SOCKET · ROOTLESS RUNTIME
                   </Badge>
                 </div>
-                <CardDescription className="text-xs text-zinc-400">
-                  Spin up the HAProxy L7 gateway and async Python consensus sentinel in front of your Orbit validator, session relayer, or game server stack.
+                <CardDescription className="text-xs text-zinc-400 leading-relaxed pt-1">
+                  Deploy the combined HAProxy L7 data plane and asynchronous Python consensus sentinel adjacent to your validator, relayer, or RPC gateway stack.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3.5">
                 <div className="relative rounded-md bg-zinc-950 p-3.5 border border-zinc-800/80 font-mono text-xs text-zinc-200 flex items-center justify-between gap-4">
                   <code className="text-zinc-300 overflow-x-auto">
                     git clone https://github.com/maskalfreeup-glitch/driftguard &amp;&amp; cd driftguard &amp;&amp; docker compose up -d
@@ -842,7 +842,7 @@ export function App() {
                         "quickstart-sidecar"
                       )
                     }
-                    className="p-1 rounded text-zinc-400 hover:text-white bg-zinc-800/60 shrink-0"
+                    className="p-1.5 rounded text-zinc-400 hover:text-white bg-zinc-800/60 shrink-0"
                     title="Copy Command"
                   >
                     {copiedId === "quickstart-sidecar" ? <Check className="size-3.5 text-[#28A0F0]" /> : <Copy className="size-3.5" />}
@@ -850,39 +850,39 @@ export function App() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                  <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800/60">
-                    <div className="text-[11px] font-semibold text-white mb-1">Local JSON-RPC Ingress (:8545)</div>
-                    <div className="text-[11px] text-zinc-400 leading-snug">
-                      High-throughput HAProxy L7 sidecar listening on loopback with &lt;1ms C-runtime routing overhead.
+                  <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800/60 space-y-1">
+                    <div className="text-[11px] font-semibold text-white font-mono">Loopback Interface (127.0.0.1:8545)</div>
+                    <div className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                      High-concurrency HAProxy L7 runtime routing with &lt; 3ms C-runtime latency overhead.
                     </div>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800/60">
-                    <div className="text-[11px] font-semibold text-white mb-1">Silent Stall Guard</div>
-                    <div className="text-[11px] text-zinc-400 leading-snug">
-                      Drains delinquent sequencer nodes via UNIX socket when drift exceeds 4 blocks (~1s) before relayers desync.
+                  <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800/60 space-y-1">
+                    <div className="text-[11px] font-semibold text-white font-mono">Consensus Drift Eviction</div>
+                    <div className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                      Automated UNIX socket drain upon &gt;= 4 blocks (~1.0s) head divergence relative to canonical anchor.
                     </div>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800/60">
-                    <div className="text-[11px] font-semibold text-white mb-1">Zero Relayer Changes</div>
-                    <div className="text-[11px] text-zinc-400 leading-snug">
-                      Point Viem, Ethers, Go-Ethereum, or C# Nethereum directly to localhost without custom failover wrappers.
+                  <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800/60 space-y-1">
+                    <div className="text-[11px] font-semibold text-white font-mono">Wire-Compatible Transport</div>
+                    <div className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                      Strict JSON-RPC 2.0 conformance; drop-in reverse proxy for Viem, Go-Ethereum, Nethermind, and Alloy.
                     </div>
                   </div>
                 </div>
 
                 <p className="text-xs text-zinc-400 leading-relaxed pt-1">
-                  The gateway listens on <code className="text-zinc-300 bg-zinc-950 px-1 py-0.5 rounded border border-zinc-800 font-mono">http://localhost:8545/arb</code>. Upstream URLs, chain IDs, polling intervals, and alert webhooks are configured via <code className="text-zinc-300 bg-zinc-950 px-1 py-0.5 rounded border border-zinc-800 font-mono">.env</code>.
+                  The ingress gateway binds to <code className="text-zinc-300 bg-zinc-950 px-1 py-0.5 rounded border border-zinc-800 font-mono">http://127.0.0.1:8545/arb</code>. Upstream Nitro execution endpoints, chain IDs, verification intervals, and alerting webhooks are configured via <code className="text-zinc-300 bg-zinc-950 px-1 py-0.5 rounded border border-zinc-800 font-mono">.env</code>.
                 </p>
 
-                <div className="pt-1 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-800/60">
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-800/60">
                   <a
                     href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-[#28A0F0] hover:underline flex items-center gap-1 font-medium"
+                    className="text-xs text-[#28A0F0] hover:underline flex items-center gap-1 font-medium font-mono"
                   >
                     <BookOpen className="size-3" />
-                    <span>Read High-Throughput Ingress Guide →</span>
+                    <span>[ Technical Architecture RFC ]</span>
                   </a>
                   <a
                     href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/PILOT_PARTNER_LOI.md"
@@ -891,23 +891,29 @@ export function App() {
                     className="text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1 font-mono"
                   >
                     <ExternalLink className="size-3" />
-                    <span>Pilot Partner LOI</span>
+                    <span>[ Partner Verification: LOI-2026-ORBIT-001 ]</span>
                   </a>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Step 2: Client & Relayer Integration Guides (Foundry, Hardhat, MetaMask) */}
-            <div>
-              <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-400 mb-3 flex items-center gap-1.5">
-                <FileCode2 className="size-3.5" />
-                2. Client &amp; Relayer Integration Guides
-              </h3>
+            {/* 02 / Execution Client Runtime Bindings */}
+            <div className="space-y-3">
+              <div className="space-y-0.5">
+                <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                  <FileCode2 className="size-3.5" />
+                  02 / Execution Client Runtime Bindings
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Production connection snippets for standard EVM frameworks and developer toolchains.
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {/* Foundry Card */}
                 <Card className="bg-zinc-900/40 border-zinc-800/80">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-semibold text-white">Foundry / Cast</CardTitle>
+                    <CardTitle className="text-xs font-semibold text-white font-mono">Foundry / Cast</CardTitle>
                     <CardDescription className="text-[11px] text-zinc-500">CLI command query</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -921,6 +927,7 @@ export function App() {
                           )
                         }
                         className="absolute top-2 right-2 p-1 text-zinc-400 hover:text-white"
+                        title="Copy Cast Command"
                       >
                         {copiedId === "cast-cmd" ? <Check className="size-3 text-[#28A0F0]" /> : <Copy className="size-3" />}
                       </button>
@@ -931,7 +938,7 @@ export function App() {
                 {/* Hardhat Card */}
                 <Card className="bg-zinc-900/40 border-zinc-800/80">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-semibold text-white">Hardhat Config</CardTitle>
+                    <CardTitle className="text-xs font-semibold text-white font-mono">Hardhat Config</CardTitle>
                     <CardDescription className="text-[11px] text-zinc-500">hardhat.config.ts</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -950,6 +957,7 @@ export function App() {
                           )
                         }
                         className="absolute top-2 right-2 p-1 text-zinc-400 hover:text-white"
+                        title="Copy Hardhat Config"
                       >
                         {copiedId === "hardhat-cfg" ? <Check className="size-3 text-[#28A0F0]" /> : <Copy className="size-3" />}
                       </button>
@@ -957,117 +965,136 @@ export function App() {
                   </CardContent>
                 </Card>
 
-                {/* MetaMask Card */}
+                {/* Viem / Ethers / Alloy Card */}
                 <Card className="bg-zinc-900/40 border-zinc-800/80">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-semibold text-white">MetaMask Parameters</CardTitle>
-                    <CardDescription className="text-[11px] text-zinc-500">Network config</CardDescription>
+                    <CardTitle className="text-xs font-semibold text-white font-mono">Viem / Ethers / Alloy</CardTitle>
+                    <CardDescription className="text-[11px] text-zinc-500">RPC Transport Binding</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-1 font-mono text-[11px]">
-                    <div className="flex justify-between py-0.5 border-b border-zinc-800/60">
-                      <span className="text-zinc-500">Name:</span>
-                      <span className="text-white">Arbitrum One</span>
-                    </div>
-                    <div className="flex justify-between py-0.5 border-b border-zinc-800/60">
-                      <span className="text-zinc-500">RPC URL:</span>
-                      <span className="text-white truncate max-w-[130px]">rpc.driftguard.live/arb</span>
-                    </div>
-                    <div className="flex justify-between py-0.5">
-                      <span className="text-zinc-500">Chain ID:</span>
-                      <span className="text-white">42161</span>
+                  <CardContent>
+                    <div className="relative rounded bg-zinc-950 p-2.5 border border-zinc-800/80 font-mono text-[11px] text-zinc-300">
+                      <pre className="overflow-x-auto leading-tight">{`import { createPublicClient, http } from 'viem';
+import { arbitrum } from 'viem/chains';
+
+export const client = createPublicClient({
+  chain: arbitrum,
+  transport: http('https://rpc.driftguard.live/arb'),
+});`}</pre>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(
+                            `import { createPublicClient, http } from 'viem';\nimport { arbitrum } from 'viem/chains';\n\nexport const client = createPublicClient({\n  chain: arbitrum,\n  transport: http('https://rpc.driftguard.live/arb'),\n});`,
+                            "viem-cfg"
+                          )
+                        }
+                        className="absolute top-2 right-2 p-1 text-zinc-400 hover:text-white"
+                        title="Copy Viem Snippet"
+                      >
+                        {copiedId === "viem-cfg" ? <Check className="size-3 text-[#28A0F0]" /> : <Copy className="size-3" />}
+                      </button>
                     </div>
                   </CardContent>
                 </Card>
               </div>
             </div>
 
-            {/* Step 3: Architecture Deep Dive */}
+            {/* 03 / Deterministic Out-of-Band Health Model */}
             <Card className="bg-zinc-900/40 border-zinc-800/80">
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <CardTitle className="text-sm font-semibold text-white flex items-center gap-2 font-mono">
                     <AlertTriangle className="size-4 text-zinc-300" />
-                    3. Architecture: Eliminating the "Silent 200 OK"
+                    03 / Deterministic Out-of-Band Health Model
                   </CardTitle>
-                  <Badge variant="outline" className="border-zinc-800 text-zinc-400 text-xs font-mono">
-                    Out-of-Band
+                  <Badge variant="outline" className="border-zinc-800 bg-zinc-950/60 text-zinc-400 text-[10px] font-mono tracking-wider">
+                    DECOUPLED CONTROL PLANE
                   </Badge>
                 </div>
-                <CardDescription className="text-xs text-zinc-400">
-                  Data Plane vs Control Plane breakdown: why standard HTTP health checks fail on Arbitrum Nitro, and how DriftGuard guarantees zero stale reads.
+                <CardDescription className="text-xs text-zinc-400 leading-relaxed pt-1">
+                  Formal decoupling of L7 JSON-RPC data forwarding from asynchronous consensus verification.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800/80 space-y-1.5">
+                  <div className="p-3.5 rounded-lg bg-zinc-950 border border-zinc-800/80 space-y-1.5">
                     <span className="text-zinc-500 font-mono text-xs">01</span>
-                    <h4 className="text-xs font-semibold text-white">Silent Sequencer Stalls</h4>
-                    <p className="text-xs text-zinc-400 leading-relaxed">
-                      A node's block ingestion stalls, but port 8545 keeps answering with HTTP 200. Standard balancers keep routing reads, causing applications to fetch stale state and submit failing transactions.
+                    <h4 className="text-xs font-semibold text-white font-mono">Sequencer Ingestion Stalls</h4>
+                    <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+                      Upstream process serves HTTP 200 with stale state root during sequencer queue contention.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800/80 space-y-1.5">
+                  <div className="p-3.5 rounded-lg bg-zinc-950 border border-zinc-800/80 space-y-1.5">
                     <span className="text-zinc-500 font-mono text-xs">02</span>
-                    <h4 className="text-xs font-semibold text-white">Out-of-Band Sentinel</h4>
-                    <p className="text-xs text-zinc-400 leading-relaxed">
-                      The Python Sentinel checks head growth rates against canonical Nitro consensus anchors every 200ms. If head height freezes for &gt; 250ms, the node is flagged delinquent.
+                    <h4 className="text-xs font-semibold text-white font-mono">Asynchronous Consensus Probe</h4>
+                    <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+                      Sentinel polls independent out-of-band canonical anchor every 200ms without client latency overhead.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800/80 space-y-1.5">
+                  <div className="p-3.5 rounded-lg bg-zinc-950 border border-zinc-800/80 space-y-1.5">
                     <span className="text-zinc-500 font-mono text-xs">03</span>
-                    <h4 className="text-xs font-semibold text-white">Sub-130ms Socket Draining</h4>
-                    <p className="text-xs text-zinc-400 leading-relaxed">
-                      The sentinel commands HAProxy's UNIX runtime socket to drain the delinquent node. Inflight requests complete, and all new traffic instantaneously shifts to the healthy fallback.
+                    <h4 className="text-xs font-semibold text-white font-mono">Dynamic UNIX Socket Drain</h4>
+                    <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+                      Executes 'set server state maint' via /run/haproxy/admin.sock within 130ms. Zero TCP connection resets.
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Step 4: Sentinel Telemetry & Alert Webhooks */}
+            {/* 04 / Telemetry Event Dispatch & Webhooks */}
             <Card className="bg-zinc-900/40 border-zinc-800/80">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
-                  <Radio className="size-4 text-zinc-300" />
-                  4. Sentinel Telemetry &amp; Alert Webhooks
-                </CardTitle>
-                <CardDescription className="text-xs text-zinc-400">
-                  Receive instant notifications in Discord or Slack when an upstream node enters degraded or failover state.
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <CardTitle className="text-sm font-semibold text-white flex items-center gap-2 font-mono">
+                    <Radio className="size-4 text-zinc-300" />
+                    04 / Telemetry Event Dispatch &amp; Webhooks
+                  </CardTitle>
+                  <Badge variant="outline" className="border-zinc-800 bg-zinc-950/60 text-zinc-400 text-[10px] font-mono tracking-wider">
+                    OPERATIONAL TELEMETRY
+                  </Badge>
+                </div>
+                <CardDescription className="text-xs text-zinc-400 leading-relaxed pt-1">
+                  Real-time webhook notification configuration for threshold breaches, socket drains, and consensus re-synchronizations.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3.5">
                 <div className="relative rounded-md bg-zinc-950 p-3.5 border border-zinc-800/80 font-mono text-xs text-zinc-300">
-                  <pre className="overflow-x-auto leading-relaxed">{`# Discord & Slack Alert Webhooks
+                  <pre className="overflow-x-auto leading-relaxed">{`# Discord Telemetry Webhook Configuration
 DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/your-channel-webhook"
-SLACK_WEBHOOK_URL="https://hooks.slack.com/services/your-slack-webhook"
 
-# Alert Cooldown & Threshold
-FAILOVER_ALERT_COOLDOWN=60
-MAX_ALLOWED_BLOCK_DRIFT=2`}</pre>
+# Out-of-Band Alerting Thresholds & Debounce
+FAILOVER_ALERT_COOLDOWN=10.0
+DRIFT_THRESHOLD=4
+FAILURE_THRESHOLD=2
+RECOVERY_THRESHOLD=2`}</pre>
                   <button
                     onClick={() =>
                       copyToClipboard(
-                        `DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/your-channel-webhook"\nSLACK_WEBHOOK_URL="https://hooks.slack.com/services/your-slack-webhook"\nFAILOVER_ALERT_COOLDOWN=60\nMAX_ALLOWED_BLOCK_DRIFT=2`,
+                        `# Discord Telemetry Webhook Configuration\nDISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/your-channel-webhook"\n\n# Out-of-Band Alerting Thresholds & Debounce\nFAILOVER_ALERT_COOLDOWN=10.0\nDRIFT_THRESHOLD=4\nFAILURE_THRESHOLD=2\nRECOVERY_THRESHOLD=2`,
                         "env-webhooks"
                       )
                     }
-                    className="absolute top-3 right-3 p-1 rounded text-zinc-400 hover:text-white bg-zinc-800/60"
+                    className="absolute top-3 right-3 p-1.5 rounded text-zinc-400 hover:text-white bg-zinc-800/60"
+                    title="Copy Webhook Configuration"
                   >
                     {copiedId === "env-webhooks" ? <Check className="size-3 text-[#28A0F0]" /> : <Copy className="size-3" />}
                   </button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                  <span className="text-zinc-500">Need help configuring alerts or want live node telemetry?</span>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-800/60 text-xs font-mono">
+                  <span className="text-zinc-400">
+                    Live Operations Channel: Automated alerts streaming continuously to Discord #bot-stats (ISO-8601 UTC).
+                  </span>
                   <a
                     href="https://discord.gg/DZBDJSsSzN"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-white hover:underline flex items-center gap-1 font-medium"
+                    className="text-[#28A0F0] hover:underline flex items-center gap-1 font-medium font-sans"
                   >
                     <MessageSquare className="size-3" />
-                    <span>Join our Discord community →</span>
+                    <span>Join Discord #bot-stats →</span>
                   </a>
                 </div>
               </CardContent>
@@ -1320,7 +1347,7 @@ MAX_ALLOWED_BLOCK_DRIFT=2`}</pre>
               onClick={() => setActiveTab("docs")}
               className="hover:text-zinc-200 transition-colors"
             >
-              Docs
+              Specifications
             </button>
             <button
               onClick={() => setActiveTab("audit")}

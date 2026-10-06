@@ -59,11 +59,11 @@ interface LedgerIncident {
   postMortemLink?: string
   canonicalHead?: string
   delinquentHead?: string
-  grantNarrative: {
+  impactAnalysis: {
     title: string
     ecosystemRiskAverted: string
     affectedStakeholders: string
-    grantSignificance: string
+    productionImpact: string
   }
   techStandard: {
     rootCause: string
@@ -92,11 +92,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb",
     canonicalHead: "#512235940",
     delinquentHead: "#512235934",
-    grantNarrative: {
+    impactAnalysis: {
       title: "ERC-4337 Relayer Nonce Parity Preservation During Micro-Burst",
       ecosystemRiskAverted: "Mitigated Risk: ERC-4337 Bundler Nonce Invalidation. At 250ms Nitro cadence, a 6-block divergence causes account abstraction bundlers to read stale nonces, triggering batch reverts across user operations ('nonce too low').",
       affectedStakeholders: "ERC-4337 Bundlers, Biconomy/ZeroDev Relayers, Arbitrum One DeFi Traders",
-      grantSignificance: "Validates that DriftGuard's sub-130ms failover acts as an essential circuit-breaker for high-throughput Arbitrum infrastructure where even 1.5s latency cascades into relayer failure."
+      productionImpact: "Validates that DriftGuard's sub-130ms failover acts as an essential circuit-breaker for high-throughput Arbitrum infrastructure where even 1.5s latency cascades into relayer failure."
     },
     techStandard: {
       rootCause: "Transient worker thread congestion in primary RPC sequencer stream under concurrent DeFi load.",
@@ -123,11 +123,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb",
     canonicalHead: "#512235480",
     delinquentHead: "HTTP 200 OK (eth_syncing = true)",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Neutralization of the 'Silent 200 OK' Syncing Trap",
       ecosystemRiskAverted: "Protected DeFi indexers and liquidation bots from reading partial historical states and missing event logs from an actively re-syncing execution client.",
       affectedStakeholders: "Lending Protocol Oracles, Liquidation Keepers, Indexers (The Graph / Goldsky)",
-      grantSignificance: "Validates the primary thesis of decentralized consensus shielding: standard cloud load balancers (AWS ALB, Cloudflare) blindly route traffic to syncing nodes because HTTP 200 OK masks consensus lag."
+      productionImpact: "Validates the primary thesis of decentralized consensus shielding: standard cloud load balancers (AWS ALB, Cloudflare) blindly route traffic to syncing nodes because HTTP 200 OK masks consensus lag."
     },
     techStandard: {
       rootCause: "Execution client peer re-negotiation triggered an internal catch-up re-sync.",
@@ -154,11 +154,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb-sepolia",
     canonicalHead: "#316353912 / #85282939",
     delinquentHead: "Gateway Timeout (> 3.5s)",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Cross-Chain Blast Radius Isolation Under Edge Degradation",
       ecosystemRiskAverted: "Prevented cascaded RPC timeouts from terminating active WebSockets in Arbitrum Nova gaming sessions and blocking Sepolia test contract deploys.",
       affectedStakeholders: "Arbitrum Nova Game Developers & Web3 Gaming Guilds, Ecosystem Testnet Developers",
-      grantSignificance: "Demonstrates multi-chain tenant isolation on a single, ultra-lightweight DriftGuard instance (<45 MiB RAM RSS on Oracle VPS)."
+      productionImpact: "Demonstrates multi-chain tenant isolation on a single, ultra-lightweight DriftGuard instance (<45 MiB RAM RSS on Oracle VPS)."
     },
     techStandard: {
       rootCause: "Tier-1 transit edge routing congestion and BGP flap on upstream provider network.",
@@ -185,11 +185,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb-sepolia",
     canonicalHead: "#316348910",
     delinquentHead: "#316348894",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Testnet Developer Pipeline Protection Against Sequencer Backlog",
       ecosystemRiskAverted: "Prevented continuous CI/CD test suite failures and conflicting tx receipt queries for developer teams building on Arbitrum Sepolia.",
       affectedStakeholders: "Core Arbitrum Developers, Orbit Rollup Builders running dev pipelines",
-      grantSignificance: "Reliable testnet infrastructure is essential for developer onboarding. DriftGuard ensures dev workflows are resilient to Nitro testnet stalls."
+      productionImpact: "Reliable testnet infrastructure is essential for developer onboarding. DriftGuard ensures dev workflows are resilient to Nitro testnet stalls."
     },
     techStandard: {
       rootCause: "Nitro sequencer batch queue memory contention causing temporary head lag.",
@@ -216,11 +216,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb",
     canonicalHead: "#512198473",
     delinquentHead: "Timeout (> 3.5s)",
-    grantNarrative: {
+    impactAnalysis: {
       title: "RPC Traffic Surge Shielding for Mainnet dApps",
       ecosystemRiskAverted: "Averted 504 Gateway Timeouts across frontend dApp users querying Arbitrum One.",
       affectedStakeholders: "Arbitrum One Retail Users & Frontend Interfaces (Uniswap / GMX)",
-      grantSignificance: "Eliminates user friction during mainnet volatility spikes."
+      productionImpact: "Eliminates user friction during mainnet volatility spikes."
     },
     techStandard: {
       rootCause: "Public endpoint HTTP thread exhaustion under global traffic surge.",
@@ -247,11 +247,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb-sepolia",
     canonicalHead: "#316314558",
     delinquentHead: "#316314550",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Nitro Testnet Batch Queue Desync Shield",
       ecosystemRiskAverted: "Prevented dropped test transactions during Nitro sequencer batch reorganization.",
       affectedStakeholders: "Stylus & Nitro Smart Contract Developers",
-      grantSignificance: "Ensures smooth developer experience without false positive pipeline test failures."
+      productionImpact: "Ensures smooth developer experience without false positive pipeline test failures."
     },
     techStandard: {
       rootCause: "Testnet batch serialization pause.",
@@ -278,11 +278,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "nova",
     canonicalHead: "#85282923",
     delinquentHead: "#85282918",
-    grantNarrative: {
+    impactAnalysis: {
       title: "AnyTrust Gaming State Parity Protection on Arbitrum Nova",
       ecosystemRiskAverted: "Protected high-frequency player state and on-chain micro-transactions from stale reads.",
       affectedStakeholders: "Orbit Gaming Chains, Game Servers, Reddit Community Point Collectors",
-      grantSignificance: "Proves DriftGuard's compatibility with AnyTrust architecture and Data Availability Committees."
+      productionImpact: "Proves DriftGuard's compatibility with AnyTrust architecture and Data Availability Committees."
     },
     techStandard: {
       rootCause: "DAC batch signing delay causing 5-block lag.",
@@ -309,11 +309,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb",
     canonicalHead: "#511942010",
     delinquentHead: "#511942005",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Micro-Stall Interception Ahead of Cascaded Nonce Desync",
       ecosystemRiskAverted: "Shielded relayer transaction submissions before client timeouts were reached.",
       affectedStakeholders: "Transaction Relayers & Automated Keepers",
-      grantSignificance: "Demonstrates that DriftGuard acts before client SDK timeouts (typically 5–10s)."
+      productionImpact: "Demonstrates that DriftGuard acts before client SDK timeouts (typically 5–10s)."
     },
     techStandard: {
       rootCause: "Sequencer micro-stall exceeding 1.25 seconds.",
@@ -340,11 +340,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb-sepolia",
     canonicalHead: "#316104250",
     delinquentHead: "#316104241",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Testnet Ingress Failover During Network Jitter",
       ecosystemRiskAverted: "Zero dropped transactions during multi-block sequencer drift.",
       affectedStakeholders: "DeFi Testnet Deployers",
-      grantSignificance: "Continuous testnet stability protects developer momentum."
+      productionImpact: "Continuous testnet stability protects developer momentum."
     },
     techStandard: {
       rootCause: "Nitro testnet micro-stall.",
@@ -371,11 +371,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb-sepolia",
     canonicalHead: "#316101900",
     delinquentHead: "#316101879",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Sustained 5-Second Testnet Backlog Protection",
       ecosystemRiskAverted: "Prevented 20+ blocks of stale read leakage during severe testnet ingestion backlog.",
       affectedStakeholders: "Arbitrum Sepolia dApp developers",
-      grantSignificance: "Shows resilience during multi-second sequencer backlog events."
+      productionImpact: "Shows resilience during multi-second sequencer backlog events."
     },
     techStandard: {
       rootCause: "Sequencer ingestion backlog.",
@@ -402,11 +402,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb-sepolia",
     canonicalHead: "#316098400",
     delinquentHead: "#316098386",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Deterministic Cutover on 14-Block Divergence",
       ecosystemRiskAverted: "Shielded relayer queues from 14-block consensus drift.",
       affectedStakeholders: "Account Abstraction Bundlers",
-      grantSignificance: "Predictable, deterministic cutover with zero TCP dropped connections."
+      productionImpact: "Predictable, deterministic cutover with zero TCP dropped connections."
     },
     techStandard: {
       rootCause: "RPC node memory pressure.",
@@ -433,11 +433,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb",
     canonicalHead: "#511928400",
     delinquentHead: "#511928389",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Single-Cycle Probe Detection of Batch Ingestion Stall",
       ecosystemRiskAverted: "Protected high-frequency trading bot submissions from submitting against stale heads.",
       affectedStakeholders: "Arbitrum One DeFi MEV & Liquidation Bots",
-      grantSignificance: "Validates 200ms poll loop performance against high block velocity."
+      productionImpact: "Validates 200ms poll loop performance against high block velocity."
     },
     techStandard: {
       rootCause: "Upstream batch ingestion thread pause.",
@@ -466,11 +466,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     caseStudyTag: "97m Endurance Case Study",
     canonicalHead: "#511910500",
     delinquentHead: "#511910487",
-    grantNarrative: {
+    impactAnalysis: {
       title: "97-Minute Continuous Failover Endurance Under Active Production Load",
       ecosystemRiskAverted: "Shielded 10,000+ Arbitrum One queries during an extended primary node outage with 0.00% dropped packets and zero memory leakage.",
       affectedStakeholders: "Entire Arbitrum Mainnet dApp Ecosystem",
-      grantSignificance: "Proves DriftGuard's rock-solid operational endurance. It is not just a fast failover tool; it is an enterprise-grade high-availability shield."
+      productionImpact: "Proves DriftGuard's rock-solid operational endurance. It is not just a fast failover tool; it is an enterprise-grade high-availability shield."
     },
     techStandard: {
       rootCause: "Persistent upstream execution node desynchronization lasting 1h 37m.",
@@ -497,11 +497,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "nova",
     canonicalHead: "#85210400",
     delinquentHead: "#85210396",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Sub-120ms AnyTrust Jitter Absorption",
       ecosystemRiskAverted: "Absorbed temporary DAC sequence delays before affecting in-game transactions.",
       affectedStakeholders: "Arbitrum Nova Game Studios",
-      grantSignificance: "Ensures ultra-low latency dApps on Nova maintain continuous responsiveness."
+      productionImpact: "Ensures ultra-low latency dApps on Nova maintain continuous responsiveness."
     },
     techStandard: {
       rootCause: "AnyTrust committee batch propagation jitter.",
@@ -528,11 +528,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb-sepolia",
     canonicalHead: "#316075200",
     delinquentHead: "#316075179",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Multi-Block Testnet Sequencer Anomaly Isolation",
       ecosystemRiskAverted: "Protected developer smart contract deployments during testnet sequencer re-anchoring.",
       affectedStakeholders: "Arbitrum Stylus / Nitro Developers",
-      grantSignificance: "Highlights DriftGuard's role in stabilizing developer environments."
+      productionImpact: "Highlights DriftGuard's role in stabilizing developer environments."
     },
     techStandard: {
       rootCause: "Testnet sequencer re-anchoring to L1 Sepolia.",
@@ -559,11 +559,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     category: "arb-sepolia",
     canonicalHead: "#316075100",
     delinquentHead: "#316075078",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Severe 22-Block Consensus Lag Mitigation",
       ecosystemRiskAverted: "Averted massive state divergence where client queries returned contract states 5.5s in the past.",
       affectedStakeholders: "Sepolia dApp Testers",
-      grantSignificance: "Demonstrates that large drifts are caught just as quickly as small micro-stalls."
+      productionImpact: "Demonstrates that large drifts are caught just as quickly as small micro-stalls."
     },
     techStandard: {
       rootCause: "Testnet validator node thread lock.",
@@ -592,11 +592,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     caseStudyTag: "2h 10m Endurance Record",
     canonicalHead: "#511674200",
     delinquentHead: "#511674185",
-    grantNarrative: {
+    impactAnalysis: {
       title: "2 Hours 10 Minutes Continuous Fallback Protection on Mainnet",
       ecosystemRiskAverted: "Zero dropped transactions across 130 minutes of sustained upstream primary RPC unresponsiveness.",
       affectedStakeholders: "High-throughput Arbitrum One dApps",
-      grantSignificance: "Sets the production endurance benchmark for DriftGuard sidecars."
+      productionImpact: "Sets the production endurance benchmark for DriftGuard sidecars."
     },
     techStandard: {
       rootCause: "Primary provider internal cluster partition under mainnet volume surge.",
@@ -626,11 +626,11 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     postMortemLink: "https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md",
     canonicalHead: "#511619849",
     delinquentHead: "#511619835",
-    grantNarrative: {
+    impactAnalysis: {
       title: "Live SEV-2 Production Incident Triage (Genesis Field Validation)",
       ecosystemRiskAverted: "Shielded 800+ real mainnet transactions with 0.00% client error rate when arb1.arbitrum.io silently froze at block #511619835.",
       affectedStakeholders: "Arbitrum One Ecosystem, Session Relayers, ERC-4337 Bundlers, DeFi Swappers",
-      grantSignificance: "Production benchmark validation: demonstrates complete autonomous detection-to-recovery lifecycle under live network stress. Full post-mortem verified by engineering team."
+      productionImpact: "Production benchmark validation: demonstrates complete autonomous detection-to-recovery lifecycle under live network stress. Full post-mortem verified by engineering team."
     },
     techStandard: {
       rootCause: "Sequencer feed deadlock in primary public RPC node during peak traffic.",
@@ -677,14 +677,14 @@ export function App() {
   const [activeTab, setActiveTab] = useState<"overview" | "rpc" | "docs" | "audit">("overview")
   const [ledgerFilter, setLedgerFilter] = useState<"all" | "arb" | "nova" | "arb-sepolia" | "case-studies">("all")
   const [incidentSearchQuery, setIncidentSearchQuery] = useState("")
-  const [activeIncidentSubTabs, setActiveIncidentSubTabs] = useState<Record<string, "grant" | "sre" | "wire">>({})
+  const [activeIncidentSubTabs, setActiveIncidentSubTabs] = useState<Record<string, "impact" | "sre" | "wire">>({})
   const [expandedIncident, setExpandedIncident] = useState<string | null>("INC-20261006-18")
 
   const toggleIncident = (id: string) => {
     setExpandedIncident(prev => (prev === id ? null : id))
   }
 
-  function setIncidentSubTab(id: string, tab: "grant" | "sre" | "wire") {
+  function setIncidentSubTab(id: string, tab: "impact" | "sre" | "wire") {
     setActiveIncidentSubTabs(prev => ({ ...prev, [id]: tab }))
   }
 
@@ -1689,8 +1689,8 @@ RECOVERY_THRESHOLD=2`}</pre>
                   const matchesDelta = inc.stallDelta.toLowerCase().includes(q)
                   const matchesNotes = inc.notes.toLowerCase().includes(q)
                   const matchesCanonical = inc.canonicalHead?.toLowerCase().includes(q) || false
-                  const matchesTitle = inc.grantNarrative?.title.toLowerCase().includes(q) || false
-                  const matchesRisk = inc.grantNarrative?.ecosystemRiskAverted.toLowerCase().includes(q) || false
+                  const matchesTitle = inc.impactAnalysis?.title.toLowerCase().includes(q) || false
+                  const matchesRisk = inc.impactAnalysis?.ecosystemRiskAverted.toLowerCase().includes(q) || false
                   if (!matchesId && !matchesChain && !matchesDelta && !matchesNotes && !matchesCanonical && !matchesTitle && !matchesRisk) {
                     return false
                   }
@@ -1699,7 +1699,7 @@ RECOVERY_THRESHOLD=2`}</pre>
                 return true
               }).map((incident) => {
                 const isExpanded = expandedIncident === incident.id
-                const subTab = activeIncidentSubTabs[incident.id] || "grant"
+                const subTab = activeIncidentSubTabs[incident.id] || "impact"
 
                 return (
                   <div
@@ -1787,22 +1787,22 @@ RECOVERY_THRESHOLD=2`}</pre>
                     {/* Rich On-Demand Drawer */}
                     {isExpanded && (
                       <div className="px-3.5 pb-3.5 pt-2 border-t border-zinc-800/80 space-y-3">
-                        {/* Sub-Tabs: Grant Narrative | SRE Post-Mortem | Wire Log */}
+                        {/* Sub-Tabs: Ecosystem Impact | SRE Post-Mortem | Wire Log */}
                         <div className="flex items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
                           <div className="flex items-center gap-1.5">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setIncidentSubTab(incident.id, "grant")
+                                setIncidentSubTab(incident.id, "impact")
                               }}
                               className={`px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                                subTab === "grant"
+                                subTab === "impact"
                                   ? "bg-cyan-950 text-cyan-300 border border-cyan-800/80"
                                   : "text-zinc-400 hover:text-zinc-200"
                               }`}
                             >
-                              <BookOpen className="size-3" />
-                              <span>🏛 Grant Narrative</span>
+                              <ShieldCheck className="size-3" />
+                              <span>Ecosystem Impact</span>
                             </button>
                             <button
                               onClick={(e) => {
@@ -1843,13 +1843,13 @@ RECOVERY_THRESHOLD=2`}</pre>
                           )}
                         </div>
 
-                        {/* SUB-TAB 1: GRANT NARRATIVE & IMPACT */}
-                        {subTab === "grant" && (
+                        {/* SUB-TAB 1: ECOSYSTEM IMPACT & MITIGATION */}
+                        {subTab === "impact" && (
                           <div className="space-y-2.5">
                             <div className="space-y-1">
                               <h4 className="text-xs sm:text-sm font-semibold text-white flex items-center gap-1.5">
                                 <Sparkles className="size-3.5 text-cyan-400 shrink-0" />
-                                <span>{incident.grantNarrative.title}</span>
+                                <span>{incident.impactAnalysis.title}</span>
                               </h4>
                               <p className="text-xs text-zinc-300 leading-relaxed">
                                 {incident.notes}
@@ -1863,18 +1863,18 @@ RECOVERY_THRESHOLD=2`}</pre>
                                 <span>MITIGATED RISK PROFILE</span>
                               </div>
                               <p className="text-xs text-zinc-200 leading-relaxed font-sans">
-                                {incident.grantNarrative.ecosystemRiskAverted}
+                                {incident.impactAnalysis.ecosystemRiskAverted}
                               </p>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
                               <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60">
                                 <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">AFFECTED STAKEHOLDERS</span>
-                                <span className="text-zinc-300 text-[11px] font-sans font-medium">{incident.grantNarrative.affectedStakeholders}</span>
+                                <span className="text-zinc-300 text-[11px] font-sans font-medium">{incident.impactAnalysis.affectedStakeholders}</span>
                               </div>
                               <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60">
                                 <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">PRODUCTION IMPACT</span>
-                                <span className="text-zinc-300 text-[11px] font-sans">{incident.grantNarrative.grantSignificance}</span>
+                                <span className="text-zinc-300 text-[11px] font-sans">{incident.impactAnalysis.productionImpact}</span>
                               </div>
                             </div>
                           </div>

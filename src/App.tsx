@@ -94,7 +94,7 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
     delinquentHead: "#512235934",
     grantNarrative: {
       title: "ERC-4337 Relayer Nonce Parity Preservation During Micro-Burst",
-      ecosystemRiskAverted: "Prevented mass transaction reverts ('nonce too low'). At ~250ms cadence, a 6-block divergence means account abstraction bundlers query obsolete nonces, triggering batch reverts across user ops.",
+      ecosystemRiskAverted: "Mitigated Risk: ERC-4337 Bundler Nonce Invalidation. At 250ms Nitro cadence, a 6-block divergence causes account abstraction bundlers to read stale nonces, triggering batch reverts across user operations ('nonce too low').",
       affectedStakeholders: "ERC-4337 Bundlers, Biconomy/ZeroDev Relayers, Arbitrum One DeFi Traders",
       grantSignificance: "Validates that DriftGuard's sub-130ms failover acts as an essential circuit-breaker for high-throughput Arbitrum infrastructure where even 1.5s latency cascades into relayer failure."
     },
@@ -127,7 +127,7 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
       title: "Neutralization of the 'Silent 200 OK' Syncing Trap",
       ecosystemRiskAverted: "Protected DeFi indexers and liquidation bots from reading partial historical states and missing event logs from an actively re-syncing execution client.",
       affectedStakeholders: "Lending Protocol Oracles, Liquidation Keepers, Indexers (The Graph / Goldsky)",
-      grantSignificance: "Empirical proof of the core problem statement outlined in the Arbitrum Grant Application: standard cloud load balancers (AWS ALB, Cloudflare) would have blindly routed traffic to this syncing node."
+      grantSignificance: "Validates the primary thesis of decentralized consensus shielding: standard cloud load balancers (AWS ALB, Cloudflare) blindly route traffic to syncing nodes because HTTP 200 OK masks consensus lag."
     },
     techStandard: {
       rootCause: "Execution client peer re-negotiation triggered an internal catch-up re-sync.",
@@ -630,7 +630,7 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
       title: "Live SEV-2 Production Incident Triage (Genesis Field Validation)",
       ecosystemRiskAverted: "Shielded 800+ real mainnet transactions with 0.00% client error rate when arb1.arbitrum.io silently froze at block #511619835.",
       affectedStakeholders: "Arbitrum One Ecosystem, Session Relayers, ERC-4337 Bundlers, DeFi Swappers",
-      grantSignificance: "The primary empirical proof submitted with the Arbitrum Foundation Grant Proposal. Complete post-mortem report verified by engineering team."
+      grantSignificance: "Production benchmark validation: demonstrates complete autonomous detection-to-recovery lifecycle under live network stress. Full post-mortem verified by engineering team."
     },
     techStandard: {
       rootCause: "Sequencer feed deadlock in primary public RPC node during peak traffic.",
@@ -1856,11 +1856,11 @@ RECOVERY_THRESHOLD=2`}</pre>
                               </p>
                             </div>
 
-                            {/* Ecosystem Risk Averted Callout Box */}
+                            {/* Mitigated Risk Profile Callout Box */}
                             <div className="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-800/50 space-y-1">
                               <div className="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
                                 <ShieldCheck className="size-3.5 text-cyan-400" />
-                                <span>Arbitrum Ecosystem Disaster Averted</span>
+                                <span>MITIGATED RISK PROFILE</span>
                               </div>
                               <p className="text-xs text-zinc-200 leading-relaxed font-sans">
                                 {incident.grantNarrative.ecosystemRiskAverted}
@@ -1873,7 +1873,7 @@ RECOVERY_THRESHOLD=2`}</pre>
                                 <span className="text-zinc-300 text-[11px] font-sans font-medium">{incident.grantNarrative.affectedStakeholders}</span>
                               </div>
                               <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60">
-                                <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">GRANT REVIEWER SIGNIFICANCE</span>
+                                <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">PRODUCTION IMPACT</span>
                                 <span className="text-zinc-300 text-[11px] font-sans">{incident.grantNarrative.grantSignificance}</span>
                               </div>
                             </div>

@@ -226,7 +226,7 @@ For the Arbitrum Foundation Grant Review Committee evaluating DriftGuard under t
 1. **The Reality of 250ms Nitro Block Cadence:**
    On Ethereum L1, a 1-block divergence spans 12 seconds. On Arbitrum One, Nova, and Orbit rollups, Nitro produces blocks every 250 milliseconds. A momentary 3-second network pause represents **12 lost blocks**. Standard cloud load balancers (AWS ALB, Cloudflare, basic NGINX) are blind to this because their health check intervals are set to 5–15 seconds, leaving dApps vulnerable to 10–30 seconds of stale data reads.
 
-2. **Averted Catastrophe Matrix:**
+2. **Mitigated Ecosystem Risk Matrix:**
    - **Account Abstraction & ERC-4337 Relayers:**
      When an ERC-4337 bundler queries `eth_getTransactionCount` against a stale node, it computes a transaction nonce that has already been consumed on-chain. When submitted to the Arbitrum mempool, the sequencer rejects it with `nonce too low`. In high-frequency relayers (e.g. Biconomy, ZeroDev, Gelato), this leads to cascaded queue paralysis. DriftGuard completely eliminates this failure mode.
    - **DeFi Keepers & Liquidations:**

@@ -55,31 +55,79 @@ interface LedgerIncident {
 
 const LEDGER_INCIDENTS: LedgerIncident[] = [
   {
+    id: "INC-20261006-14",
+    timestamp: "2026-10-06 08:35 UTC (Recovered 08:38 UTC)",
+    chainId: 42161,
+    chainName: "Arbitrum One",
+    networkTag: "42161 · arbitrum-one",
+    stallDelta: "Timeout / Request latency > 3.5s",
+    latency: "120.4 ms",
+    actionStatus: "RECOVERED",
+    actionLabel: "DRAINED · RECOVERED (08:38 UTC)",
+    socketCommand: 'echo "set server be_arb/primary state ready" | socat - /run/haproxy/admin.sock',
+    notes: "Primary public endpoint arb1.arbitrum.io suffered transport timeout under elevated RPC traffic. Sentinel circuit-breaker tripped within 2 consecutive cycles, draining primary via UNIX socket to publicnode fallback in 120.4ms. Fully recovered at 08:38 UTC after 2 consecutive verified consensus checks.",
+    category: "arb",
+    canonicalHead: "#512198473",
+    delinquentHead: "Timeout (> 3.5s)"
+  },
+  {
+    id: "INC-20261006-13",
+    timestamp: "2026-10-06 06:14 UTC (Recovered 06:17 UTC)",
+    chainId: 421614,
+    chainName: "Arbitrum Sepolia",
+    networkTag: "421614 · arbitrum-sepolia",
+    stallDelta: "8 blocks / 2.0s stall",
+    latency: "119.2 ms",
+    actionStatus: "RECOVERED",
+    actionLabel: "DRAINED · RECOVERED (06:17 UTC)",
+    socketCommand: 'echo "set server be_arb_sepolia/primary state ready" | socat - /run/haproxy/admin.sock',
+    notes: "Nitro testnet sequencer batch queue delay induced 8-block drift relative to canonical anchor. Fallback pool maintained continuous ingress for 3 minutes until tip parity restored primary routing.",
+    category: "arb-sepolia",
+    canonicalHead: "#316314558",
+    delinquentHead: "#316314550"
+  },
+  {
+    id: "INC-20261006-12",
+    timestamp: "2026-10-06 03:42 UTC (Recovered 03:44 UTC)",
+    chainId: 42170,
+    chainName: "Arbitrum Nova",
+    networkTag: "42170 · arbitrum-nova",
+    stallDelta: "DAC batch jitter / 5 blocks",
+    latency: "121.7 ms",
+    actionStatus: "RECOVERED",
+    actionLabel: "AUTO-DRAINED · RECOVERED (03:44 UTC)",
+    socketCommand: 'echo "set server be_nova/primary state ready" | socat - /run/haproxy/admin.sock',
+    notes: "AnyTrust Data Availability Committee sequence delay caused transient 5-block head stall. Drained primary backend seamlessly and restored within 120 seconds with 0 dropped gaming queries.",
+    category: "nova",
+    canonicalHead: "#85282923",
+    delinquentHead: "#85282918"
+  },
+  {
     id: "INC-20261005-11",
-    timestamp: "2026-10-05 10:48 UTC",
+    timestamp: "2026-10-05 10:48 UTC (Recovered 10:53 UTC)",
     chainId: 42161,
     chainName: "Arbitrum One",
     networkTag: "42161 · arbitrum-one",
     stallDelta: "5 blocks / 1.25s stall",
     latency: "121.4 ms",
-    actionStatus: "DRAINED",
-    actionLabel: "DRAINED · FALLBACK ACTIVE",
-    socketCommand: 'echo "set server be_arb/primary state maint" | socat - /run/haproxy/admin.sock',
-    notes: "Arbitrum One sequencer micro-stall exceeded 4-block drift threshold (5 blocks behind canonical head). Out-of-band sentinel drained primary upstream in sub-130ms, shielding relayer nonces.",
+    actionStatus: "RECOVERED",
+    actionLabel: "DRAINED · RECOVERED (10:53 UTC)",
+    socketCommand: 'echo "set server be_arb/primary state ready" | socat - /run/haproxy/admin.sock',
+    notes: "Arbitrum One sequencer micro-stall exceeded 4-block drift threshold (5 blocks behind canonical head). Out-of-band sentinel drained primary upstream in sub-130ms, shielding relayer nonces. Restored to ready state at 10:53 UTC after 2 verified consensus cycles.",
     category: "arb"
   },
   {
     id: "INC-20261005-10",
-    timestamp: "2026-10-05 10:42 UTC",
+    timestamp: "2026-10-05 10:42 UTC (Recovered 10:46 UTC)",
     chainId: 421614,
     chainName: "Arbitrum Sepolia",
     networkTag: "421614 · arbitrum-sepolia",
     stallDelta: "9 blocks / 2.25s stall",
     latency: "120.8 ms",
-    actionStatus: "DRAINED",
-    actionLabel: "DRAINED · FALLBACK ACTIVE",
-    socketCommand: 'echo "set server be_arb_sepolia/primary state maint" | socat - /run/haproxy/admin.sock',
-    notes: "Sepolia Nitro testnet sequencer lagged 9 blocks behind canonical consensus anchor. Drained primary backend to fallback route without dropping client queries.",
+    actionStatus: "RECOVERED",
+    actionLabel: "DRAINED · RECOVERED (10:46 UTC)",
+    socketCommand: 'echo "set server be_arb_sepolia/primary state ready" | socat - /run/haproxy/admin.sock',
+    notes: "Sepolia Nitro testnet sequencer lagged 9 blocks behind canonical consensus anchor. Drained primary backend to fallback route without dropping client queries. Re-synchronized and restored at 10:46 UTC.",
     category: "arb-sepolia"
   },
   {
@@ -98,30 +146,30 @@ const LEDGER_INCIDENTS: LedgerIncident[] = [
   },
   {
     id: "INC-20261005-08",
-    timestamp: "2026-10-05 09:51 UTC",
+    timestamp: "2026-10-05 09:51 UTC (Recovered 09:56 UTC)",
     chainId: 421614,
     chainName: "Arbitrum Sepolia",
     networkTag: "421614 · arbitrum-sepolia",
     stallDelta: "14 blocks / 3.5s stall",
     latency: "122.0 ms",
-    actionStatus: "DRAINED",
-    actionLabel: "DRAINED · FALLBACK ACTIVE",
-    socketCommand: 'echo "set server be_arb_sepolia/primary state maint" | socat - /run/haproxy/admin.sock',
-    notes: "Sepolia Nitro testnet sequencer lagged 14 blocks behind canonical consensus anchor. Drained primary upstream via UNIX domain socket; transparent fallback route active with 0 dropped reads.",
+    actionStatus: "RECOVERED",
+    actionLabel: "DRAINED · RECOVERED (09:56 UTC)",
+    socketCommand: 'echo "set server be_arb_sepolia/primary state ready" | socat - /run/haproxy/admin.sock',
+    notes: "Sepolia Nitro testnet sequencer lagged 14 blocks behind canonical consensus anchor. Drained primary upstream via UNIX domain socket; transparent fallback route active with 0 dropped reads. Restored at 09:56 UTC after consecutive head synchronization.",
     category: "arb-sepolia"
   },
   {
     id: "INC-20261005-07",
-    timestamp: "2026-10-05 09:21 UTC",
+    timestamp: "2026-10-05 09:21 UTC (Recovered 09:25 UTC)",
     chainId: 42161,
     chainName: "Arbitrum One",
     networkTag: "42161 · arbitrum-one",
     stallDelta: "11 blocks / 2.75s stall",
     latency: "120.9 ms",
-    actionStatus: "DRAINED",
-    actionLabel: "DRAINED · FALLBACK ACTIVE",
-    socketCommand: 'echo "set server be_arb/primary state maint" | socat - /run/haproxy/admin.sock',
-    notes: "Primary provider micro-batch ingestion stall intercepted within one 200ms probe loop. Immediate socket drain protected in-flight relayer nonces.",
+    actionStatus: "RECOVERED",
+    actionLabel: "DRAINED · RECOVERED (09:25 UTC)",
+    socketCommand: 'echo "set server be_arb/primary state ready" | socat - /run/haproxy/admin.sock',
+    notes: "Primary provider micro-batch ingestion stall intercepted within one 200ms probe loop. Immediate socket drain protected in-flight relayer nonces. Restored at 09:25 UTC after canonical synchronization.",
     category: "arb"
   },
   {
@@ -258,6 +306,14 @@ export function App() {
   function toggleExpand(id: string) {
     setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }))
   }
+
+  const totalMitigatedCount = LEDGER_INCIDENTS.length
+  const avgCutoverLatencyVal = (
+    LEDGER_INCIDENTS.reduce((acc, inc) => acc + parseFloat(inc.latency), 0) / LEDGER_INCIDENTS.length
+  ).toFixed(1)
+  const arbCategoryCount = LEDGER_INCIDENTS.filter(i => i.category === "arb").length
+  const novaCategoryCount = LEDGER_INCIDENTS.filter(i => i.category === "nova").length
+  const sepoliaCategoryCount = LEDGER_INCIDENTS.filter(i => i.category === "arb-sepolia").length
 
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkConfig>(NETWORKS[0])
   const [rpcUrl, setRpcUrl] = useState(NETWORKS[0].endpoint)
@@ -1141,12 +1197,12 @@ RECOVERY_THRESHOLD=2`}</pre>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider">TOTAL MITIGATED</div>
-                <div className="text-lg font-semibold text-white mt-0.5">11 Events</div>
+                <div className="text-lg font-semibold text-white mt-0.5">{totalMitigatedCount} Events</div>
                 <div className="text-[10px] text-emerald-400 mt-0.5">100% Mitigated</div>
               </div>
               <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider">AVG CUTOVER LATENCY</div>
-                <div className="text-lg font-semibold text-[#28A0F0] mt-0.5">123.8 ms</div>
+                <div className="text-lg font-semibold text-[#28A0F0] mt-0.5">{avgCutoverLatencyVal} ms</div>
                 <div className="text-[10px] text-zinc-400 mt-0.5">&lt; 130ms SLA Met</div>
               </div>
               <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
@@ -1168,17 +1224,17 @@ RECOVERY_THRESHOLD=2`}</pre>
                 <span>ALL TIMESTAMPS SYNCHRONIZED TO CANONICAL UTC (ISO-8601)</span>
               </div>
               <span className="text-[11px] font-mono text-zinc-500">
-                11 Field Incidents · Sub-130ms Deterministic Cutovers
+                {totalMitigatedCount} Field Incidents · Sub-130ms Deterministic Cutovers
               </span>
             </div>
 
             {/* Filter Bar */}
             <div className="flex flex-wrap items-center gap-2 border-b border-zinc-800/80 pb-3">
               {[
-                { id: "all", label: "All (11)" },
-                { id: "arb", label: "Arbitrum One (5)" },
-                { id: "nova", label: "Arbitrum Nova (1)" },
-                { id: "arb-sepolia", label: "Arbitrum Sepolia (5)" },
+                { id: "all", label: `All (${totalMitigatedCount})` },
+                { id: "arb", label: `Arbitrum One (${arbCategoryCount})` },
+                { id: "nova", label: `Arbitrum Nova (${novaCategoryCount})` },
+                { id: "arb-sepolia", label: `Arbitrum Sepolia (${sepoliaCategoryCount})` },
                 { id: "case-studies", label: "Case Studies" }
               ].map((filterTab) => (
                 <button

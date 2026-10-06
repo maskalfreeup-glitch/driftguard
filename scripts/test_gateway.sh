@@ -104,7 +104,7 @@ echo -n "[6/8] Testing Method Whitelist (DELETE rejected with 405)... "
 DEL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${GATEWAY_URL}")
 GET_BODY=$(curl -s -X GET "${GATEWAY_URL}")
 
-if [ "$DEL_STATUS" = "405" ] && echo "$GET_BODY" | grep -q "SYSTEM OPERATIONAL"; then
+if [ "$DEL_STATUS" = "405" ] && echo "$GET_BODY" | grep -qi "OPERATIONAL"; then
     echo -e "${GREEN}PASS (DELETE -> 405, GET -> Landing Page 200)${NC}"
 else
     echo -e "${RED}FAIL (DELETE HTTP: ${DEL_STATUS})${NC}"

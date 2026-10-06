@@ -422,6 +422,7 @@ make test
 
 - **Grant Application Dossier:** Read the official Arbitrum Foundation grant application in [`ARBITRUM_GRANT_PROPOSAL.md`](ARBITRUM_GRANT_PROPOSAL.md).
 - **Pilot Partner LOI:** Review the ecosystem evaluation record in [`docs/PILOT_PARTNER_LOI.md`](docs/PILOT_PARTNER_LOI.md).
+- **Production Incident Ledger:** Review the continuous consensus desync triage records across Arbitrum One, Nova, and Sepolia in [`docs/reports/INCIDENT_LEDGER.md`](docs/reports/INCIDENT_LEDGER.md).
 - **Incident Post-Mortem:** Read the October 4, 2026 14-block desync engineering report in [`docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md`](docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md).
 - **High-Throughput Ingress Guide:** Follow the 3-step sidecar deployment guide in [`docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md`](docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md).
 

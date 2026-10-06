@@ -3,11 +3,11 @@
 # DriftGuard - Unified Multi-Chain EVM Gateway Failover & Alerting Drill
 # ==============================================================================
 # Asserts:
-# 1. Path-based ingress verification for all 3 supported EVM chains:
-#    - /base -> Chain ID 8453 (0x2105)
-#    - /arb  -> Chain ID 42161 (0xa4b1)
-#    - /sepolia -> Chain ID 11155111 (0xaa36a7)
-# 2. Chaos drill against be_base:
+# 1. Path-based ingress verification for Arbitrum EVM chains:
+#    - /arb         -> Arbitrum One (Chain ID 42161 / 0xa4b1)
+#    - /nova        -> Arbitrum Nova (Chain ID 42170 / 0xa4ba)
+#    - /arb-sepolia -> Arbitrum Sepolia (Chain ID 421614 / 0x66eee)
+# 2. Chaos drill against be_arb:
 #    - Injects synthetic consensus drift on Primary (drift=50)
 #    - Measures cutover latency against a 1.5s drill threshold (not an SLA)
 #    - Asserts zero HTTP 5xx responses during failover

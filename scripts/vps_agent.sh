@@ -182,7 +182,7 @@ cmd_report() {
   {"name": "⏱️ Uptime", "value": "${uptime_val}", "inline": true},
   {"name": "🧠 RAM Usage", "value": "${used_ram} MB / ${total_ram} MB (**${ram_pct}%**)", "inline": true},
   {"name": "📈 CPU Load (1m)", "value": "**${load}**", "inline": true},
-  {"name": "💾 Root Disk", "value": "${used_disk} / ${total_ram} (**${disk_pct}%**)", "inline": true},
+  {"name": "💾 Root Disk", "value": "${used_disk} / ${total_disk} (**${disk_pct}%**)", "inline": true},
   {"name": "🐳 Docker Containers", "value": "${docker_val}", "inline": false}
 ]
 EOF

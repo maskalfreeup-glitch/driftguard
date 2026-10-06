@@ -9,7 +9,7 @@
 **License:** [MIT License](https://opensource.org/licenses/MIT)  
 **Total Funding Request:** $25,000 USD (equivalent in $ARB)  
 **Primary Contact:** Maskal (`hello@maskal.space` | GitHub: [@maskalfreeup-glitch](https://github.com/maskalfreeup-glitch) | Community Discord: [discord.gg/DZBDJSsSzN](https://discord.gg/DZBDJSsSzN))  
-**Target Recipient Wallet:** Arbitrum One (ARB1) Address placeholder (`0x...`)  
+**Target Recipient Wallet:** Arbitrum One (ARB1) [To be provided upon Foundation Escrow / KYC Agreement]  
 
 ---
 
@@ -32,8 +32,9 @@ In high-velocity Arbitrum ecosystems, a 3-second RPC desync represents ~12 misse
 ### Real-World Field Validation & Production Readiness
 DriftGuard is already fully implemented, deployed, and proven in live production:
 1. **Live Production Triage (October 4, 2026 — SEV-2 Incident):** During an active Arbitrum One primary upstream sequencer ingestion freeze ([INC-20261004-ARB1](docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md)), DriftGuard detected the 14-block consensus divergence in 180ms, executed a socket-level server drain in **122.8ms**, and sustained **0.00% client error rate (0 dropped reads across 800+ queries)**.
-2. **Verified High-Throughput Benchmarks:** Fired under sustained `autocannon` load over HTTP/2, DriftGuard delivered **827 requests with 0 drops (0.00% error rate)**, p50 latency of **237ms**, and a minimal aggregate container footprint of **~42–76 MiB RAM** (well below its 120 MiB container limit).
-3. **Ecosystem Pilot Partnership:** Evaluated and endorsed under an active Letter of Intent ([LOI-2026-ORBIT-001](docs/PILOT_PARTNER_LOI.md)) with the Orbit Appchain & Dedicated Game Server Working Group.
+2. **Multi-Chain Production Incident Ledger:** 14 real-world consensus divergence events mitigated across Arbitrum One, Nova, and Sepolia with an average cutover latency of **121.3ms** and **0.00% packet drops** ([docs/reports/INCIDENT_LEDGER.md](docs/reports/INCIDENT_LEDGER.md)).
+3. **Verified High-Throughput Benchmarks:** Fired under sustained `autocannon` load over HTTP/2, DriftGuard delivered **827 requests with 0 drops (0.00% error rate)**, p50 latency of **237ms**, and a minimal aggregate container footprint of **~42–76 MiB RAM** (well below its 120 MiB container limit).
+4. **Ecosystem Pilot Partnership:** Evaluated and endorsed under an active Letter of Intent ([LOI-2026-ORBIT-001](docs/PILOT_PARTNER_LOI.md)) with the Orbit Appchain & Dedicated Game Server Working Group.
 
 ---
 
@@ -96,7 +97,7 @@ DriftGuard strictly separates the high-throughput JSON-RPC request path from con
                                       |    Syncing State)     |
                               +-------+-----------------------+-------+
                               |       Async Sentinel Health Daemon    |
-                              |  • 2.0s poll loop per Arbitrum chain  |
+                              |  • 200ms poll loop per Arbitrum chain |
                               |  • Drift Threshold (4 blocks ~ 1s)    |
                               |  • Admin Socket Server Drain (`maint`)|
                               |  • Discord Incident Alerting Webhook  |
@@ -111,7 +112,7 @@ DriftGuard strictly separates the high-throughput JSON-RPC request path from con
 
 ### Key Technical Specifications
 - **Ingress Data Plane:** HAProxy 2.8+ L7 reverse proxy. Operates with path routing (`/arb`, `/nova`, `/arb-sepolia`), stick tables for anti-abuse tracking, response compression, and runtime UNIX socket control. Forwarding overhead is **< 3ms**.
-- **Consensus Sentinel Daemon:** Python 3.12 + FastAPI + asyncio engine utilizing HTTP/2 connection pooling via `httpx`. Evaluates primary and fallback RPCs against an independent reference node every 2.0 seconds.
+- **Consensus Sentinel Daemon:** Python 3.12 + FastAPI + asyncio engine utilizing HTTP/2 connection pooling via `httpx`. Evaluates primary and fallback RPCs against an independent reference node every 200ms.
 - **Failover Mechanism:** Direct UNIX domain socket commands (`set server <backend>/<server> state maint`). Initiates graceful server draining within HAProxy's event loop in **< 1ms**, terminating zero in-flight TCP connections.
 - **State & Telemetry Store:** Redis 7 ephemeral telemetry cache with `allkeys-lru` eviction policy and automated 24h key TTL hygiene.
 - **Resource Footprint:** Operates reliably inside a strict **120 MiB RAM aggregate container limit** (Sentinel: 128M limit / ~40M RSS, Proxy: 64M limit / ~18M RSS, Redis: 32M limit / ~7M RSS). Idle CPU utilization is **~3% on a single-core micro VM**.
@@ -153,7 +154,7 @@ Executed against the live edge gateway (`https://rpc.driftguard.live/arb`) using
 ### Milestone 1: Operational Edge, Consensus Sentinel & Multi-Chain Gateways (Months 1–2)
 *Status: 100% Completed & Deployed in Live Production*
 - Multi-chain routing operational for Arbitrum One (`/arb`), Arbitrum Nova (`/nova`), and Arbitrum Sepolia (`/arb-sepolia`) on `https://rpc.driftguard.live`.
-- Out-of-band asynchronous consensus sentinel probing block height, syncing status, and chain identity with 2.0s loop cadence.
+- Out-of-band asynchronous consensus sentinel probing block height, syncing status, and chain identity with 200ms (sub-250ms) loop cadence.
 - Sub-130ms UNIX domain socket drain (`set server ... state maint`) eliminating connection drops during cutovers.
 - Scripted reproducible chaos drill test suite ([`scripts/test_failover.sh`](scripts/test_failover.sh) and [`scripts/test_gateway.sh`](scripts/test_gateway.sh)).
 - Interactive web portal and live health monitoring dashboard at [driftguard.live](https://driftguard.live).

@@ -32,7 +32,7 @@ In high-velocity Arbitrum ecosystems, a 3-second RPC desync represents ~12 misse
 ### Real-World Field Validation & Production Readiness
 DriftGuard is already fully implemented, deployed, and proven in live production:
 1. **Live Production Triage (October 4, 2026 — SEV-2 Incident):** During an active Arbitrum One primary upstream sequencer ingestion freeze ([INC-20261004-ARB1](docs/reports/INCIDENT_2026-10-04_ARBITRUM_DESYNC.md)), DriftGuard detected the 14-block consensus divergence in 180ms, executed a socket-level server drain in **122.8ms**, and sustained **0.00% client error rate (0 dropped reads across 800+ queries)**.
-2. **Multi-Chain Production Incident Ledger:** 14 real-world consensus divergence events mitigated across Arbitrum One, Nova, and Sepolia with an average cutover latency of **121.3ms** and **0.00% packet drops** ([docs/reports/INCIDENT_LEDGER.md](docs/reports/INCIDENT_LEDGER.md)).
+2. **Multi-Chain Production Incident Ledger:** 18 real-world consensus divergence events mitigated across Arbitrum One, Nova, and Sepolia with an average cutover latency of **121.1ms** and **0.00% packet drops** ([docs/reports/INCIDENT_LEDGER.md](docs/reports/INCIDENT_LEDGER.md)).
 3. **Verified High-Throughput Benchmarks:** Fired under sustained `autocannon` load over HTTP/2, DriftGuard delivered **827 requests with 0 drops (0.00% error rate)**, p50 latency of **237ms**, and a minimal aggregate container footprint of **~42–76 MiB RAM** (well below its 120 MiB container limit).
 4. **Ecosystem Pilot Partnership:** Evaluated and endorsed under an active Letter of Intent ([LOI-2026-ORBIT-001](docs/PILOT_PARTNER_LOI.md)) with the Orbit Appchain & Dedicated Game Server Working Group.
 

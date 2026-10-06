@@ -21,15 +21,12 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
-  Server,
   Activity,
   Cpu,
   Zap,
-  Layers,
   Search,
   Clock,
   Sparkles,
-  ArrowRight,
   Shield
 } from "lucide-react"
 
@@ -679,23 +676,16 @@ const NETWORKS: NetworkConfig[] = [
 export function App() {
   const [activeTab, setActiveTab] = useState<"overview" | "rpc" | "docs" | "audit">("overview")
   const [ledgerFilter, setLedgerFilter] = useState<"all" | "arb" | "nova" | "arb-sepolia" | "case-studies">("all")
-  const [ledgerPerspective, setLedgerPerspective] = useState<"grant" | "sre" | "cluster">("grant")
   const [incidentSearchQuery, setIncidentSearchQuery] = useState("")
-  const [severityFilter, setSeverityFilter] = useState<"all" | "SEV-2" | "SEV-3">("all")
   const [activeIncidentSubTabs, setActiveIncidentSubTabs] = useState<Record<string, "grant" | "sre" | "wire">>({})
-  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({
-    "INC-20261006-18": true,
-    "INC-20261006-17": true,
-    "INC-20261005-06": true,
-    "INC-20261004-01": true
-  })
+  const [expandedIncident, setExpandedIncident] = useState<string | null>("INC-20261006-18")
+
+  const toggleIncident = (id: string) => {
+    setExpandedIncident(prev => (prev === id ? null : id))
+  }
 
   function setIncidentSubTab(id: string, tab: "grant" | "sre" | "wire") {
     setActiveIncidentSubTabs(prev => ({ ...prev, [id]: tab }))
-  }
-
-  function toggleExpand(id: string) {
-    setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
   const totalMitigatedCount = LEDGER_INCIDENTS.length
@@ -1554,20 +1544,20 @@ RECOVERY_THRESHOLD=2`}</pre>
             VIEW 4: INCIDENT LEDGER & POST-MORTEMS
            ══════════════════════════════════════════════════════════ */}
         {activeTab === "audit" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Header & Direct Discord Verification CTA */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-800/80">
               <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/80 text-[11px] font-mono text-emerald-400">
-                  <ShieldCheck className="size-3.5 text-emerald-400" />
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/80 text-[10px] font-mono text-emerald-400">
+                  <ShieldCheck className="size-3 text-emerald-400" />
                   <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  ARBITRUM FOUNDATION GRANT EVIDENCE · ACTIVE FIELD VALIDATION
+                  LIVE ARBITRUM NITRO RPC LEDGER · EMPIRICAL VERIFICATION
                 </div>
-                <h2 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">
+                <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
                   Production Incident Command &amp; Consensus Audit Ledger
                 </h2>
-                <p className="text-xs sm:text-sm text-zinc-400 max-w-3xl leading-relaxed">
-                  Empirical telemetry, out-of-band consensus desync records, and automated runtime socket drains across Arbitrum execution networks. Verified against the <span className="text-white font-medium">Arbitrum Nitro 250ms Head Velocity Specification</span>.
+                <p className="text-xs text-zinc-400 max-w-3xl leading-relaxed">
+                  Real-time autonomous failover telemetry across Arbitrum One, Nova, and Sepolia. Out-of-band consensus sentinel sampling canonical anchors at 200ms cadence.
                 </p>
               </div>
 
@@ -1576,7 +1566,7 @@ RECOVERY_THRESHOLD=2`}</pre>
                   href="https://discord.gg/DZBDJSsSzN"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-medium px-4 py-2.5 rounded-lg transition-colors shadow-sm"
+                  className="inline-flex items-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-medium px-3.5 py-2 rounded-lg transition-colors shadow-sm"
                 >
                   <MessageSquare className="size-3.5 fill-current" />
                   <span>Join Discord #bot-stats</span>
@@ -1585,309 +1575,111 @@ RECOVERY_THRESHOLD=2`}</pre>
             </div>
 
             {/* KPI Metric Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/80 font-mono">
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center justify-between">
-                  <span>TOTAL MITIGATED</span>
+                  <span>MITIGATED INCIDENTS</span>
                   <Activity className="size-3 text-emerald-400" />
                 </div>
-                <div className="text-lg font-semibold text-white mt-0.5">{totalMitigatedCount} Events</div>
+                <div className="text-lg font-bold text-white mt-0.5">{totalMitigatedCount} Events</div>
                 <div className="text-[10px] text-emerald-400 mt-0.5">100% Cutovers Succeeded</div>
               </div>
-              <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
+              <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/80 font-mono">
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center justify-between">
-                  <span>AVG CUTOVER LATENCY</span>
+                  <span>AVG CUTOVER TIME</span>
                   <Zap className="size-3 text-[#28A0F0]" />
                 </div>
-                <div className="text-lg font-semibold text-[#28A0F0] mt-0.5">{avgCutoverLatencyVal} ms</div>
-                <div className="text-[10px] text-zinc-400 mt-0.5">&lt; 130ms SLA Consistently Met</div>
+                <div className="text-lg font-bold text-[#28A0F0] mt-0.5">{avgCutoverLatencyVal} ms</div>
+                <div className="text-[10px] text-zinc-400 mt-0.5">&lt; 130ms SLA Met</div>
               </div>
-              <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
+              <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/80 font-mono">
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center justify-between">
-                  <span>PACKET DROPS (TCP)</span>
+                  <span>PACKET LOSS (TCP)</span>
                   <Shield className="size-3 text-emerald-400" />
                 </div>
-                <div className="text-lg font-semibold text-emerald-400 mt-0.5">0.00%</div>
-                <div className="text-[10px] text-zinc-400 mt-0.5">Zero Dropped Player/Relayer Reads</div>
+                <div className="text-lg font-bold text-emerald-400 mt-0.5">0.00%</div>
+                <div className="text-[10px] text-zinc-400 mt-0.5">Zero Dropped Reads</div>
               </div>
-              <div className="p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/80 font-mono">
+              <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/80 font-mono">
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center justify-between">
-                  <span>MAX CONTINUOUS FAILOVER</span>
+                  <span>LONGEST SHIELD</span>
                   <Clock className="size-3 text-amber-400" />
                 </div>
-                <div className="text-lg font-semibold text-white mt-0.5">2h 10m</div>
-                <div className="text-[10px] text-zinc-400 mt-0.5">Unbroken Upstream Outage Shield</div>
+                <div className="text-lg font-bold text-white mt-0.5">2h 10m</div>
+                <div className="text-[10px] text-zinc-400 mt-0.5">Sustained Outage Shield</div>
               </div>
             </div>
 
-            {/* Perspective View Switcher: Grant Narrative vs SRE Standards vs VPS Cluster */}
-            <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800/90 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="size-3.5 text-cyan-400" />
-                    <span className="text-xs font-semibold text-white tracking-wide uppercase">
-                      Audit Ledger Exploration Lens
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400">
-                    Switch between the Grant Reviewer ecosystem impact narrative, the SRE engineering standard, or live Oracle Cloud VPS cluster telemetry.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-1.5 bg-zinc-900 p-1 rounded-lg border border-zinc-800 self-start sm:self-auto shrink-0">
-                  <button
-                    onClick={() => setLedgerPerspective("grant")}
-                    className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 transition-all ${
-                      ledgerPerspective === "grant"
-                        ? "bg-[#28A0F0] text-black font-semibold shadow-sm"
-                        : "text-zinc-400 hover:text-white"
-                    }`}
-                  >
-                    <BookOpen className="size-3.5" />
-                    <span>Grant Narrative</span>
-                  </button>
-                  <button
-                    onClick={() => setLedgerPerspective("sre")}
-                    className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 transition-all ${
-                      ledgerPerspective === "sre"
-                        ? "bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700"
-                        : "text-zinc-400 hover:text-white"
-                    }`}
-                  >
-                    <Cpu className="size-3.5" />
-                    <span>SRE Tech Standard</span>
-                  </button>
-                  <button
-                    onClick={() => setLedgerPerspective("cluster")}
-                    className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 transition-all ${
-                      ledgerPerspective === "cluster"
-                        ? "bg-emerald-500 text-black font-semibold shadow-sm"
-                        : "text-zinc-400 hover:text-white"
-                    }`}
-                  >
-                    <Server className="size-3.5" />
-                    <span>Live VPS Nodes</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Dynamic Lens Context Callouts */}
-              {ledgerPerspective === "grant" && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-zinc-900">
-                  <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/70 space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400">
-                      <Zap className="size-3.5" />
-                      <span>ERC-4337 Relayers &amp; Bundlers</span>
-                    </div>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed">
-                      At 250ms head cadence, an unmitigated 6-block drift causes <code className="text-zinc-300">eth_getTransactionCount</code> to return outdated nonces. Bundlers broadcast reverted user ops (<code className="text-rose-400">nonce too low</code>). DriftGuard diverts in 119ms.
-                    </p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/70 space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
-                      <Layers className="size-3.5" />
-                      <span>The "Silent 200 OK" Sync Trap</span>
-                    </div>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed">
-                      When upstream nodes re-peer and enter background sync (<code className="text-zinc-300">eth_syncing = true</code>), standard balancers forward traffic because HTTP status is 200. DriftGuard inspects JSON-RPC payloads out-of-band and drains instantly.
-                    </p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/70 space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
-                      <ShieldCheck className="size-3.5" />
-                      <span>Arbitrum Orbit &amp; Nova Gaming</span>
-                    </div>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed">
-                      AnyTrust DAC sequence jitter causes 5-block head stalls. Dedicated game servers querying stale heads risk item rollbacks and ghost inventory. DriftGuard shields game loops with sub-130ms failover.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {ledgerPerspective === "sre" && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2 border-t border-zinc-900">
-                  <div className="p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800/70 space-y-1">
-                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">CONTROL PLANE</div>
-                    <div className="text-xs font-semibold text-white font-mono">POSIX UNIX Socket IPC</div>
-                    <p className="text-[11px] text-zinc-400 leading-tight">
-                      Zero TCP connection resets. Atomic server drain via <code className="text-zinc-300">/run/haproxy/admin.sock</code>.
-                    </p>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800/70 space-y-1">
-                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">POLL INTERVAL</div>
-                    <div className="text-xs font-semibold text-[#28A0F0] font-mono">200ms Asynchronous</div>
-                    <p className="text-[11px] text-zinc-400 leading-tight">
-                      Out-of-band sentinel evaluates tip divergence against Alchemy &amp; dRPC canonical anchors.
-                    </p>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800/70 space-y-1">
-                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">HYSTERESIS FILTER</div>
-                    <div className="text-xs font-semibold text-emerald-400 font-mono">Fail: 2 · Recovery: 2</div>
-                    <p className="text-[11px] text-zinc-400 leading-tight">
-                      Prevents route flapping during transient sequencer micro-bursts and AnyTrust jitter.
-                    </p>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800/70 space-y-1">
-                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">COMPLIANCE</div>
-                    <div className="text-xs font-semibold text-amber-400 font-mono">RFC-5841 SRE Standard</div>
-                    <p className="text-[11px] text-zinc-400 leading-tight">
-                      Standardized post-mortem methodology with Root Cause Analysis, MTTD, MTTC &amp; MTTR.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {ledgerPerspective === "cluster" && (
-                <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/70 space-y-3 pt-2 border-t border-zinc-900">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-xs font-semibold text-white font-mono">
-                        Oracle Cloud Infrastructure (OCI) Multi-Node Production Topology
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono text-zinc-400">
-                      Live Ingress: <a href="https://rpc.driftguard.live/healthz" target="_blank" rel="noreferrer" className="text-cyan-400 underline">rpc.driftguard.live</a>
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-                    <div className="p-2.5 rounded bg-zinc-950 border border-zinc-800/80 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-400 font-semibold">Node 2 (Primary Active Gateway)</span>
-                        <Badge variant="outline" className="border-emerald-700 bg-emerald-950/60 text-emerald-400 text-[10px]">
-                          ACTIVE GATEWAY
-                        </Badge>
-                      </div>
-                      <div className="text-[11px] text-zinc-300">Host: 157.151.130.191 (OCI Ashburn)</div>
-                      <div className="text-[11px] text-zinc-400">Containers: driftguard-proxy · sentinel · redis</div>
-                      <div className="text-[11px] text-emerald-400">Memory RSS: ~42 MiB / 120 MiB Container Limit</div>
-                    </div>
-
-                    <div className="p-2.5 rounded bg-zinc-950 border border-zinc-800/80 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-400 font-semibold">Node 1 (Secondary Cluster Node)</span>
-                        <Badge variant="outline" className="border-zinc-700 bg-zinc-900 text-zinc-300 text-[10px]">
-                          HOT STANDBY
-                        </Badge>
-                      </div>
-                      <div className="text-[11px] text-zinc-300">Host: 150.136.136.254 (OCI Phoenix)</div>
-                      <div className="text-[11px] text-zinc-400">Cluster Sync: Active-Active Tunnel</div>
-                      <div className="text-[11px] text-cyan-400">Telemetry: Discord Sentinel Dispatch &lt;200ms</div>
-                    </div>
-                  </div>
-                </div>
-              )}
+            {/* Sleek, Single-Line Lifecycle Breadcrumb */}
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-zinc-950/90 border border-zinc-800/90 text-[11px] font-mono text-zinc-400 overflow-x-auto no-scrollbar shadow-inner">
+              <span className="text-zinc-500 font-semibold uppercase tracking-wider shrink-0 flex items-center gap-1.5">
+                <Sparkles className="size-3 text-cyan-400" />
+                <span>Autonomous Failover Loop:</span>
+              </span>
+              <span className="text-zinc-300 shrink-0 font-medium">200ms Active Probe</span>
+              <span className="text-zinc-600 shrink-0">→</span>
+              <span className="text-amber-400 shrink-0 font-medium">&gt;2 Block Drift Tripped</span>
+              <span className="text-zinc-600 shrink-0">→</span>
+              <span className="text-cyan-400 shrink-0 font-medium">&lt;125ms UNIX Socket Drain</span>
+              <span className="text-zinc-600 shrink-0">→</span>
+              <span className="text-emerald-400 shrink-0 font-medium">Zero-Drop Fallback</span>
+              <span className="text-zinc-600 shrink-0">→</span>
+              <span className="text-zinc-300 shrink-0 font-medium">2-Cycle Parity Recovery</span>
             </div>
 
-            {/* Visual 5-Stage Failover Pipeline Banner */}
-            <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800/80 overflow-x-auto no-scrollbar">
-              <div className="flex items-center justify-between min-w-[700px] gap-2 text-xs font-mono">
-                <div className="flex items-center gap-1.5 text-zinc-300">
-                  <span className="size-5 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] text-zinc-300 font-bold">1</span>
-                  <span>200ms Out-of-Band Probe</span>
-                </div>
-                <ArrowRight className="size-3.5 text-zinc-600 shrink-0" />
-                <div className="flex items-center gap-1.5 text-amber-300">
-                  <span className="size-5 rounded-full bg-amber-950/80 border border-amber-800 flex items-center justify-center text-[10px] text-amber-400 font-bold">2</span>
-                  <span>Consensus Divergence Tripped</span>
-                </div>
-                <ArrowRight className="size-3.5 text-zinc-600 shrink-0" />
-                <div className="flex items-center gap-1.5 text-cyan-300">
-                  <span className="size-5 rounded-full bg-cyan-950/80 border border-cyan-800 flex items-center justify-center text-[10px] text-cyan-400 font-bold">3</span>
-                  <span>POSIX Socket Drain (&lt;130ms)</span>
-                </div>
-                <ArrowRight className="size-3.5 text-zinc-600 shrink-0" />
-                <div className="flex items-center gap-1.5 text-emerald-300">
-                  <span className="size-5 rounded-full bg-emerald-950/80 border border-emerald-800 flex items-center justify-center text-[10px] text-emerald-400 font-bold">4</span>
-                  <span>Fallback Active (0 Drops)</span>
-                </div>
-                <ArrowRight className="size-3.5 text-zinc-600 shrink-0" />
-                <div className="flex items-center gap-1.5 text-zinc-300">
-                  <span className="size-5 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] text-zinc-300 font-bold">5</span>
-                  <span>2-Cycle Parity Recovery</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Filter and Search Bar */}
-            <div className="space-y-3 border-b border-zinc-800/80 pb-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                {/* Search Box */}
-                <div className="relative flex-1 max-w-md">
-                  <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={incidentSearchQuery}
-                    onChange={(e) => setIncidentSearchQuery(e.target.value)}
-                    placeholder="Search by ID, block number, error reason, or chain..."
-                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-zinc-900/60 border border-zinc-800 rounded-md text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 font-mono"
-                  />
-                  {incidentSearchQuery && (
-                    <button
-                      onClick={() => setIncidentSearchQuery("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 text-[10px]"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-
-                {/* Severity Filter Pill */}
-                <div className="flex items-center gap-1.5 text-xs font-mono">
-                  <span className="text-zinc-500 text-[11px] mr-1">SEVERITY:</span>
-                  {(["all", "SEV-2", "SEV-3"] as const).map((sev) => (
-                    <button
-                      key={sev}
-                      onClick={() => setSeverityFilter(sev)}
-                      className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors ${
-                        severityFilter === sev
-                          ? "bg-zinc-800 text-white border border-zinc-700"
-                          : "text-zinc-400 hover:text-zinc-200"
-                      }`}
-                    >
-                      {sev === "all" ? "All Severities" : sev}
-                    </button>
-                  ))}
-                </div>
+            {/* Merged Single-Row Search and Chain Filter Pills */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3 pt-1">
+              {/* Search Input */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={incidentSearchQuery}
+                  onChange={(e) => setIncidentSearchQuery(e.target.value)}
+                  placeholder="Search ID, block, reason, chain..."
+                  className="w-full pl-9 pr-8 py-1.5 text-xs bg-zinc-900/90 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-cyan-500 font-mono transition-colors"
+                />
+                {incidentSearchQuery && (
+                  <button
+                    onClick={() => setIncidentSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 text-[10px]"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
 
-              {/* Network Categories Tabs */}
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Clean Segmented Chain Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
                 {[
-                  { id: "all", label: `All Incidents (${totalMitigatedCount})` },
+                  { id: "all", label: `All (${totalMitigatedCount})` },
                   { id: "arb", label: `Arbitrum One (${arbCategoryCount})` },
-                  { id: "nova", label: `Arbitrum Nova (${novaCategoryCount})` },
-                  { id: "arb-sepolia", label: `Arbitrum Sepolia (${sepoliaCategoryCount})` },
-                  { id: "case-studies", label: "Featured Case Studies (3)" }
-                ].map((filterTab) => (
+                  { id: "nova", label: `Nova (${novaCategoryCount})` },
+                  { id: "arb-sepolia", label: `Sepolia (${sepoliaCategoryCount})` },
+                  { id: "case-studies", label: `Case Studies (3)` }
+                ].map((tab) => (
                   <button
-                    key={filterTab.id}
-                    onClick={() => setLedgerFilter(filterTab.id as any)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${
-                      ledgerFilter === filterTab.id
-                        ? "bg-zinc-800 text-white border border-zinc-700 shadow-sm font-medium"
-                        : "bg-zinc-900/40 text-zinc-400 border border-zinc-800/60 hover:text-zinc-200 hover:bg-zinc-800/50"
+                    key={tab.id}
+                    onClick={() => setLedgerFilter(tab.id as any)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all shrink-0 ${
+                      ledgerFilter === tab.id
+                        ? "bg-cyan-500 text-slate-950 font-semibold shadow-sm"
+                        : "bg-zinc-900/60 text-zinc-400 border border-zinc-800/60 hover:text-zinc-200 hover:bg-zinc-800/50"
                     }`}
                   >
-                    {filterTab.label}
+                    {tab.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Incident Telemetry Rows */}
-            <div className="space-y-3">
+            {/* Dense, High-Signal Incident Telemetry Rows (Accordion Style) */}
+            <div className="space-y-2">
               {LEDGER_INCIDENTS.filter((inc) => {
                 if (ledgerFilter === "case-studies") {
                   if (!inc.isCaseStudy) return false
                 } else if (ledgerFilter !== "all") {
                   if (inc.category !== ledgerFilter) return false
-                }
-
-                if (severityFilter !== "all" && inc.severity !== severityFilter) {
-                  return false
                 }
 
                 if (incidentSearchQuery.trim()) {
@@ -1906,24 +1698,24 @@ RECOVERY_THRESHOLD=2`}</pre>
 
                 return true
               }).map((incident) => {
-                const isExpanded = !!expandedIds[incident.id]
-                const subTab = activeIncidentSubTabs[incident.id] || (ledgerPerspective === "sre" ? "sre" : "grant")
+                const isExpanded = expandedIncident === incident.id
+                const subTab = activeIncidentSubTabs[incident.id] || "grant"
 
                 return (
                   <div
                     key={incident.id}
-                    className={`rounded-xl border transition-all ${
+                    className={`rounded-lg border transition-all ${
                       isExpanded
-                        ? "bg-zinc-900/70 border-zinc-700/80 shadow-md ring-1 ring-zinc-700/50"
-                        : "bg-zinc-900/30 border-zinc-800/80 hover:border-zinc-700/70 hover:bg-zinc-900/50"
+                        ? "bg-zinc-900/80 border-cyan-800/80 shadow-md ring-1 ring-cyan-800/40"
+                        : "bg-zinc-900/40 border-zinc-800/80 hover:border-zinc-700/80 hover:bg-zinc-900/60"
                     }`}
                   >
-                    {/* Collapsible Header Row */}
+                    {/* Compact SRE Row */}
                     <div
-                      className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
-                      onClick={() => toggleExpand(incident.id)}
+                      className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 cursor-pointer"
+                      onClick={() => toggleIncident(incident.id)}
                     >
-                      {/* Left: Status Dot + ID + Severity + Chain Badge + Case Study Tag */}
+                      {/* Left: Indicator + ID + Severity + Chain Badge + Case Study Tag */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
                           className={`size-2 rounded-full shrink-0 ${
@@ -1956,7 +1748,7 @@ RECOVERY_THRESHOLD=2`}</pre>
                             {incident.caseStudyTag}
                           </span>
                         )}
-                        <span className="text-[11px] text-zinc-400 font-mono hidden md:inline">
+                        <span className="text-[11px] text-zinc-400 font-mono hidden lg:inline">
                           {incident.timestamp}
                         </span>
                       </div>
@@ -1967,8 +1759,8 @@ RECOVERY_THRESHOLD=2`}</pre>
                         {incident.stallDelta}
                       </div>
 
-                      {/* Right: Latency + Action Status Pill + Chevron */}
-                      <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
+                      {/* Right: Latency + Status Pill + Chevron */}
+                      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                         <span className="text-xs font-mono text-[#28A0F0] font-semibold bg-[#28A0F0]/10 px-2 py-0.5 rounded border border-[#28A0F0]/20">
                           {incident.latency}
                         </span>
@@ -1992,10 +1784,10 @@ RECOVERY_THRESHOLD=2`}</pre>
                       </div>
                     </div>
 
-                    {/* Rich Expandable Inspection Drawer */}
+                    {/* Rich On-Demand Drawer */}
                     {isExpanded && (
-                      <div className="px-4 pb-4 pt-2 border-t border-zinc-800/80 space-y-4">
-                        {/* Sub-Tabs Selector inside card */}
+                      <div className="px-3.5 pb-3.5 pt-2 border-t border-zinc-800/80 space-y-3">
+                        {/* Sub-Tabs: Grant Narrative | SRE Post-Mortem | Wire Log */}
                         <div className="flex items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
                           <div className="flex items-center gap-1.5">
                             <button
@@ -2010,7 +1802,7 @@ RECOVERY_THRESHOLD=2`}</pre>
                               }`}
                             >
                               <BookOpen className="size-3" />
-                              <span>Grant Narrative &amp; Ecosystem Impact</span>
+                              <span>🏛 Grant Narrative</span>
                             </button>
                             <button
                               onClick={(e) => {
@@ -2024,7 +1816,7 @@ RECOVERY_THRESHOLD=2`}</pre>
                               }`}
                             >
                               <Cpu className="size-3" />
-                              <span>SRE Tech Standard &amp; RCA</span>
+                              <span>🔬 SRE Post-Mortem</span>
                             </button>
                             <button
                               onClick={(e) => {
@@ -2038,25 +1830,25 @@ RECOVERY_THRESHOLD=2`}</pre>
                               }`}
                             >
                               <Terminal className="size-3" />
-                              <span>Wire Telemetry &amp; Logs</span>
+                              <span>📋 Wire Log</span>
                             </button>
                           </div>
 
                           {incident.canonicalHead && (
                             <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-zinc-400">
-                              <span>Canonical: <span className="text-emerald-400">{incident.canonicalHead}</span></span>
+                              <span>Canonical: <span className="text-emerald-400 font-semibold">{incident.canonicalHead}</span></span>
                               <span>·</span>
-                              <span>Delinquent: <span className="text-amber-400">{incident.delinquentHead}</span></span>
+                              <span>Delinquent: <span className="text-amber-400 font-semibold">{incident.delinquentHead}</span></span>
                             </div>
                           )}
                         </div>
 
-                        {/* SUB-VIEW 1: GRANT NARRATIVE & IMPACT */}
+                        {/* SUB-TAB 1: GRANT NARRATIVE & IMPACT */}
                         {subTab === "grant" && (
-                          <div className="space-y-3">
+                          <div className="space-y-2.5">
                             <div className="space-y-1">
-                              <h4 className="text-sm font-semibold text-white flex items-center gap-2">
-                                <Sparkles className="size-4 text-cyan-400 shrink-0" />
+                              <h4 className="text-xs sm:text-sm font-semibold text-white flex items-center gap-1.5">
+                                <Sparkles className="size-3.5 text-cyan-400 shrink-0" />
                                 <span>{incident.grantNarrative.title}</span>
                               </h4>
                               <p className="text-xs text-zinc-300 leading-relaxed">
@@ -2065,7 +1857,7 @@ RECOVERY_THRESHOLD=2`}</pre>
                             </div>
 
                             {/* Ecosystem Risk Averted Callout Box */}
-                            <div className="p-3 rounded-lg bg-cyan-950/30 border border-cyan-800/50 space-y-1">
+                            <div className="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-800/50 space-y-1">
                               <div className="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
                                 <ShieldCheck className="size-3.5 text-cyan-400" />
                                 <span>Arbitrum Ecosystem Disaster Averted</span>
@@ -2081,18 +1873,18 @@ RECOVERY_THRESHOLD=2`}</pre>
                                 <span className="text-zinc-300 text-[11px] font-sans font-medium">{incident.grantNarrative.affectedStakeholders}</span>
                               </div>
                               <div className="p-2 rounded bg-zinc-950 border border-zinc-800/60">
-                                <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">GRANT SIGNIFICANCE</span>
+                                <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">GRANT REVIEWER SIGNIFICANCE</span>
                                 <span className="text-zinc-300 text-[11px] font-sans">{incident.grantNarrative.grantSignificance}</span>
                               </div>
                             </div>
                           </div>
                         )}
 
-                        {/* SUB-VIEW 2: SRE TECH STANDARD & RCA */}
+                        {/* SUB-TAB 2: SRE POST-MORTEM & RCA */}
                         {subTab === "sre" && (
-                          <div className="space-y-3 font-mono text-xs">
+                          <div className="space-y-2.5 font-mono text-xs">
                             {/* RCA Grid */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               <div className="p-2.5 rounded bg-zinc-950 border border-zinc-800/80 space-y-1">
                                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider">ROOT CAUSE ANALYSIS (RCA)</div>
                                 <div className="text-zinc-300 text-xs font-sans leading-relaxed">{incident.techStandard.rootCause}</div>
@@ -2156,10 +1948,10 @@ RECOVERY_THRESHOLD=2`}</pre>
                           </div>
                         )}
 
-                        {/* SUB-VIEW 3: WIRE TELEMETRY & LOGS */}
+                        {/* SUB-TAB 3: WIRE LOG */}
                         {subTab === "wire" && (
-                          <div className="space-y-3 font-mono text-xs">
-                            <div className="p-3 rounded bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300 space-y-1.5 overflow-x-auto">
+                          <div className="space-y-2.5 font-mono text-xs">
+                            <div className="p-2.5 rounded bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300 space-y-1 overflow-x-auto">
                               <div className="text-zinc-500 text-[10px] uppercase">DriftGuard Sentinel JSON Wire Telemetry</div>
                               <pre className="text-zinc-300">{JSON.stringify({
                                 incident_id: incident.id,
@@ -2177,10 +1969,10 @@ RECOVERY_THRESHOLD=2`}</pre>
                             </div>
 
                             {/* Discord Audit Embed Preview */}
-                            <div className="p-2.5 rounded bg-[#5865F2]/10 border border-[#5865F2]/30 flex items-center justify-between text-xs">
+                            <div className="p-2 rounded bg-[#5865F2]/10 border border-[#5865F2]/30 flex items-center justify-between text-xs">
                               <div className="flex items-center gap-2">
-                                <MessageSquare className="size-4 text-[#5865F2]" />
-                                <span className="text-zinc-200">
+                                <MessageSquare className="size-3.5 text-[#5865F2]" />
+                                <span className="text-zinc-300 text-[11px]">
                                   Audit alert dispatched to Discord <code className="text-white">#bot-stats</code> within 200ms
                                 </span>
                               </div>
@@ -2189,9 +1981,9 @@ RECOVERY_THRESHOLD=2`}</pre>
                                 target="_blank"
                                 rel="noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="text-xs text-[#5865F2] hover:underline flex items-center gap-1 font-medium"
+                                className="text-[11px] text-[#5865F2] hover:underline flex items-center gap-1 font-medium"
                               >
-                                <span>Verify on Discord</span>
+                                <span>Verify Discord Log</span>
                                 <ExternalLink className="size-3" />
                               </a>
                             </div>
@@ -2206,12 +1998,12 @@ RECOVERY_THRESHOLD=2`}</pre>
                               target="_blank"
                               rel="noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="text-emerald-400 hover:underline flex items-center gap-1.5 font-sans font-medium"
+                              className="text-emerald-400 hover:underline flex items-center gap-1.5 font-sans font-medium text-xs"
                             >
                               <BookOpen className="size-3.5" />
                               <span>Read Formal Engineering SEV-2 Post-Mortem Report (GitHub) →</span>
                             </a>
-                            <span className="text-[11px] text-zinc-500 font-mono">
+                            <span className="text-[10px] text-zinc-500 font-mono">
                               Verified Systems Engineering Documentation
                             </span>
                           </div>

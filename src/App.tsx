@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { DriftGuardLogo } from "@/components/DriftGuardLogo"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
@@ -27,7 +27,9 @@ import {
   Search,
   Clock,
   Sparkles,
-  Shield
+  Shield,
+  Film,
+  Download
 } from "lucide-react"
 
 interface NetworkConfig {
@@ -679,6 +681,14 @@ export function App() {
   const [incidentSearchQuery, setIncidentSearchQuery] = useState("")
   const [activeIncidentSubTabs, setActiveIncidentSubTabs] = useState<Record<string, "impact" | "sre" | "wire">>({})
   const [expandedIncident, setExpandedIncident] = useState<string | null>("INC-20261006-18")
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  const seekToChapter = (seconds: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = seconds
+      videoRef.current.play().catch(() => {})
+    }
+  }
 
   const toggleIncident = (id: string) => {
     setExpandedIncident(prev => (prev === id ? null : id))
@@ -906,16 +916,30 @@ export function App() {
 
               <div className="flex items-center justify-center gap-3 pt-2">
                 <Button
-                  onClick={() => setActiveTab("rpc")}
+                  onClick={() => {
+                    const el = document.getElementById("explainer-video")
+                    if (el) el.scrollIntoView({ behavior: "smooth" })
+                    if (videoRef.current) {
+                      videoRef.current.play().catch(() => {})
+                    }
+                  }}
                   className="bg-white hover:bg-zinc-200 text-black font-medium h-9 sm:h-10 px-4 rounded-lg text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm"
                 >
-                  <Play className="size-3.5 fill-current" />
+                  <Play className="size-3.5 fill-current text-[#28A0F0]" />
+                  Watch Explainer Video
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setActiveTab("rpc")}
+                  className="border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 h-9 sm:h-10 px-4 rounded-lg text-xs sm:text-sm flex items-center gap-2"
+                >
+                  <Terminal className="size-3.5 text-zinc-400" />
                   Inspect Ingress Telemetry
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setActiveTab("docs")}
-                  className="border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 h-9 sm:h-10 px-4 rounded-lg text-xs sm:text-sm flex items-center gap-2"
+                  className="border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 h-9 sm:h-10 px-4 rounded-lg text-xs sm:text-sm flex items-center gap-2 hidden sm:flex"
                 >
                   <BookOpen className="size-3.5 text-zinc-400" />
                   Technical Specification
@@ -948,6 +972,144 @@ export function App() {
                   </div>
                   <div className="text-[11px] sm:text-xs font-mono text-zinc-500 mt-1 uppercase tracking-wider">
                     RESIDENT MEMORY (RSS)
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Architectural Explainer Video Showcase (1080p Master) ── */}
+            <div id="explainer-video" className="space-y-3 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+                <div className="flex items-center gap-2">
+                  <Film className="size-4 text-[#28A0F0]" />
+                  <h2 className="text-sm font-mono tracking-tight font-semibold text-white uppercase">
+                    Architectural Explainer &amp; Failover Walkthrough
+                  </h2>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="border-sky-800/80 bg-sky-950/40 text-[#28A0F0] text-[10px] font-mono tracking-wider">
+                    1080P · 30 FPS
+                  </Badge>
+                  <Badge variant="outline" className="border-emerald-800/80 bg-emerald-950/40 text-emerald-400 text-[10px] font-mono tracking-wider">
+                    SUBTITLED [CC]
+                  </Badge>
+                  <Badge variant="outline" className="border-zinc-800 bg-zinc-900/80 text-zinc-400 text-[10px] font-mono tracking-wider">
+                    02:08 RUNTIME
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="specular-border rounded-xl border border-zinc-800/80 bg-zinc-950/80 overflow-hidden shadow-2xl backdrop-blur-sm">
+                {/* Window Titlebar */}
+                <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-zinc-800/80 bg-zinc-950/90">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="size-2 rounded-full bg-zinc-700 inline-block" />
+                      <span className="size-2 rounded-full bg-zinc-700 inline-block" />
+                      <span className="size-2 rounded-full bg-zinc-700 inline-block" />
+                    </div>
+                    <span className="ml-1 font-mono text-[11px] sm:text-xs text-zinc-400 truncate">
+                      driftguard-explainer-master-1080p.mp4 — Deterministic L7 Gateway &amp; Sentinel
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href="/driftguard-explainer.mp4"
+                      download="driftguard-explainer-1080p.mp4"
+                      className="text-zinc-400 hover:text-white transition-colors p-1 rounded hover:bg-zinc-800/60"
+                      title="Download 1080p MP4 Video"
+                    >
+                      <Download className="size-3.5" />
+                    </a>
+                    <a
+                      href="/driftguard-explainer.mp4"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-zinc-400 hover:text-white transition-colors p-1 rounded hover:bg-zinc-800/60"
+                      title="Open video in new tab"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Video Player */}
+                <div className="relative bg-black aspect-video flex items-center justify-center">
+                  <video
+                    ref={videoRef}
+                    controls
+                    preload="metadata"
+                    poster="/driftguard-explainer-poster.png"
+                    className="w-full h-full object-contain"
+                  >
+                    <source src="/driftguard-explainer.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+
+                {/* Chapter Nav & Highlights Footer */}
+                <div className="p-3 sm:p-4 bg-zinc-950/90 border-t border-zinc-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-1.5 text-zinc-400 font-mono text-[11px] flex-wrap">
+                    <span className="text-zinc-500 font-sans font-medium mr-0.5">Jump to:</span>
+                    <button
+                      onClick={() => seekToChapter(0)}
+                      className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      00:00 Intro
+                    </button>
+                    <button
+                      onClick={() => seekToChapter(2)}
+                      className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      00:02 Overview
+                    </button>
+                    <button
+                      onClick={() => seekToChapter(20)}
+                      className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      00:20 Problem
+                    </button>
+                    <button
+                      onClick={() => seekToChapter(37)}
+                      className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      00:37 Architecture
+                    </button>
+                    <button
+                      onClick={() => seekToChapter(55)}
+                      className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      00:55 QuickStart
+                    </button>
+                    <button
+                      onClick={() => seekToChapter(72)}
+                      className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      01:12 Failover Drill
+                    </button>
+                    <button
+                      onClick={() => seekToChapter(90)}
+                      className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      01:30 Ecosystem
+                    </button>
+                    <button
+                      onClick={() => seekToChapter(104)}
+                      className="px-2 py-0.5 rounded bg-sky-950/60 hover:bg-sky-900/60 border border-sky-800/60 text-[#28A0F0] hover:text-sky-300 transition-colors cursor-pointer"
+                    >
+                      01:44 Discord Outro
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a
+                      href="/driftguard-explainer.mp4"
+                      download="driftguard-explainer-1080p.mp4"
+                      className="inline-flex items-center gap-1.5 text-[11px] font-mono text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1 rounded transition-colors"
+                    >
+                      <Download className="size-3 text-[#28A0F0]" />
+                      <span>Download Master (7.1 MB)</span>
+                    </a>
                   </div>
                 </div>
               </div>

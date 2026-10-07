@@ -251,8 +251,8 @@ SCENE_CUES: Dict[int, List[NarrationCue]] = {
             "DriftGuard is completely open source under the MIT license with full documentation on GitHub."
         ),
         NarrationCue(
-            "Explore the source code, inspect our benchmarks, and start running the consensus sentinel today at github dot com slash maskalfreeup hyphen glitch slash drift guard.",
-            "Explore the code and run the consensus sentinel at github.com/maskalfreeup-glitch/driftguard."
+            "Explore the source code, inspect our benchmarks, and start running the consensus sentinel today on GitHub.",
+            "Explore the source code, inspect our benchmarks, and run the sentinel today on GitHub."
         ),
     ],
 }

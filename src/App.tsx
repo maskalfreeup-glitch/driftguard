@@ -1108,7 +1108,7 @@ export function App() {
                       className="inline-flex items-center gap-1.5 text-[11px] font-mono text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1 rounded transition-colors"
                     >
                       <Download className="size-3 text-[#28A0F0]" />
-                      <span>Download Master (5.9 MB)</span>
+                      <span>Download Master (5.8 MB)</span>
                     </a>
                   </div>
                 </div>

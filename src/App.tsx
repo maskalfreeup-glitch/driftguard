@@ -15,7 +15,13 @@ import { Footer } from "@/components/Footer"
 import { LEDGER_INCIDENTS } from "@/constants/incidents"
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<"overview" | "rpc" | "docs" | "audit">("overview")
+  const isDocs =
+    typeof window !== "undefined" &&
+    (window.location.hostname.startsWith("docs.") || window.location.hostname === "docs.driftguard.live")
+
+  const [activeTab, setActiveTab] = useState<"overview" | "rpc" | "docs" | "audit">(
+    isDocs ? "docs" : "overview"
+  )
 
   const handleTabChange = (tab: "overview" | "rpc" | "docs" | "audit") => {
     setActiveTab(tab)

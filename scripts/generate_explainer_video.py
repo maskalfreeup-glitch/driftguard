@@ -525,23 +525,23 @@ def draw_badge(
 def draw_scene_header(
     draw: ImageDraw.Draw,
     fonts: FontManager,
-    tag: str,
-    title: str,
-    subtitle: str,
+    title: str = "",
+    subtitle: str = "",
+    tag: Optional[str] = None,
     tag_color: Tuple[int, int, int] = CYAN,
     tag_bg: Tuple[int, int, int] = CARD_BG,
     tag_border: Tuple[int, int, int] = CARD_BORDER,
-    left_x: int = MARGIN_X
+    left_x: int = MARGIN_X,
+    **kwargs: Any
 ) -> None:
     """
-    Renders standardized scene header contained strictly within y < 180px:
-    - Badge: y = 78..102
-    - Title: y = 106..138
-    - Subtitle: y = 142..168
+    Renders standardized scene header without badge bloat:
+    - Title: y = 72..108 (crisp white, high-contrast)
+    - Subtitle: y = 114..142 (crisp cyan)
     """
-    draw_badge(draw, left_x, 78, tag, fonts.small_bold, bg_color=tag_bg, text_color=tag_color, border_color=tag_border)
-    draw.text((left_x, 106), title, font=fonts.title_font, fill=WHITE)
-    draw.text((left_x, 142), subtitle, font=fonts.h2_font, fill=CYAN)
+    draw.text((left_x, 72), title, font=fonts.title_font, fill=WHITE)
+    draw.text((left_x, 114), subtitle, font=fonts.h2_font, fill=CYAN)
+
 
 
 def draw_card(
@@ -842,13 +842,13 @@ class SceneIntro(Scene):
     ) -> None:
         t = frame_idx / self.fps
 
-        # 1. Header Zone (y < 180px)
+        # 1. Header Zone (y < 160px)
         draw_scene_header(
             draw, fonts,
-            tag="ARBITRUM NITRO & ORBIT ROLLUP INGRESS",
             title="DriftGuard Ingress Sentinel",
             subtitle="Deterministic L7 Ingress Gateway & Out-of-Band Consensus Watchdog"
         )
+
 
         # 2. Primary Focal Anchors (y: 210..840)
         # Left Anchor: Centered around x = 500, y = 490
@@ -935,14 +935,11 @@ class SceneProblem(Scene):
     ) -> None:
         t = frame_idx / self.fps
 
-        # 1. Header Zone (y < 180px)
+        # 1. Header Zone (y < 160px)
         draw_scene_header(
             draw, fonts,
-            tag="THE HIDDEN FAILURE MODE",
             title="The Silent 200 OK Staleness Trap",
-            subtitle="Why Standard Layer 7 Load Balancers Fail Blockchain Workloads",
-            tag_color=RED,
-            tag_border=RED
+            subtitle="Why Standard Layer 7 Load Balancers Fail Blockchain Workloads"
         )
 
         # 2. Primary Focal Anchors: Split Comparison (y: 210..840)
@@ -1020,10 +1017,9 @@ class SceneArchitecture(Scene):
     ) -> None:
         t = frame_idx / self.fps
 
-        # 1. Header Zone (y < 180px)
+        # 1. Header Zone (y < 160px)
         draw_scene_header(
             draw, fonts,
-            tag="DUAL-PLANE TOPOLOGY",
             title="Decoupled Data & Control Planes",
             subtitle="Sub-Millisecond L7 Ingress Proxy with Out-of-Band Consensus Watchdog"
         )
@@ -1112,10 +1108,9 @@ class SceneQuickStart(Scene):
     ) -> None:
         t = frame_idx / self.fps
 
-        # 1. Header Zone (y < 180px)
+        # 1. Header Zone (y < 160px)
         draw_scene_header(
             draw, fonts,
-            tag="DEPLOYMENT IN UNDER 60 SECONDS",
             title="Quick Start & Configuration",
             subtitle="Drop-In Docker Sidecar Setup for Arbitrum Nitro & Orbit Upstreams"
         )
@@ -1210,10 +1205,9 @@ class SceneLiveDrill(Scene):
     ) -> None:
         t = frame_idx / self.fps
 
-        # 1. Header Zone (y < 180px)
+        # 1. Header Zone (y < 160px)
         draw_scene_header(
             draw, fonts,
-            tag="EMPIRICAL TESTBED & VERIFICATION",
             title="Live Edge Routing & Chaos Failover Drill",
             subtitle="Automated Verification with Real-Time Header Telemetry & Socket Draining"
         )
@@ -1305,10 +1299,9 @@ class SceneSummary(Scene):
     ) -> None:
         t = frame_idx / self.fps
 
-        # 1. Header Zone (y < 180px)
+        # 1. Header Zone (y < 160px)
         draw_scene_header(
             draw, fonts,
-            tag="PRODUCTION ARCHITECTURE & ECOSYSTEM",
             title="Ecosystem Deployment Targets",
             subtitle="Built for Orbit Rollup Operators, High-Throughput Relayers & Validator Clusters"
         )
@@ -1388,14 +1381,11 @@ class SceneOutroCommunity(Scene):
     ) -> None:
         t = frame_idx / self.fps
 
-        # 1. Header Zone (y < 180px)
+        # 1. Header Zone (y < 160px)
         draw_scene_header(
             draw, fonts,
-            tag="OFFICIAL COMMUNITY & MONITORING",
             title="Join the DriftGuard Discord Community",
-            subtitle="Real-Time Node Health Alerts, Video Tutorials, and Operator Discussions",
-            tag_color=CYAN,
-            tag_border=CYAN
+            subtitle="Real-Time Node Health Alerts, Video Tutorials, and Operator Discussions"
         )
 
         # 2. Primary Focal Anchors: Dual Target Cards (y: 210..840)
@@ -1538,40 +1528,35 @@ def draw_global_ui(
     Renders top persistent header bar (y: 0..65) and bottom scrubber (y: 1040..1080).
     Guarantees mathematically centered navigation and zero collision across bands.
     """
-    # Top Header Bar (y: 0..65)
-    draw.rectangle([0, 0, w, 65], fill=(11, 16, 27))
-    draw.line([(0, 65), (w, 65)], fill=CARD_BORDER, width=1)
+    # Top Header Bar (y: 0..52)
+    header_h = 52
+    draw.rectangle([0, 0, w, header_h], fill=(11, 16, 27))
+    draw.line([(0, header_h), (w, header_h)], fill=CARD_BORDER, width=1)
 
-    # Left Brand Block (x: 80..370)
-    sh_icon = shield.resize((36, 36), Image.Resampling.LANCZOS)
-    img.paste(sh_icon, (MARGIN_X, 14), sh_icon)
-    draw.text((MARGIN_X + 46, 17), "DriftGuard", font=fonts.h2_font, fill=WHITE)
-    draw_badge(draw, MARGIN_X + 180, 20, "L7 GATEWAY", fonts.small_bold, bg_color=CARD_BG, text_color=CYAN, border_color=CARD_BORDER)
+    # Left Brand Block: Icon + DriftGuard (clean typography, no redundant badges)
+    sh_icon = shield.resize((28, 28), Image.Resampling.LANCZOS)
+    img.paste(sh_icon, (MARGIN_X, 12), sh_icon)
+    draw.text((MARGIN_X + 38, 15), "DriftGuard", font=fonts.h2_font, fill=WHITE)
 
-    # Far Right Live Indicator (x: w - 210)
-    draw_badge(draw, w - 210, 18, "LIVE: ONLINE", fonts.small_bold, bg_color=(15, 35, 25), text_color=EMERALD, border_color=EMERALD)
-    draw.ellipse([w - 65, 27, w - 53, 39], fill=EMERALD)
+    # Right: Minimal Scene Tracker (e.g. "01 / 07  •  OVERVIEW")
+    if 0 <= current_scene_idx < len(scenes):
+        sc_num = f"{current_scene_idx + 1:02d} / {len(scenes):02d}"
+        sc_name = scenes[current_scene_idx].name.upper()
 
-    # Center Navigation Links (Centered in the open span between x: 380 and x: 1700)
-    nav_item_widths = []
-    for sc in scenes:
-        bb = draw.textbbox((0, 0), sc.breadcrumb, font=fonts.small_bold)
-        nav_item_widths.append(bb[2] - bb[0])
+        num_bb = draw.textbbox((0, 0), sc_num, font=fonts.mono_small)
+        num_w = num_bb[2] - num_bb[0]
+        sep = "  •  "
+        sep_bb = draw.textbbox((0, 0), sep, font=fonts.small_font)
+        sep_w = sep_bb[2] - sep_bb[0]
+        name_bb = draw.textbbox((0, 0), sc_name, font=fonts.small_bold)
+        name_w = name_bb[2] - name_bb[0]
 
-    spacing = 22
-    total_nav_w = sum(nav_item_widths) + spacing * (len(scenes) - 1)
-    center_span_mid = (380 + (w - 220)) // 2  # ~1040
-    bread_x = center_span_mid - total_nav_w // 2
+        tot_w = num_w + sep_w + name_w
+        x_pos = w - MARGIN_X - tot_w
 
-    for idx, sc in enumerate(scenes):
-        is_active = (idx == current_scene_idx)
-        color = CYAN if is_active else TEXT_DARK
-        f_font = fonts.small_bold if is_active else fonts.small_font
-        if is_active:
-            draw.ellipse([bread_x - 10, 30, bread_x - 4, 36], fill=CYAN)
-        draw.text((bread_x, 24), sc.breadcrumb, font=f_font, fill=color)
-        bbox = draw.textbbox((0, 0), sc.breadcrumb, font=f_font)
-        bread_x += (bbox[2] - bbox[0]) + spacing
+        draw.text((x_pos, 18), sc_num, font=fonts.mono_small, fill=TEXT_MUTED)
+        draw.text((x_pos + num_w, 18), sep, font=fonts.small_font, fill=TEXT_DARK)
+        draw.text((x_pos + num_w + sep_w, 18), sc_name, font=fonts.small_bold, fill=CYAN)
 
     # Bottom Progress Scrubber (y: 1040..1080)
     draw.rectangle([0, SCRUBBER_Y, w, 1080], fill=(11, 16, 27))

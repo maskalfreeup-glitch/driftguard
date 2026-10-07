@@ -30,7 +30,7 @@ venv/
 ENV/
 
 # Runtime state, logs and local artifacts
-data/
+/data/
 redis_data/
 *.log
 *.pid

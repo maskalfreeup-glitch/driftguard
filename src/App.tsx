@@ -1064,40 +1064,40 @@ export function App() {
                       00:02 Overview
                     </button>
                     <button
-                      onClick={() => seekToChapter(20)}
+                      onClick={() => seekToChapter(23)}
                       className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
                     >
-                      00:20 Problem
+                      00:23 Problem
                     </button>
                     <button
-                      onClick={() => seekToChapter(37)}
+                      onClick={() => seekToChapter(43)}
                       className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
                     >
-                      00:37 Architecture
+                      00:43 Architecture
                     </button>
                     <button
-                      onClick={() => seekToChapter(55)}
+                      onClick={() => seekToChapter(64)}
                       className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
                     >
-                      00:55 QuickStart
+                      01:04 QuickStart
                     </button>
                     <button
-                      onClick={() => seekToChapter(72)}
+                      onClick={() => seekToChapter(81)}
                       className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
                     >
-                      01:12 Failover Drill
+                      01:21 Failover Drill
                     </button>
                     <button
-                      onClick={() => seekToChapter(90)}
+                      onClick={() => seekToChapter(98)}
                       className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
                     >
-                      01:30 Ecosystem
+                      01:38 Ecosystem
                     </button>
                     <button
-                      onClick={() => seekToChapter(104)}
+                      onClick={() => seekToChapter(113)}
                       className="px-2 py-0.5 rounded bg-sky-950/60 hover:bg-sky-900/60 border border-sky-800/60 text-[#28A0F0] hover:text-sky-300 transition-colors cursor-pointer"
                     >
-                      01:44 Discord Outro
+                      01:53 Discord Outro
                     </button>
                   </div>
 
@@ -1108,7 +1108,7 @@ export function App() {
                       className="inline-flex items-center gap-1.5 text-[11px] font-mono text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1 rounded transition-colors"
                     >
                       <Download className="size-3 text-[#28A0F0]" />
-                      <span>Download Master (7.1 MB)</span>
+                      <span>Download Master (5.8 MB)</span>
                     </a>
                   </div>
                 </div>

@@ -32,9 +32,9 @@ Visual Geometry & Layout Standards:
 - Header & Brand Zone contained strictly within y < 180px.
 - Primary visual focal anchors centered on x = 640px and x = 1280px.
 - Lower third metrics, supporting cards, and footers across y: 725..968.
-- Dedicated subtitle band anchored at y: 982..1026.
+- Dedicated subtitle band anchored at y: 880..930.
 - 2.0-second cinematic logo intro and outro bumper cards.
-- Outro announcement covering Discord server for monitoring, tutorials, and community.
+- Outro announcement covering open source repository, documentation, and endpoints.
 - Local Piper voiceover (Ryan/Lessac) with clean phonetic tunings and synchronized subtitles.
 - Pure acoustic clarity: zero low-frequency hum/drone.
 - Kept strictly local and untracked via .git/info/exclude.
@@ -108,9 +108,9 @@ ROT_Y2: int = 720   # 2/3 horizontal guideline (lower third baseline)
 # Content bands
 HEADER_MAX_Y: int = 180       # Header & Brand zone strictly y < 180
 FOCAL_START_Y: int = 210      # Primary focal anchor start y
-FOCAL_END_Y: int = 840        # Primary focal anchor end y
-SUBTITLE_Y1: int = 910        # Dedicated subtitle bar top
-SUBTITLE_Y2: int = 960        # Dedicated subtitle bar bottom
+FOCAL_END_Y: int = 720        # Primary focal anchor end y (Rule of Thirds 2/3 baseline)
+SUBTITLE_Y1: int = 880        # Dedicated subtitle bar top (Lower Third centered)
+SUBTITLE_Y2: int = 930        # Dedicated subtitle bar bottom
 SCRUBBER_Y: int = 1040        # Scrubber bar y
 
 # -----------------------------------------------------------------------------
@@ -247,12 +247,12 @@ SCENE_CUES: Dict[int, List[NarrationCue]] = {
     ],
     7: [
         NarrationCue(
-            "We have an official Discord server for real-time monitoring, tutorials, and community where you can join.",
-            "We have an official Discord server for real-time monitoring, tutorials, and community where you can join."
+            "DriftGuard is completely open source under the M-I-T license, with full documentation and active development on GitHub.",
+            "DriftGuard is completely open source under the MIT license with full documentation on GitHub."
         ),
         NarrationCue(
-            "Connect directly with rollup operators and our core team at discord dot gg slash drift guard.",
-            "Connect directly with rollup operators and our core team at discord.gg/driftguard."
+            "Explore the source code, inspect our benchmarks, and start running the consensus sentinel today at github dot com slash maskalfreeup hyphen glitch slash drift guard.",
+            "Explore the code and run the consensus sentinel at github.com/maskalfreeup-glitch/driftguard."
         ),
     ],
 }
@@ -558,36 +558,60 @@ def draw_card(
     bg_color: Tuple[int, int, int] = CARD_BG,
     tag: str = "",
     tag_color: Tuple[int, int, int] = CYAN,
-    wrap_width: int = 46
+    wrap_width: int = 58,
+    metrics: Optional[List[Tuple[str, str]]] = None
 ) -> None:
-    """Draws a card component with title, subtitle, and dynamic wrapped bullet points."""
+    """Draws a card component with title, subtitle, bullets, and bottom metric tray."""
     draw.rounded_rectangle([x, y, x + w, y + h], radius=12, fill=bg_color, outline=border_color, width=2)
     cur_y = y + 16
     if tag:
-        draw_badge(draw, x + 18, cur_y, tag, fonts.small_bold, bg_color=CARD_BG, text_color=tag_color, border_color=border_color)
+        draw_badge(draw, x + 20, cur_y, tag, fonts.small_bold, bg_color=(20, 28, 48), text_color=tag_color, border_color=border_color)
         cur_y += 32
     if title:
-        draw.text((x + 18, cur_y), title, font=fonts.h2_font, fill=WHITE)
-        cur_y += 26
+        draw.text((x + 20, cur_y), title, font=fonts.h1_font, fill=WHITE)
+        cur_y += 30
     if subtitle:
-        draw.text((x + 18, cur_y), subtitle, font=fonts.body_font, fill=CYAN)
+        draw.text((x + 20, cur_y), subtitle, font=fonts.body_bold, fill=CYAN)
         cur_y += 24
-        draw.line([(x + 18, cur_y), (x + w - 18, cur_y)], fill=CARD_BORDER, width=1)
-        cur_y += 14
+        draw.line([(x + 20, cur_y), (x + w - 20, cur_y)], fill=CARD_BORDER, width=1)
+        cur_y += 16
+    
+    max_bullet_y = y + h - (58 if metrics else 20)
     for bullet in bullets:
-        if cur_y > y + h - 24:
+        if cur_y > max_bullet_y:
             break
         wrapped = textwrap.wrap(bullet, width=wrap_width)
         for line_idx, line in enumerate(wrapped):
-            if cur_y > y + h - 22:
+            if cur_y > max_bullet_y:
                 break
             if line_idx == 0:
-                draw.text((x + 18, cur_y), "•", font=fonts.body_bold, fill=ARBITRUM_BLUE)
-                draw.text((x + 34, cur_y), line, font=fonts.body_font, fill=TEXT_MUTED)
+                draw.text((x + 20, cur_y), "•", font=fonts.body_bold, fill=tag_color if tag else ARBITRUM_BLUE)
+                draw.text((x + 38, cur_y), line, font=fonts.body_font, fill=TEXT_MUTED)
             else:
-                draw.text((x + 34, cur_y), line, font=fonts.body_font, fill=TEXT_MUTED)
-            cur_y += 22
-        cur_y += 4
+                draw.text((x + 38, cur_y), line, font=fonts.body_font, fill=TEXT_MUTED)
+            cur_y += 24
+        cur_y += 5
+
+    # Bottom Metric Tray (if metrics provided)
+    if metrics:
+        tray_h = 36
+        tray_y = y + h - tray_h - 14
+        draw.rounded_rectangle([x + 18, tray_y, x + w - 18, tray_y + tray_h], radius=8, fill=(11, 16, 28), outline=CARD_BORDER, width=1)
+        num_m = len(metrics)
+        col_w = (w - 36) // num_m
+        for m_idx, (m_label, m_val) in enumerate(metrics):
+            mx = x + 18 + m_idx * col_w
+            if m_idx > 0:
+                draw.line([(mx, tray_y + 8), (mx, tray_y + tray_h - 8)], fill=CARD_BORDER, width=1)
+            full_txt = f"{m_label}: {m_val}"
+            bb = draw.textbbox((0, 0), full_txt, font=fonts.mono_small)
+            tw = bb[2] - bb[0]
+            tx = mx + (col_w - tw) // 2
+            ty = tray_y + 10
+            lbl_bb = draw.textbbox((0, 0), f"{m_label}: ", font=fonts.mono_small)
+            lbl_w = lbl_bb[2] - lbl_bb[0]
+            draw.text((tx, ty), f"{m_label}: ", font=fonts.mono_small, fill=TEXT_DARK)
+            draw.text((tx + lbl_w, ty), m_val, font=fonts.mono_small, fill=CYAN)
 
 
 def draw_terminal_window(
@@ -600,9 +624,10 @@ def draw_terminal_window(
     lines: List[str],
     fonts: FontManager,
     cursor_line: int = -1,
-    cursor_col: int = -1
+    cursor_col: int = -1,
+    metrics: Optional[List[Tuple[str, str]]] = None
 ) -> None:
-    """Draws macOS/Linux terminal window with chrome buttons and syntax-highlighted lines."""
+    """Draws macOS/Linux terminal window with chrome buttons, syntax-highlighted lines, and bottom status tray."""
     draw.rounded_rectangle([x, y, x + w, y + h], radius=12, fill=(11, 16, 27), outline=CARD_BORDER, width=2)
     draw.rounded_rectangle([x, y, x + w, y + 36], radius=12, fill=(20, 28, 45))
     draw.rectangle([x, y + 24, x + w, y + 36], fill=(20, 28, 45))
@@ -617,9 +642,10 @@ def draw_terminal_window(
     draw.text((x + (w - tw) // 2, y + 9), title, font=fonts.small_bold, fill=TEXT_MUTED)
 
     cur_y = y + 46
-    line_h = 22
+    line_h = 24
+    max_line_y = y + h - (52 if metrics else 22)
     for line_idx, line in enumerate(lines):
-        if cur_y > y + h - 22:
+        if cur_y > max_line_y:
             break
         cur_x = x + 18
         color = WHITE
@@ -650,6 +676,28 @@ def draw_terminal_window(
             draw.rectangle([cx_pos, cur_y + 2, cx_pos + 8, cur_y + 16], fill=CYAN)
 
         cur_y += line_h
+
+    # Bottom Status Tray (if metrics provided)
+    if metrics:
+        tray_h = 34
+        tray_y = y + h - tray_h - 12
+        draw.rounded_rectangle([x + 14, tray_y, x + w - 14, tray_y + tray_h], radius=6, fill=(15, 22, 36), outline=CARD_BORDER, width=1)
+        num_m = len(metrics)
+        col_w = (w - 28) // num_m
+        for m_idx, (m_label, m_val) in enumerate(metrics):
+            mx = x + 14 + m_idx * col_w
+            if m_idx > 0:
+                draw.line([(mx, tray_y + 6), (mx, tray_y + tray_h - 6)], fill=CARD_BORDER, width=1)
+            full_txt = f"{m_label}: {m_val}"
+            bb = draw.textbbox((0, 0), full_txt, font=fonts.mono_small)
+            tw = bb[2] - bb[0]
+            tx = mx + (col_w - tw) // 2
+            ty = tray_y + 9
+            lbl_bb = draw.textbbox((0, 0), f"{m_label}: ", font=fonts.mono_small)
+            lbl_w = lbl_bb[2] - lbl_bb[0]
+            draw.text((tx, ty), f"{m_label}: ", font=fonts.mono_small, fill=TEXT_DARK)
+            draw.text((tx + lbl_w, ty), m_val, font=fonts.mono_small, fill=EMERALD if "0" in m_val or "PASS" in m_val or "OK" in m_val or "SYNC" in m_val else CYAN)
+
 
 
 def draw_subtitle_pill(
@@ -850,42 +898,42 @@ class SceneIntro(Scene):
         )
 
 
-        # 2. Primary Focal Anchors (y: 210..840)
-        # Left Anchor: Centered around x = 500, y = 490
-        left_cx = 500
-        center_y = 480
+        # 2. Primary Focal Anchors (Rule of Thirds: y = 210..720)
+        # Left Anchor: Centered at left third (x = 520, center_y = 440)
+        left_cx = 520
+        center_y = 440
         pulse = 0.5 + 0.5 * math.sin(t * 3.0)
-        glow_size = int(280 + pulse * 50)
+        glow_size = int(270 + pulse * 45)
         glow_scaled = glow.resize((glow_size, glow_size), Image.Resampling.BILINEAR)
-        img.paste(glow_scaled, (left_cx - glow_size // 2, center_y - 110 - glow_size // 2), glow_scaled)
+        img.paste(glow_scaled, (left_cx - glow_size // 2, center_y - 105 - glow_size // 2), glow_scaled)
 
-        wave_radius = int((t * 80) % 220)
+        wave_radius = int((t * 80) % 210)
         if wave_radius > 15:
             draw.ellipse([
-                (left_cx - wave_radius, center_y - 110 - wave_radius),
-                (left_cx + wave_radius, center_y - 110 + wave_radius)
+                (left_cx - wave_radius, center_y - 105 - wave_radius),
+                (left_cx + wave_radius, center_y - 105 + wave_radius)
             ], outline=(40, 160, 240), width=1)
 
-        sh_icon = shield.resize((190, 190), Image.Resampling.LANCZOS)
+        sh_icon = shield.resize((175, 175), Image.Resampling.LANCZOS)
         sh_w, sh_h = sh_icon.size
-        img.paste(sh_icon, (left_cx - sh_w // 2, center_y - 110 - sh_h // 2), sh_icon)
+        img.paste(sh_icon, (left_cx - sh_w // 2, center_y - 105 - sh_h // 2), sh_icon)
 
         hero_title = "DriftGuard"
         ht_box = draw.textbbox((0, 0), hero_title, font=fonts.hero_font)
-        draw.text((left_cx - (ht_box[2] - ht_box[0]) // 2, center_y + 40), hero_title, font=fonts.hero_font, fill=WHITE)
+        draw.text((left_cx - (ht_box[2] - ht_box[0]) // 2, center_y + 35), hero_title, font=fonts.hero_font, fill=WHITE)
 
         hero_sub = "Deterministic L7 Ingress Gateway"
         hs_box = draw.textbbox((0, 0), hero_sub, font=fonts.h2_font)
-        draw.text((left_cx - (hs_box[2] - hs_box[0]) // 2, center_y + 115), hero_sub, font=fonts.h2_font, fill=CYAN)
+        draw.text((left_cx - (hs_box[2] - hs_box[0]) // 2, center_y + 105), hero_sub, font=fonts.h2_font, fill=CYAN)
 
         badge_txt = "SUB-MILLISECOND ROUTING  •  ZERO PACKET LOSS"
         b_box = draw.textbbox((0, 0), badge_txt, font=fonts.small_bold)
-        draw_badge(draw, left_cx - (b_box[2] - b_box[0]) // 2 - 14, center_y + 165, badge_txt, fonts.small_bold,
+        draw_badge(draw, left_cx - (b_box[2] - b_box[0]) // 2 - 14, center_y + 155, badge_txt, fonts.small_bold,
                    bg_color=CARD_BG, text_color=EMERALD, border_color=EMERALD)
 
-        # Right Anchor: Consensus Sentinel Mission Card (x: 980, y: 210, w: 860, h: 630)
+        # Right Anchor: Consensus Sentinel Mission Card (x: 980, y: 210, w: 860, h: 510)
         card_w_hero = 860
-        card_h_hero = 630
+        card_h_hero = FOCAL_END_Y - FOCAL_START_Y  # 510px (Rule of Thirds 2/3 baseline at y=720)
         anchor_2_x = 980
 
         mission_bullets = [
@@ -896,6 +944,11 @@ class SceneIntro(Scene):
             "Ultra-low resource footprint: runs in under 45 MB of RAM.",
             "Seamless drop-in sidecar container alongside Nitro validator clusters."
         ]
+        mission_metrics = [
+            ("SPEC", "NITRO & ORBIT"),
+            ("DRAIN SLA", "< 130ms"),
+            ("ERROR RATE", "0.00%")
+        ]
         draw_card(
             draw, anchor_2_x, FOCAL_START_Y, card_w_hero, card_h_hero,
             title="Consensus Sentinel Mission",
@@ -905,7 +958,8 @@ class SceneIntro(Scene):
             border_color=CARD_BORDER_ACTIVE,
             tag="CONSENSUS SENTINEL",
             tag_color=EMERALD,
-            wrap_width=72
+            wrap_width=58,
+            metrics=mission_metrics
         )
 
 
@@ -942,9 +996,9 @@ class SceneProblem(Scene):
             subtitle="Why Standard Layer 7 Load Balancers Fail Blockchain Workloads"
         )
 
-        # 2. Primary Focal Anchors: Split Comparison (y: 210..840)
+        # 2. Primary Focal Anchors: Split Comparison (Rule of Thirds: y = 210..720)
         col_w = 860
-        col_h = 630
+        col_h = FOCAL_END_Y - FOCAL_START_Y  # 510px
         left_x = MARGIN_X
         right_x = w - MARGIN_X - col_w
 
@@ -957,6 +1011,11 @@ class SceneProblem(Scene):
             "Silent failure: no 5xx errors recorded in cloud metrics dashboards.",
             "Relayers submit invalid nonces causing transaction rejection storms."
         ]
+        std_metrics = [
+            ("DRIFT VISIBILITY", "0%"),
+            ("PROBING", "BLIND 200 OK"),
+            ("OUTAGE RISK", "SEV-1")
+        ]
         draw_card(
             draw, left_x, FOCAL_START_Y, col_w, col_h,
             title="Standard Load Balancer (NGINX / ALB)",
@@ -966,7 +1025,8 @@ class SceneProblem(Scene):
             border_color=RED,
             tag="HTTP 200 OK (BLIND ROUTING)",
             tag_color=RED,
-            wrap_width=72
+            wrap_width=58,
+            metrics=std_metrics
         )
 
         # Right Column: DriftGuard Out-of-Band Sentinel
@@ -978,6 +1038,11 @@ class SceneProblem(Scene):
             "Drains node cleanly without dropping in-flight TCP connections.",
             "Preserves zero 5xx errors: fallback pool seamlessly serves traffic."
         ]
+        dg_metrics = [
+            ("LAG DETECT", "<= 240ms"),
+            ("DRAIN SLA", "< 130ms"),
+            ("DROPPED READS", "0")
+        ]
         draw_card(
             draw, right_x, FOCAL_START_Y, col_w, col_h,
             title="DriftGuard Consensus Sentinel",
@@ -987,7 +1052,8 @@ class SceneProblem(Scene):
             border_color=EMERALD,
             tag="CONSENSUS AWARE (DRAINED)",
             tag_color=EMERALD,
-            wrap_width=72
+            wrap_width=58,
+            metrics=dg_metrics
         )
 
 
@@ -1024,9 +1090,9 @@ class SceneArchitecture(Scene):
             subtitle="Sub-Millisecond L7 Ingress Proxy with Out-of-Band Consensus Watchdog"
         )
 
-        # 2. Primary Focal Anchors: Dual Planes (y: 210..840)
+        # 2. Primary Focal Anchors: Dual Planes (Rule of Thirds: y = 210..720)
         plane_w = 820
-        plane_h = 630
+        plane_h = FOCAL_END_Y - FOCAL_START_Y  # 510px
         left_x = MARGIN_X
         right_x = w - MARGIN_X - plane_w
 
@@ -1039,6 +1105,11 @@ class SceneArchitecture(Scene):
             "UNIX domain socket runtime API: /var/run/haproxy/admin.sock.",
             "Executes seamless graceful connection handoff with zero TCP resets."
         ]
+        data_metrics = [
+            ("ENGINE", "HAPROXY 2.8"),
+            ("P99 LATENCY", "< 0.4ms"),
+            ("SOCKET", "UNIX DRAIN")
+        ]
         draw_card(
             draw, left_x, FOCAL_START_Y, plane_w, plane_h,
             title="HAProxy 2.8 Data Plane",
@@ -1048,7 +1119,8 @@ class SceneArchitecture(Scene):
             border_color=ARBITRUM_BLUE,
             tag="DATA PLANE (INGRESS)",
             tag_color=ARBITRUM_BLUE,
-            wrap_width=68
+            wrap_width=56,
+            metrics=data_metrics
         )
 
         # Right Anchor: Control Plane (Sentinel)
@@ -1058,7 +1130,12 @@ class SceneArchitecture(Scene):
             "Drift trigger threshold: block lag >= 3 blocks or sequence stall.",
             "Issues UNIX domain socket drain command: 'set server node/srv maint'.",
             "Under 130 milliseconds end-to-end drain confirmation.",
-            "Prometheus metrics exporter at :8000/metrics and Discord alerts."
+            "Prometheus metrics exporter at :8000/metrics and automated webhook alerts."
+        ]
+        ctrl_metrics = [
+            ("POLL LOOP", "200ms"),
+            ("TRIGGER", ">= 3 BLOCKS"),
+            ("METRICS", ":8000/METRICS")
         ]
         draw_card(
             draw, right_x, FOCAL_START_Y, plane_w, plane_h,
@@ -1069,7 +1146,8 @@ class SceneArchitecture(Scene):
             border_color=CYAN,
             tag="CONTROL PLANE (SENTINEL)",
             tag_color=CYAN,
-            wrap_width=68
+            wrap_width=56,
+            metrics=ctrl_metrics
         )
 
         # Animated Connector Arrow between Planes
@@ -1115,9 +1193,9 @@ class SceneQuickStart(Scene):
             subtitle="Drop-In Docker Sidecar Setup for Arbitrum Nitro & Orbit Upstreams"
         )
 
-        # 2. Primary Focal Anchors: Dual Terminal / Code Windows (y: 210..840)
+        # 2. Primary Focal Anchors: Dual Terminal / Code Windows (Rule of Thirds: y = 210..720)
         win_w = 860
-        win_h = 630
+        win_h = FOCAL_END_Y - FOCAL_START_Y  # 510px
         left_x = MARGIN_X
         right_x = w - MARGIN_X - win_w
 
@@ -1142,6 +1220,11 @@ class SceneQuickStart(Scene):
             "{\"status\":\"synced\",\"block\":194520245,\"lag\":0}"
         ]
 
+        term_metrics = [
+            ("STACK", "COMPOSE"),
+            ("PORT", ":8545"),
+            ("STATUS", "SYNCED")
+        ]
         visible_lines = min(len(term_lines), int(t * 3.2) + 2)
         draw_terminal_window(
             draw, left_x, FOCAL_START_Y, win_w, win_h,
@@ -1149,7 +1232,8 @@ class SceneQuickStart(Scene):
             lines=term_lines[:visible_lines],
             fonts=fonts,
             cursor_line=visible_lines - 1,
-            cursor_col=24
+            cursor_col=24,
+            metrics=term_metrics
         )
 
         # Right Window: config/chains.json Specification
@@ -1171,11 +1255,17 @@ class SceneQuickStart(Scene):
             "  }",
             "}"
         ]
+        config_metrics = [
+            ("CHAIN", "ARBITRUM-ONE"),
+            ("POLL", "200ms"),
+            ("MAX_LAG", "3 BLOCKS")
+        ]
         draw_terminal_window(
             draw, right_x, FOCAL_START_Y, win_w, win_h,
             title="config/chains.json — JSON Configuration",
             lines=config_lines,
-            fonts=fonts
+            fonts=fonts,
+            metrics=config_metrics
         )
 
 
@@ -1212,9 +1302,9 @@ class SceneLiveDrill(Scene):
             subtitle="Automated Verification with Real-Time Header Telemetry & Socket Draining"
         )
 
-        # 2. Primary Focal Anchors: Dual Terminal Windows (y: 210..840)
+        # 2. Primary Focal Anchors: Dual Terminal Windows (Rule of Thirds: y = 210..720)
         win_w = 860
-        win_h = 630
+        win_h = FOCAL_END_Y - FOCAL_START_Y  # 510px
         left_x = MARGIN_X
         right_x = w - MARGIN_X - win_w
 
@@ -1234,11 +1324,17 @@ class SceneLiveDrill(Scene):
             "",
             "# Response latency: 0.38ms (sub-millisecond overhead)"
         ]
+        curl_metrics = [
+            ("ROUTE", "PRIMARY"),
+            ("OVERHEAD", "0.38ms"),
+            ("ERRORS", "0")
+        ]
         draw_terminal_window(
             draw, left_x, FOCAL_START_Y, win_w, win_h,
             title="curl -i http://localhost:8545/arb — Telemetry Inspection",
             lines=curl_lines,
-            fonts=fonts
+            fonts=fonts,
+            metrics=curl_metrics
         )
 
         # Right Window: chaos drill failover output
@@ -1265,11 +1361,17 @@ class SceneLiveDrill(Scene):
             "[INFO] Polling out-of-band sentinel response..."
         ]
 
+        drill_metrics = [
+            ("FAILOVER SLA", "< 130ms"),
+            ("ACTUAL DRAIN", "84ms"),
+            ("DROPPED TXS", "0")
+        ]
         draw_terminal_window(
             draw, right_x, FOCAL_START_Y, win_w, win_h,
             title="Drift Injection Drill — ./scripts/test_failover.sh",
             lines=drill_lines,
-            fonts=fonts
+            fonts=fonts,
+            metrics=drill_metrics
         )
 
 
@@ -1306,9 +1408,9 @@ class SceneSummary(Scene):
             subtitle="Built for Orbit Rollup Operators, High-Throughput Relayers & Validator Clusters"
         )
 
-        # 2. Primary Focal Anchors: Dual Target Cards (y: 210..840)
+        # 2. Primary Focal Anchors: Dual Target Cards (Rule of Thirds: y = 210..720)
         card_w = 860
-        card_h = 630
+        card_h = FOCAL_END_Y - FOCAL_START_Y  # 510px
         left_x = MARGIN_X
         right_x = w - MARGIN_X - card_w
 
@@ -1321,6 +1423,11 @@ class SceneSummary(Scene):
             "Compatible with Arbitrum AnyTrust and rollup execution modes.",
             "Protects on-chain gaming state machines from consensus desync."
         ]
+        orbit_metrics = [
+            ("DEPLOYMENT", "SIDECAR CONTAINER"),
+            ("MODE", "ANYTRUST & ROLLUP"),
+            ("FAILOVER", "ZERO LOSS")
+        ]
         draw_card(
             draw, left_x, FOCAL_START_Y, card_w, card_h,
             title="Orbit L3 Rollup Operators",
@@ -1330,7 +1437,8 @@ class SceneSummary(Scene):
             border_color=ARBITRUM_BLUE,
             tag="ORBIT ROLLUPS",
             tag_color=ARBITRUM_BLUE,
-            wrap_width=72
+            wrap_width=58,
+            metrics=orbit_metrics
         )
 
         # Right Anchor: Session Relayers & Paymasters
@@ -1342,6 +1450,11 @@ class SceneSummary(Scene):
             "Drop-in sidecar for Biconomy, ZeroDev, and custom relayers.",
             "Multi-chain support: Arbitrum One, Nova, Sepolia, Orbit L3."
         ]
+        relayer_metrics = [
+            ("INTEGRATION", "ERC-4337 & BICONOMY"),
+            ("NONCE DRIFT", "0% REVERTS"),
+            ("HEAD", "CANONICAL")
+        ]
         draw_card(
             draw, right_x, FOCAL_START_Y, card_w, card_h,
             title="Session Relayers & Paymasters",
@@ -1351,22 +1464,23 @@ class SceneSummary(Scene):
             border_color=EMERALD,
             tag="ERC-4337 RELAYERS",
             tag_color=EMERALD,
-            wrap_width=72
+            wrap_width=58,
+            metrics=relayer_metrics
         )
 
 
 # -----------------------------------------------------------------------------
-# Scene 7: Community & Discord Outro
+# Scene 7: Open Source & Developer Resources
 # -----------------------------------------------------------------------------
 class SceneOutroCommunity(Scene):
     """
     Scene 7:
-    - Header & Brand Zone: y < 180px
-    - Focal Anchors: Discord Server at x = 640px (1/3), Community Hub & Links at x = 1280px (2/3)
-    - Lower Third: 3 Community feature cards along y: 725..968 baseline
+    - Header & Brand Zone: y < 160px
+    - Rule of Thirds Anchors: Left card x: 60..920, Right card x: 1000..1860, y: 210..720 (ROT_Y2)
+    - Bottom Metric Tray: Status, License, and Repository telemetry
     """
     def __init__(self, fps: int = 30, duration: float = 11.0) -> None:
-        super().__init__(7, "Community", "07 COMMUNITY", duration, fps)
+        super().__init__(7, "Open Source", "07 OPEN SOURCE", duration, fps)
 
     def render(
         self,
@@ -1384,56 +1498,68 @@ class SceneOutroCommunity(Scene):
         # 1. Header Zone (y < 160px)
         draw_scene_header(
             draw, fonts,
-            title="Join the DriftGuard Discord Community",
-            subtitle="Real-Time Node Health Alerts, Video Tutorials, and Operator Discussions"
+            title="Open Source & Developer Resources",
+            subtitle="Production Ingress Gateway & Consensus Sentinel for Arbitrum Chains"
         )
 
-        # 2. Primary Focal Anchors: Dual Target Cards (y: 210..840)
+        # 2. Primary Focal Anchors: Dual Target Cards (y: 210..720)
         card_w = 860
-        card_h = 630
+        card_h = 510
         left_x = MARGIN_X
         right_x = w - MARGIN_X - card_w
 
-        # Left Anchor: Discord Server Channels & Features
-        discord_bullets = [
-            "Real-time webhook notifications for consensus drift and node stalls.",
-            "Interactive video tutorials, setup guides, and operational playbooks.",
-            "Active peer discussions for Arbitrum Orbit rollup operators.",
-            "Specialized channels for HAProxy L7 tuning and ERC-4337 relayers.",
-            "Direct engagement with core maintainers and new feature RFCs.",
-            "Public incident postmortems and high-availability architecture reviews."
+        # Left Anchor: GitHub Repository & Core Engine
+        github_bullets = [
+            "Public repository: github.com/maskalfreeup-glitch/driftguard",
+            "Permissive MIT license: fully open for commercial and community use.",
+            "Complete test suite: unit tests, chaos drill scripts, mock RPC engines.",
+            "Full source code for drift detector, agent sidecar, and HAProxy templates.",
+            "Comprehensive CI/CD pipelines and reproducible Docker Compose recipes.",
+            "Contributions welcome: submit pull requests, issues, or RFC proposals."
+        ]
+        github_metrics = [
+            ("REPOSITORY", "GITHUB"),
+            ("LICENSE", "MIT"),
+            ("TESTS", "PASSING")
         ]
         draw_card(
             draw, left_x, FOCAL_START_Y, card_w, card_h,
-            title="Discord Server Channels & Features",
-            subtitle="Real-Time Node Monitoring & Alerts",
-            bullets=discord_bullets,
+            title="GitHub Repository & Core Engine",
+            subtitle="Open Source Consensus Sentinel",
+            bullets=github_bullets,
             fonts=fonts,
             border_color=ARBITRUM_BLUE,
-            tag="DISCORD COMMUNITY",
+            tag="OPEN SOURCE REPOSITORY",
             tag_color=ARBITRUM_BLUE,
-            wrap_width=72
+            wrap_width=58,
+            metrics=github_metrics
         )
 
-        # Right Anchor: Community Hub & Quick Links
-        hub_bullets = [
-            "Official Discord Server: discord.gg/driftguard",
-            "GitHub Repository: github.com/maskalfreeup-glitch/driftguard",
-            "Live Reference RPC: rpc.driftguard.live",
-            "Documentation & Guides: docs.driftguard.live",
-            "Open source under permissive MIT license for the Arbitrum ecosystem.",
-            "Submit pull requests, report issues, or propose architectural RFCs."
+        # Right Anchor: Documentation & Reference Deployment
+        docs_bullets = [
+            "Official documentation portal: docs.driftguard.live",
+            "Interactive quickstart guides, topology diagrams, and runbooks.",
+            "Live Arbitrum One reference endpoint: rpc.driftguard.live",
+            "Zero-overhead metrics exporter with pre-built Grafana dashboards.",
+            "Enterprise HAProxy configuration with dynamic socket reloads.",
+            "Drop-in compatibility with Arbitrum Orbit, Nova, and Nitro rollups."
+        ]
+        docs_metrics = [
+            ("DOCS", "DOCS.DRIFTGUARD.LIVE"),
+            ("RPC", "RPC.DRIFTGUARD.LIVE"),
+            ("STATUS", "ACTIVE")
         ]
         draw_card(
             draw, right_x, FOCAL_START_Y, card_w, card_h,
-            title="Official Community Links & Hub",
-            subtitle="Connect, Learn & Contribute",
-            bullets=hub_bullets,
+            title="Documentation & Reference Deployment",
+            subtitle="Production Endpoints & Operations Manual",
+            bullets=docs_bullets,
             fonts=fonts,
             border_color=EMERALD,
-            tag="CONNECT & JOIN",
+            tag="DOCUMENTATION & ENDPOINTS",
             tag_color=EMERALD,
-            wrap_width=72
+            wrap_width=58,
+            metrics=docs_metrics
         )
 
 
@@ -1492,7 +1618,7 @@ class SceneOutroLogo(Scene):
         draw.text((cx - (sb[2] - sb[0]) // 2, cy + 195), sub, font=fonts.h1_font, fill=CYAN)
 
         # Community Badges / Links
-        link_str = "discord.gg/driftguard  •  rpc.driftguard.live  •  github.com/maskalfreeup-glitch/driftguard"
+        link_str = "github.com/maskalfreeup-glitch/driftguard  •  docs.driftguard.live  •  rpc.driftguard.live"
         lb = draw.textbbox((0, 0), link_str, font=fonts.mono_title)
         draw_badge(draw, cx - (lb[2] - lb[0]) // 2 - 16, cy + 245, link_str, fonts.mono_title,
                    bg_color=CARD_BG, text_color=EMERALD, border_color=EMERALD, pad_x=16, pad_y=6)
@@ -1811,12 +1937,17 @@ def render_video(
                 img = Image.new("RGB", (width, height), BG_COLOR)
                 draw = ImageDraw.Draw(img)
 
-                # Tech Grid (60px)
                 # Subtle Tech Grid (80px)
                 for gx in range(0, width, 80):
                     draw.line([(gx, 0), (gx, height)], fill=(13, 19, 32), width=1)
                 for gy in range(0, height, 80):
                     draw.line([(0, gy), (width, gy)], fill=(13, 19, 32), width=1)
+
+                # Subtle Rule of Thirds composition guidelines
+                draw.line([(ROT_X1, 0), (ROT_X1, height)], fill=(18, 26, 44), width=1)
+                draw.line([(ROT_X2, 0), (ROT_X2, height)], fill=(18, 26, 44), width=1)
+                draw.line([(0, ROT_Y1), (width, ROT_Y1)], fill=(18, 26, 44), width=1)
+                draw.line([(0, ROT_Y2), (width, ROT_Y2)], fill=(18, 26, 44), width=1)
 
                 # Render Scene Content
                 scene.render(f_in_scene, img, draw, fonts, shield, glow, width, height)

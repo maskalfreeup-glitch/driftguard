@@ -4,30 +4,30 @@ export function MetricsTrio() {
   const metrics = [
     {
       value: "< 130ms",
-      unit: "POSIX IPC DRAIN",
-      label: "Runtime Socket Drain",
-      description: "Commands HAProxy via UNIX domain socket to drain delinquent upstreams in <130ms without TCP resets.",
+      unit: "DRAIN LATENCY",
+      label: "Drain Latency",
+      description: "Graceful HAProxy socket state toggles with zero RST packets",
       icon: Zap,
       badge: "SLA GUARANTEE",
-      badgeColor: "border-sky-500/30 text-[#28A0F0] bg-sky-950/40"
+      badgeColor: "border-zinc-800 text-zinc-400 bg-zinc-900/60"
     },
     {
       value: "250ms",
-      unit: "ARBITRUM CADENCE",
-      label: "Out-of-Band Probing",
-      description: "Continuous asynchronous poll loop matches Arbitrum Nitro micro-block generation with zero client overhead.",
+      unit: "PROBE CADENCE",
+      label: "Probe Cadence",
+      description: "Out-of-band health sampling aligned with Nitro block times",
       icon: Activity,
       badge: "ZERO OVERHEAD",
-      badgeColor: "border-emerald-500/30 text-emerald-400 bg-emerald-950/40"
+      badgeColor: "border-zinc-800 text-zinc-400 bg-zinc-900/60"
     },
     {
       value: "< 45 MB",
-      unit: "RESIDENT RAM (RSS)",
-      label: "Resource Footprint",
-      description: "Combined HAProxy L7 core + FastAPI asyncio daemon fits into low-cost validator nodes or minimal cloud VPS.",
+      unit: "MEMORY FOOTPRINT",
+      label: "Memory Footprint",
+      description: "Single standalone daemon with zero runtime dependencies",
       icon: Cpu,
-      badge: "ROOTLESS SIDECAR",
-      badgeColor: "border-purple-500/30 text-purple-400 bg-purple-950/40"
+      badge: "STANDALONE DAEMON",
+      badgeColor: "border-zinc-800 text-zinc-400 bg-zinc-900/60"
     }
   ]
 
@@ -40,11 +40,11 @@ export function MetricsTrio() {
           return (
             <div
               key={idx}
-              className="relative p-5 sm:p-6 rounded-xl border border-zinc-800/80 bg-zinc-950/60 hover:bg-zinc-900/50 hover:border-zinc-700/80 transition-all duration-200 specular-border flex flex-col justify-between"
+              className="relative p-5 sm:p-6 rounded-xl border border-zinc-800 bg-zinc-950/60 hover:bg-zinc-900/50 hover:border-zinc-700/80 transition-all duration-200 specular-border flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${m.badgeColor}`}>
+                  <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-full border ${m.badgeColor}`}>
                     {m.badge}
                   </span>
                   <Icon className="size-4 text-zinc-500" />
@@ -59,7 +59,7 @@ export function MetricsTrio() {
                   </div>
                 </div>
 
-                <div className="mt-3 text-sm font-semibold text-zinc-200">
+                <div className="mt-3 text-sm font-semibold font-mono text-zinc-200">
                   {m.label}
                 </div>
 
@@ -68,9 +68,9 @@ export function MetricsTrio() {
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-zinc-800/60 flex items-center gap-1.5 text-[11px] font-mono text-zinc-500">
+              <div className="mt-4 pt-3 border-t border-zinc-800/60 flex items-center gap-1.5 text-[11px] font-mono text-zinc-400">
                 <ShieldCheck className="size-3 text-emerald-400 shrink-0" />
-                <span>Deterministic Field Validated</span>
+                <span>Production verified</span>
               </div>
             </div>
           )

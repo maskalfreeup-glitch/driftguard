@@ -31,7 +31,7 @@ export function RuleOfThirdsHero({
     // Step 1: Drift detected at 400ms
     setTimeout(() => {
       setSimStep("drain")
-      setDrillLatency(120.4)
+      setDrillLatency(112)
     }, 900)
 
     // Step 2: Drained & Fallback promoted
@@ -60,22 +60,20 @@ export function RuleOfThirdsHero({
             COLUMN 1 & 2: THE 2/3 PROPOSITION & ACTION CLUSTER
            ══════════════════════════════════════════════════════════ */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-5 text-left">
-          {/* Institutional VC & Grant Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-sky-500/30 text-[11px] font-mono text-zinc-300 shadow-sm">
-            <span className="size-2 rounded-full bg-[#28A0F0] animate-pulse" />
-            <span className="text-white font-semibold">ARBITRUM NITRO &amp; ORBIT</span>
-            <span className="text-zinc-600">·</span>
-            <span className="text-[#28A0F0]">L7 CONSENSUS RUNTIME SENTINEL</span>
+          {/* Ingress Gateway Eyebrow */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-300">
+            <span className="size-1.5 rounded-full bg-[#28A0F0]" />
+            <span className="text-zinc-200 font-medium">ARBITRUM NITRO &amp; ORBIT INGRESS GATEWAY</span>
           </div>
 
           {/* Primary High-Impact Headline */}
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-[1.12]">
-            Deterministic Ingress &amp; Out-of-Band Consensus Guard
+            Reliable RPC Ingress for Arbitrum Nitro &amp; Orbit
           </h1>
 
           {/* Strategic Value Proposition */}
           <p className="text-sm sm:text-base text-zinc-300 leading-relaxed max-w-2xl font-sans">
-            Eliminates silent <span className="text-white font-medium">HTTP 200 OK</span> desyncs and sequencer queue stalls in Arbitrum Nitro and Orbit chains. Decouples EVM JSON-RPC transport with sub-130ms UNIX socket cutover and <span className="text-emerald-400 font-medium">zero TCP connection resets</span>.
+            When an Arbitrum sequencer stalls, upstream nodes still return HTTP 200 with stale execution heads—breaking relayer nonces and failing user transactions. DriftGuard continuously verifies consensus out-of-band and drains desynced nodes in &lt;130ms without dropping TCP sockets.
           </p>
 
           {/* Rule of Thirds Action Links: Aligned along 1/3 focal line */}
@@ -167,23 +165,20 @@ export function RuleOfThirdsHero({
             COLUMN 3: THE 1/3 LIVE SENTINEL TELEMETRY HUD & SHIELD
            ══════════════════════════════════════════════════════════ */}
         <div className="lg:col-span-5 xl:col-span-4">
-          <div className="relative rounded-2xl border border-sky-500/25 bg-gradient-to-b from-zinc-900/90 to-zinc-950/95 p-4 sm:p-5 shadow-2xl backdrop-blur-xl overflow-hidden specular-border">
-            {/* Top Atmospheric Glow */}
-            <div className="absolute top-0 right-0 w-36 h-36 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-
+          <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:p-5 shadow-xl backdrop-blur-xl overflow-hidden specular-border">
             {/* HUD Titlebar */}
             <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3 mb-3.5">
               <div className="flex items-center gap-2">
-                <span className="relative flex size-2.5">
+                <span className="relative flex size-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full size-2.5 bg-emerald-500" />
+                  <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
                 </span>
-                <span className="font-mono text-xs font-semibold text-white tracking-wider uppercase">
-                  SENTINEL TELEMETRY HUD
+                <span className="font-mono text-xs font-semibold text-zinc-200 tracking-wider">
+                  telemetry_hud
                 </span>
               </div>
-              <Badge variant="outline" className="border-sky-500/30 bg-sky-950/40 text-[#28A0F0] text-[10px] font-mono">
-                CYCLE: 200MS
+              <Badge variant="outline" className="border-zinc-800 bg-zinc-950 text-zinc-400 text-[10px] font-mono">
+                poll: 200ms
               </Badge>
             </div>
 
@@ -192,40 +187,36 @@ export function RuleOfThirdsHero({
               <HeroBrandShield />
             </div>
 
-            {/* Live Telemetry Tickers */}
-            <div className="space-y-2 mt-2 pt-2 border-t border-zinc-800/80 font-mono text-xs">
+            {/* Live Telemetry Tickers in Lowercase Operational Notation */}
+            <div className="space-y-1.5 mt-2 pt-2 border-t border-zinc-800/80 font-mono text-xs">
               <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/80 border border-zinc-800/80">
-                <span className="text-[11px] text-zinc-400">Consensus Tip Parity</span>
-                <span className={`text-[11px] font-bold flex items-center gap-1.5 ${
+                <span className="text-[11px] text-zinc-400">status:</span>
+                <span className={`text-[11px] font-medium flex items-center gap-1.5 ${
                   simStep === "drift" ? "text-amber-400" : "text-emerald-400"
                 }`}>
                   <span className={`size-1.5 rounded-full ${
                     simStep === "drift" ? "bg-amber-400 animate-ping" : "bg-emerald-400"
                   }`} />
-                  {simStep === "drift" ? "6 BLOCKS LAG DETECTED" : "PARITY (0 BLOCK DRIFT)"}
+                  {simStep === "drift" ? "5-block lag detected" : "nominal"}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/80 border border-zinc-800/80">
-                <span className="text-[11px] text-zinc-400">HAProxy L7 Ingress</span>
-                <span className="text-[11px] font-bold text-zinc-200">
-                  {simStep === "drain" || simStep === "recovered" ? (
-                    <span className="text-cyan-400">FALLBACK POOL (DRAINED)</span>
-                  ) : (
-                    <span>PRIMARY (arb1.arbitrum.io)</span>
-                  )}
+                <span className="text-[11px] text-zinc-400">active_peers:</span>
+                <span className="text-[11px] font-medium text-zinc-300">
+                  {simStep === "drain" || simStep === "recovered" ? "2 (fallback pool)" : "3"}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/80 border border-zinc-800/80">
-                <span className="text-[11px] text-zinc-400">Cutover Latency (MTTC)</span>
-                <span className="text-[11px] font-bold text-[#28A0F0]">
-                  {drillLatency ? `${drillLatency} ms` : "119.8 ms (Target <130ms)"}
+                <span className="text-[11px] text-zinc-400">drain_latency:</span>
+                <span className="text-[11px] font-medium text-[#28A0F0]">
+                  {drillLatency ? `${drillLatency}ms` : "112ms"}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/80 border border-zinc-800/80">
-                <span className="text-[11px] text-zinc-400">POSIX Socket Control</span>
+                <span className="text-[11px] text-zinc-400">socket_path:</span>
                 <span className="text-[10px] text-zinc-400 font-mono">/run/haproxy/admin.sock</span>
               </div>
             </div>
@@ -238,22 +229,22 @@ export function RuleOfThirdsHero({
                 className={`w-full py-2 px-3 rounded-lg font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                   isSimulating
                     ? "bg-amber-950/60 border border-amber-600/50 text-amber-300 cursor-wait"
-                    : "bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-[#28A0F0] hover:text-sky-300"
+                    : "bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 hover:text-white"
                 }`}
               >
                 {isSimulating ? (
                   <>
                     <RefreshCw className="size-3.5 animate-spin" />
                     <span>
-                      {simStep === "drift" && "Simulating 6-Block Sequencer Drift..."}
-                      {simStep === "drain" && "Tripping Sub-130ms UNIX Socket Drain!"}
-                      {simStep === "recovered" && "Cutover Complete · Zero Packet Drops"}
+                      {simStep === "drift" && "simulating 5-block sequencer lag..."}
+                      {simStep === "drain" && "draining primary socket (<130ms)..."}
+                      {simStep === "recovered" && "status: nominal · routed to fallback"}
                     </span>
                   </>
                 ) : (
                   <>
                     <Activity className="size-3.5 text-[#28A0F0]" />
-                    <span>Trigger Live Failover Drill Simulation</span>
+                    <span>Simulate 5-Block Sequencer Lag</span>
                   </>
                 )}
               </button>

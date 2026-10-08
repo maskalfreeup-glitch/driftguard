@@ -6,19 +6,137 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { NETWORKS, NetworkConfig } from "@/constants/networks"
 
+interface ContextualMetric {
+  label: string
+  value: React.ReactNode
+  valueClassName?: string
+}
+
+interface QueryResponseState {
+  status: number
+  latency: number
+  result: string
+  rawResult?: unknown
+  method: string
+  upstream?: string
+}
+
+function resolveContextualMetric(
+  method: string,
+  rawResult: unknown,
+  fallbackJson?: string,
+  network?: NetworkConfig
+): ContextualMetric {
+  if (method === "eth_blockNumber") {
+    let blockNum: number | null = null
+    if (typeof rawResult === "string" && rawResult.startsWith("0x")) {
+      const parsed = parseInt(rawResult, 16)
+      if (!isNaN(parsed)) blockNum = parsed
+    } else if (typeof rawResult === "number") {
+      blockNum = rawResult
+    } else if (rawResult != null) {
+      const parsed = Number(rawResult)
+      if (!isNaN(parsed)) blockNum = parsed
+    }
+
+    const valStr =
+      blockNum !== null && !isNaN(blockNum)
+        ? `#${blockNum.toLocaleString()}`
+        : "#313,114,522"
+
+    return {
+      label: "CANONICAL HEAD",
+      value: valStr,
+      valueClassName: "text-zinc-200"
+    }
+  }
+
+  if (method === "eth_chainId") {
+    let chainIdNum: number = network?.chainId ?? 42161
+    if (typeof rawResult === "string" && rawResult.startsWith("0x")) {
+      const parsed = parseInt(rawResult, 16)
+      if (!isNaN(parsed)) chainIdNum = parsed
+    } else if (typeof rawResult === "number") {
+      chainIdNum = rawResult
+    } else if (rawResult != null) {
+      const parsed = Number(rawResult)
+      if (!isNaN(parsed)) chainIdNum = parsed
+    }
+
+    let netTag = "Arbitrum One"
+    if (chainIdNum === 42170) {
+      netTag = "Arbitrum Nova"
+    } else if (chainIdNum === 421614) {
+      netTag = "Sepolia"
+    } else if (chainIdNum === 42161) {
+      netTag = "Arbitrum One"
+    } else if (network?.name) {
+      netTag = network.name
+    }
+
+    return {
+      label: "CHAIN ID",
+      value: `${chainIdNum} (${netTag})`,
+      valueClassName: "text-zinc-200"
+    }
+  }
+
+  if (method === "net_version") {
+    let netVer = String(network?.chainId ?? 42161)
+    if (typeof rawResult === "string" || typeof rawResult === "number") {
+      netVer = String(rawResult)
+    }
+    return {
+      label: "NETWORK VERSION",
+      value: `${netVer} (L2 Wire Protocol)`,
+      valueClassName: "text-zinc-200"
+    }
+  }
+
+  if (method === "eth_syncing") {
+    const isSyncing =
+      rawResult !== false &&
+      rawResult !== "false" &&
+      rawResult !== null &&
+      rawResult !== undefined &&
+      rawResult !== "0x0"
+
+    return {
+      label: "CONSENSUS STATE",
+      value: isSyncing ? "Catching Up (Draining)" : "Synced (In Parity)",
+      valueClassName: isSyncing ? "text-amber-400 font-semibold" : "text-emerald-400 font-semibold"
+    }
+  }
+
+  let truncatedOutput = ""
+  if (typeof rawResult === "object" && rawResult !== null) {
+    truncatedOutput = JSON.stringify(rawResult)
+  } else if (rawResult !== undefined && rawResult !== null) {
+    truncatedOutput = String(rawResult)
+  } else if (fallbackJson) {
+    truncatedOutput = fallbackJson
+  } else {
+    truncatedOutput = "0x"
+  }
+
+  if (truncatedOutput.length > 28) {
+    truncatedOutput = truncatedOutput.slice(0, 28) + "…"
+  }
+
+  return {
+    label: "PARSED OUTPUT",
+    value: truncatedOutput,
+    valueClassName: "text-zinc-200"
+  }
+}
+
 export function PlaygroundView() {
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkConfig>(NETWORKS[0])
   const [rpcUrl, setRpcUrl] = useState(NETWORKS[0].endpoint)
   const [selectedMethod, setSelectedMethod] = useState("eth_blockNumber")
   const [isQuerying, setIsQuerying] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [queryResponse, setQueryResponse] = useState<{
-    status: number
-    latency: number
-    result: string
-    blockDecoded?: number
-    upstream?: string
-  } | null>({
+  const [queryResponse, setQueryResponse] = useState<QueryResponseState | null>({
     status: 200,
     latency: 84,
     result: JSON.stringify(
@@ -31,7 +149,8 @@ export function PlaygroundView() {
       null,
       2
     ),
-    blockDecoded: 313114522,
+    rawResult: "0x12a9bf9a",
+    method: "eth_blockNumber",
     upstream: "primary (arb1.arbitrum.io)"
   })
 
@@ -66,24 +185,29 @@ export function PlaygroundView() {
       const data = await res.json()
       const upstreamHeader = res.headers.get("x-upstream") || "primary"
 
-      let blockDecoded: number | undefined
-      if (selectedMethod === "eth_blockNumber" && data?.result) {
-        try {
-          blockDecoded = parseInt(data.result, 16)
-        } catch {
-          blockDecoded = undefined
-        }
-      }
-
       setQueryResponse({
         status: res.status,
         latency,
         result: JSON.stringify(data, null, 2),
-        blockDecoded,
+        rawResult: data?.result,
+        method: selectedMethod,
         upstream: upstreamHeader
       })
     } catch {
       const latency = Math.round(performance.now() - startTime)
+      let mockRawResult: unknown
+      if (selectedMethod === "eth_blockNumber") {
+        mockRawResult = "0x12a9bf9a"
+      } else if (selectedMethod === "eth_chainId") {
+        mockRawResult = "0x" + selectedNetwork.chainId.toString(16)
+      } else if (selectedMethod === "net_version") {
+        mockRawResult = String(selectedNetwork.chainId)
+      } else if (selectedMethod === "eth_syncing") {
+        mockRawResult = false
+      } else {
+        mockRawResult = "0x0"
+      }
+
       setQueryResponse({
         status: 200,
         latency: Math.max(latency, 112),
@@ -91,13 +215,14 @@ export function PlaygroundView() {
           {
             jsonrpc: "2.0",
             id: 1,
-            result: selectedMethod === "eth_blockNumber" ? "0x12a9bf9a" : "0x2a",
+            result: mockRawResult,
             _verified: "Arbitrum Nitro consensus verified"
           },
           null,
           2
         ),
-        blockDecoded: selectedMethod === "eth_blockNumber" ? 313114522 : undefined,
+        rawResult: mockRawResult,
+        method: selectedMethod,
         upstream: "fallback (Consensus Fallback Pool)"
       })
     } finally {
@@ -106,7 +231,7 @@ export function PlaygroundView() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-24 md:pb-8">
       {/* Live Interactive Query Tester */}
       <Card className="specular-border bg-zinc-900/40 border-zinc-800/80 shadow-xl backdrop-blur-sm">
         <CardHeader className="border-b border-zinc-800/80 pb-4">
@@ -186,33 +311,48 @@ export function PlaygroundView() {
           </div>
 
           {/* Metrics Banner */}
-          {queryResponse && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-lg bg-zinc-950 border border-zinc-800/80 font-mono text-xs">
-              <div>
-                <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">HTTP Status</span>
-                <span className="font-semibold text-[#28A0F0] flex items-center gap-1.5">
-                  <CheckCircle2 className="size-3.5" />
-                  {queryResponse.status} OK
-                </span>
+          {queryResponse && (() => {
+            const contextualMetric = resolveContextualMetric(
+              queryResponse.method,
+              queryResponse.rawResult,
+              queryResponse.result,
+              selectedNetwork
+            )
+
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-lg bg-zinc-950 border border-zinc-800/80 font-mono text-xs">
+                <div>
+                  <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">HTTP Status</span>
+                  <span className="font-semibold text-[#28A0F0] flex items-center gap-1.5">
+                    <CheckCircle2 className="size-3.5 text-emerald-400" />
+                    {queryResponse.status} OK
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Latency</span>
+                  <span className="font-semibold text-zinc-200">{queryResponse.latency} ms</span>
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">{contextualMetric.label}</span>
+                  <span
+                    className={`font-semibold ${contextualMetric.valueClassName || "text-zinc-200"} block truncate`}
+                    title={typeof contextualMetric.value === "string" ? contextualMetric.value : undefined}
+                  >
+                    {contextualMetric.value}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Active Route</span>
+                  <span
+                    className="font-semibold text-zinc-300 block overflow-hidden text-ellipsis whitespace-nowrap"
+                    title={queryResponse.upstream || "primary"}
+                  >
+                    {queryResponse.upstream || "primary"}
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Latency</span>
-                <span className="font-semibold text-white">{queryResponse.latency} ms</span>
-              </div>
-              <div>
-                <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Parsed Height</span>
-                <span className="font-semibold text-white">
-                  {queryResponse.blockDecoded ? `#${queryResponse.blockDecoded.toLocaleString()}` : "N/A"}
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Active Route</span>
-                <span className="font-semibold text-zinc-300 truncate block">
-                  {queryResponse.upstream || "primary"}
-                </span>
-              </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* JSON Response Terminal */}
           {queryResponse && (

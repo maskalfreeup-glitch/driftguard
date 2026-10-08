@@ -245,7 +245,7 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
             >
               <span className="flex items-center gap-2">
                 <Activity className="size-3 text-amber-500" />
-                <span>SEV-2 Genesis Field Post-Mortem</span>
+                <span>Arbitrum Desync Post-Mortem (2026-10-04)</span>
               </span>
               <ExternalLink className="size-3 text-zinc-600" />
             </a>

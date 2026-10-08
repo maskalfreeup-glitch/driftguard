@@ -74,18 +74,18 @@ export function Footer({ onSelectTab }: FooterProps) {
                   rel="noreferrer"
                   className="hover:text-white transition-colors flex items-center gap-1.5 text-zinc-300"
                 >
-                  <span>SEV-2 Genesis Field Post-Mortem</span>
+                  <span>Arbitrum Desync Post-Mortem (2026-10-04)</span>
                   <ExternalLink className="size-3 text-zinc-500" />
                 </a>
               </li>
               <li>
                 <a
-                  href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/ARBITRUM_GRANT_PROPOSAL.md"
+                  href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/reports/INCIDENT_LEDGER.md"
                   target="_blank"
                   rel="noreferrer"
-                  className="hover:text-white transition-colors flex items-center gap-1.5 text-cyan-400 font-medium"
+                  className="hover:text-white transition-colors flex items-center gap-1.5 text-zinc-300"
                 >
-                  <span>Arbitrum Foundation Grant Proposal</span>
+                  <span>Incident Ledger &amp; SRE Docs</span>
                   <ExternalLink className="size-3 text-zinc-500" />
                 </a>
               </li>

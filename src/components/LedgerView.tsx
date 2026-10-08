@@ -501,7 +501,7 @@ export function LedgerView() {
                         className="text-emerald-400 hover:underline flex items-center gap-1.5 font-sans font-medium text-xs"
                       >
                         <BookOpen className="size-3.5" />
-                        <span>Read Formal Engineering SEV-2 Post-Mortem Report (GitHub) →</span>
+                        <span>Read Incident Post-Mortem Report (2026-10-04) →</span>
                       </a>
                       <span className="text-[10px] text-zinc-500 font-mono">
                         Verified Systems Engineering Documentation

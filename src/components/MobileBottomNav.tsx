@@ -52,13 +52,13 @@ export function MobileBottomNav({ activeTab, setActiveTab, incidentCount }: Mobi
           >
             {/* Top active indicator line */}
             {isActive && (
-              <span className="absolute -top-1.5 w-6 h-0.5 bg-[#28A0F0] rounded-full shadow-[0_0_8px_#28A0F0]" />
+              <span className="absolute -top-1.5 w-6 h-0.5 bg-[#28A0F0] rounded-full" />
             )}
 
             <div className="relative">
               <Icon className={`size-4.5 ${isActive ? "text-[#28A0F0]" : "text-zinc-400"}`} />
               {tab.badge && (
-                <span className="absolute -top-1.5 -right-3 text-[9px] font-mono font-bold px-1 rounded-full bg-cyan-950 text-[#28A0F0] border border-cyan-800">
+                <span className="absolute -top-1.5 -right-3 text-[9px] font-mono font-bold px-1 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
                   {tab.badge}
                 </span>
               )}

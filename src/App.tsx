@@ -42,17 +42,17 @@ export function App() {
 
   return (
     <div className="relative min-h-screen bg-[#08090d] text-zinc-100 flex flex-col selection:bg-[#28A0F0]/25 selection:text-[#38bdf8] font-sans overflow-x-hidden pb-12 md:pb-0">
-      {/* ── Background EVM / Arbitrum Atmospheric Textures ── */}
-      {/* 1. Top Ethereal Cyan Radial Aurora */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[700px] bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(40,160,240,0.18),transparent_75%)] z-0" />
+      {/* ── Background Atmospheric Textures ── */}
+      {/* 1. Subtle Radial Ambient Tint */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[600px] bg-[radial-gradient(ellipse_80%_40%_at_50%_-10%,rgba(40,160,240,0.06),transparent_75%)] z-0" />
       {/* 2. Micro Grid Pattern with Radial Mask */}
-      <div className="pointer-events-none absolute inset-0 bg-grid-mesh [mask-image:radial-gradient(ellipse_75%_50%_at_50%_25%,#000_20%,transparent_100%)] opacity-70 z-0" />
-      {/* 3. Cyber Dot Matrix Glow behind Hero */}
-      <div className="pointer-events-none absolute top-12 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[500px] bg-dot-mesh [mask-image:radial-gradient(ellipse_50%_50%_at_50%_40%,#000_20%,transparent_100%)] opacity-50 z-0" />
+      <div className="pointer-events-none absolute inset-0 bg-grid-mesh [mask-image:radial-gradient(ellipse_75%_50%_at_50%_25%,#000_20%,transparent_100%)] opacity-40 z-0" />
+      {/* 3. Subtle Dot Matrix Texture */}
+      <div className="pointer-events-none absolute top-12 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[450px] bg-dot-mesh [mask-image:radial-gradient(ellipse_50%_50%_at_50%_40%,#000_20%,transparent_100%)] opacity-25 z-0" />
       {/* 4. Film Grain / Cryptographic Noise Texture */}
-      <div className="pointer-events-none fixed inset-0 bg-noise opacity-30 z-40" />
+      <div className="pointer-events-none fixed inset-0 bg-noise opacity-20 z-40" />
 
-      {/* ── Top VC & Grant Announcement Ribbon ── */}
+      {/* ── Top Announcement Ribbon ── */}
       <AnnouncementBanner />
 
       {/* ── Responsive Sticky Navigation Header with Mobile Drawer ── */}
@@ -77,7 +77,7 @@ export function App() {
               onOpenLedger={() => handleTabChange("audit")}
             />
 
-            {/* Institutional Ecosystem Proof Strip */}
+            {/* Ecosystem Proof Strip */}
             <TrustProofStrip />
 
             {/* Rule of Thirds 3-Column Metrics Pillars */}

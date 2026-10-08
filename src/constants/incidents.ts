@@ -585,7 +585,7 @@ export const LEDGER_INCIDENTS: LedgerIncident[] = [
     canonicalHead: "#511619849",
     delinquentHead: "#511619835",
     impactAnalysis: {
-      title: "Live SEV-2 Production Incident Triage (Genesis Field Validation)",
+      title: "Live SEV-2 Production Incident Triage (Arbitrum One Mainnet Desync)",
       ecosystemRiskAverted: "Shielded 800+ real mainnet transactions with 0.00% client error rate when arb1.arbitrum.io silently froze at block #511619835.",
       affectedStakeholders: "Arbitrum One Ecosystem, Session Relayers, ERC-4337 Bundlers, DeFi Swappers",
       productionImpact: "Production benchmark validation: demonstrates complete autonomous detection-to-recovery lifecycle under live network stress. Full post-mortem verified by engineering team."

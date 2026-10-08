@@ -134,20 +134,20 @@ export function ResourcesSection({ onSelectTab }: ResourcesSectionProps) {
                 >
                   <span className="flex items-center gap-2 truncate">
                     <Activity className="size-3.5 text-amber-400" />
-                    <span>SEV-2 Genesis Field Post-Mortem</span>
+                    <span>Arbitrum Desync Post-Mortem (2026-10-04)</span>
                   </span>
                   <ExternalLink className="size-3 text-zinc-500 group-hover:text-white" />
                 </a>
 
                 <a
-                  href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/ARBITRUM_GRANT_PROPOSAL.md"
+                  href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/reports/INCIDENT_LEDGER.md"
                   target="_blank"
                   rel="noreferrer"
                   className="p-2.5 rounded-lg bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 transition-colors flex items-center justify-between group block"
                 >
                   <span className="flex items-center gap-2 truncate">
                     <Layers className="size-3.5 text-purple-400" />
-                    <span>Arbitrum Grant Proposal Draft</span>
+                    <span>Incident Ledger &amp; SRE Telemetry</span>
                   </span>
                   <ExternalLink className="size-3 text-zinc-500 group-hover:text-white" />
                 </a>

@@ -1,35 +1,21 @@
 export function HeroBrandShield() {
   return (
-    <div className="relative rounded-2xl border border-sky-500/20 bg-sky-950/10 p-8 backdrop-blur-sm flex flex-col items-center justify-center overflow-hidden shadow-[0_0_50px_-10px_rgba(40,160,240,0.18)] transition-all hover:border-sky-500/40 duration-300">
-      {/* Outer ambient radial glow in Arbitrum Cyan */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(40,160,240,0.18)_0%,transparent_70%)] pointer-events-none" />
+    <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 backdrop-blur-sm flex flex-col items-center justify-center overflow-hidden transition-all duration-300">
+      {/* Ambient center tint */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(40,160,240,0.05)_0%,transparent_70%)] pointer-events-none" />
 
-      {/* Pulsing radar ping ring around the shield */}
+      {/* Geometry Container */}
       <div className="relative flex items-center justify-center">
-        <div className="absolute size-44 rounded-full border border-sky-400/20 animate-ping opacity-30 pointer-events-none" />
-        <div className="absolute size-36 rounded-full border border-[#28A0F0]/30 animate-pulse pointer-events-none" />
-
-        {/* Luminous High-Resolution SVG Shield */}
+        {/* Crisp High-Resolution SVG Shield */}
         <svg
-          width="160"
-          height="160"
+          width="150"
+          height="150"
           viewBox="0 0 120 120"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="relative z-10 drop-shadow-[0_0_25px_rgba(40,160,240,0.4)]"
+          className="relative z-10"
         >
           <defs>
-            {/* Ambient Cyan Filter Glow */}
-            <filter id="hero-shield-glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow
-                dx="0"
-                dy="0"
-                stdDeviation="4"
-                floodColor="#28A0F0"
-                floodOpacity="0.5"
-              />
-            </filter>
-
             {/* Gradient for Primary Nitro Prism */}
             <linearGradient id="hero-prism-cyan" x1="20" y1="20" x2="100" y2="100" gradientUnits="userSpaceOnUse">
               <stop offset="0%" stopColor="#7CCBFC" />
@@ -76,9 +62,9 @@ export function HeroBrandShield() {
             strokeWidth="1.5"
           />
 
-          {/* Dual Interlocking Nitro Prisms (Arbitrum-style isometric geometry) */}
-          <g filter="url(#hero-shield-glow)">
-            {/* Primary Cyan Prism (Left-aligned & upward angled) */}
+          {/* Dual Interlocking Nitro Prisms */}
+          <g>
+            {/* Primary Cyan Prism */}
             <path
               d="M38 44 L60 30 L60 62 L38 76 Z"
               fill="url(#hero-prism-cyan)"
@@ -88,7 +74,7 @@ export function HeroBrandShield() {
               fill="#0A4C7E"
             />
 
-            {/* Interlocking Platinum/Silver Prism (Offset & forward-facing) */}
+            {/* Interlocking Platinum/Silver Prism */}
             <path
               d="M60 46 L82 32 L82 64 L60 78 Z"
               fill="url(#hero-prism-white)"
@@ -99,20 +85,17 @@ export function HeroBrandShield() {
               fillOpacity="0.9"
             />
 
-            {/* Center Consensus Nexus Core */}
+            {/* Center Core */}
             <circle cx="60" cy="60" r="3.5" fill="#38B0F8" />
             <circle cx="60" cy="60" r="1.5" fill="#FFFFFF" />
           </g>
         </svg>
       </div>
 
-      {/* Connectivity Status Label */}
-      <div className="mt-5 relative z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-[#0A2E4E]/50 border border-[#28A0F0]/30 text-[#28A0F0] text-xs font-mono">
-        <span className="relative flex size-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#28A0F0] opacity-75"></span>
-          <span className="relative inline-flex rounded-full size-2 bg-[#28A0F0]"></span>
-        </span>
-        <span className="font-semibold tracking-wide">Arbitrum Nitro Consensus</span>
+      {/* Connectivity Status Display */}
+      <div className="mt-4 relative z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs font-mono">
+        <span className="size-2 rounded-full bg-emerald-400" />
+        <span className="tracking-tight">status: nominal</span>
       </div>
     </div>
   )

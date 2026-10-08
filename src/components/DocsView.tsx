@@ -13,7 +13,7 @@ export function DocsView() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-24 md:pb-8">
       {/* Header */}
       <div className="border-b border-zinc-800/80 pb-4">
         <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight mb-1">

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   ShieldCheck,
   Activity,
@@ -15,20 +15,46 @@ import {
   ExternalLink,
   BookOpen,
   Check,
-  Copy
+  Copy,
+  Link2
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { LEDGER_INCIDENTS } from "@/constants/incidents"
 
-export function LedgerView() {
+interface LedgerViewProps {
+  initialIncidentId?: string
+}
+
+export function LedgerView({ initialIncidentId }: LedgerViewProps) {
   const [ledgerFilter, setLedgerFilter] = useState<"all" | "arb" | "nova" | "arb-sepolia" | "case-studies">("all")
   const [incidentSearchQuery, setIncidentSearchQuery] = useState("")
   const [activeIncidentSubTabs, setActiveIncidentSubTabs] = useState<Record<string, "impact" | "sre" | "wire">>({})
-  const [expandedIncident, setExpandedIncident] = useState<string | null>("INC-20261006-18")
+  const [expandedIncident, setExpandedIncident] = useState<string | null>(initialIncidentId || "INC-20261006-18")
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (initialIncidentId) {
+      setExpandedIncident(initialIncidentId)
+      setTimeout(() => {
+        const el = document.getElementById(initialIncidentId)
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" })
+        }
+      }, 150)
+    }
+  }, [initialIncidentId])
 
   const toggleIncident = (id: string) => {
     setExpandedIncident((prev) => (prev === id ? null : id))
+  }
+
+  function handleCopyIncidentLink(id: string, e: React.MouseEvent) {
+    e.stopPropagation()
+    const url = `${window.location.origin}${window.location.pathname}#audit?id=${id}`
+    navigator.clipboard.writeText(url)
+    setCopiedLinkId(id)
+    setTimeout(() => setCopiedLinkId(null), 2000)
   }
 
   function setIncidentSubTab(id: string, tab: "impact" | "sre" | "wire") {
@@ -44,7 +70,7 @@ export function LedgerView() {
   const sepoliaCategoryCount = LEDGER_INCIDENTS.filter((i) => i.category === "arb-sepolia").length
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24 md:pb-8">
       {/* Header & Direct Discord Verification CTA */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-800/80">
         <div className="space-y-1">
@@ -204,7 +230,8 @@ export function LedgerView() {
           return (
             <div
               key={incident.id}
-              className={`rounded-lg border transition-all ${
+              id={incident.id}
+              className={`rounded-lg border transition-all scroll-mt-20 ${
                 isExpanded
                   ? "bg-zinc-900/80 border-cyan-800/80 shadow-md ring-1 ring-cyan-800/40"
                   : "bg-zinc-900/40 border-zinc-800/80 hover:border-zinc-700/80 hover:bg-zinc-900/60"
@@ -259,7 +286,7 @@ export function LedgerView() {
                   {incident.stallDelta}
                 </div>
 
-                {/* Right: Latency + Status Pill + Chevron */}
+                {/* Right: Latency + Status Pill + Share Link + Chevron */}
                 <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                   <span className="text-xs font-mono text-[#28A0F0] font-semibold bg-[#28A0F0]/10 px-2 py-0.5 rounded border border-[#28A0F0]/20">
                     {incident.latency}
@@ -274,7 +301,18 @@ export function LedgerView() {
                   >
                     {incident.actionStatus}
                   </Badge>
-                  <div className="text-zinc-500 hover:text-zinc-300 ml-1">
+                  <button
+                    onClick={(e) => handleCopyIncidentLink(incident.id, e)}
+                    className="p-1 text-zinc-500 hover:text-white rounded transition-colors"
+                    title="Copy direct URL to this incident"
+                  >
+                    {copiedLinkId === incident.id ? (
+                      <Check className="size-3.5 text-emerald-400" />
+                    ) : (
+                      <Link2 className="size-3.5" />
+                    )}
+                  </button>
+                  <div className="text-zinc-500 hover:text-zinc-300 ml-0.5">
                     {isExpanded ? (
                       <ChevronUp className="size-4" />
                     ) : (

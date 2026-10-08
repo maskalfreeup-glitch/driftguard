@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Play, RefreshCw, CheckCircle2, Copy, Check } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -154,28 +154,20 @@ export function PlaygroundView() {
     upstream: "primary (arb1.arbitrum.io)"
   })
 
-  function handleNetworkChange(net: NetworkConfig) {
-    setSelectedNetwork(net)
-    setRpcUrl(net.endpoint)
-    setQueryResponse(null)
-  }
-
-  function copyToClipboard(text: string, id: string) {
-    navigator.clipboard.writeText(text)
-    setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
-  }
-
-  async function runRpcQuery() {
+  async function executeRpcQuery(
+    targetUrl: string = rpcUrl,
+    method: string = selectedMethod,
+    net: NetworkConfig = selectedNetwork
+  ) {
     setIsQuerying(true)
     const startTime = performance.now()
     try {
-      const res = await fetch(rpcUrl, {
+      const res = await fetch(targetUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jsonrpc: "2.0",
-          method: selectedMethod,
+          method: method,
           params: [],
           id: 1
         })
@@ -190,19 +182,19 @@ export function PlaygroundView() {
         latency,
         result: JSON.stringify(data, null, 2),
         rawResult: data?.result,
-        method: selectedMethod,
+        method: method,
         upstream: upstreamHeader
       })
     } catch {
       const latency = Math.round(performance.now() - startTime)
       let mockRawResult: unknown
-      if (selectedMethod === "eth_blockNumber") {
+      if (method === "eth_blockNumber") {
         mockRawResult = "0x12a9bf9a"
-      } else if (selectedMethod === "eth_chainId") {
-        mockRawResult = "0x" + selectedNetwork.chainId.toString(16)
-      } else if (selectedMethod === "net_version") {
-        mockRawResult = String(selectedNetwork.chainId)
-      } else if (selectedMethod === "eth_syncing") {
+      } else if (method === "eth_chainId") {
+        mockRawResult = "0x" + net.chainId.toString(16)
+      } else if (method === "net_version") {
+        mockRawResult = String(net.chainId)
+      } else if (method === "eth_syncing") {
         mockRawResult = false
       } else {
         mockRawResult = "0x0"
@@ -222,13 +214,46 @@ export function PlaygroundView() {
           2
         ),
         rawResult: mockRawResult,
-        method: selectedMethod,
+        method: method,
         upstream: "fallback (Consensus Fallback Pool)"
       })
     } finally {
       setIsQuerying(false)
     }
   }
+
+  function runRpcQuery() {
+    executeRpcQuery(rpcUrl, selectedMethod, selectedNetwork)
+  }
+
+  function handleNetworkChange(net: NetworkConfig) {
+    setSelectedNetwork(net)
+    setRpcUrl(net.endpoint)
+    executeRpcQuery(net.endpoint, selectedMethod, net)
+  }
+
+  function handleSelectMethod(method: string) {
+    setSelectedMethod(method)
+    executeRpcQuery(rpcUrl, method, selectedNetwork)
+  }
+
+  function copyToClipboard(text: string, id: string) {
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  // Keyboard shortcut: Cmd/Ctrl + Enter to trigger query
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault()
+        executeRpcQuery(rpcUrl, selectedMethod, selectedNetwork)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [rpcUrl, selectedMethod, selectedNetwork])
 
   return (
     <div className="space-y-8 pb-24 md:pb-8">
@@ -275,10 +300,13 @@ export function PlaygroundView() {
               />
             </div>
             <div>
-              <label className="text-xs text-zinc-400 font-medium mb-1.5 block">JSON-RPC Method</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs text-zinc-400 font-medium">JSON-RPC Method</label>
+                <span className="text-[10px] text-zinc-500 font-mono hidden sm:inline">⌘↵ to execute</span>
+              </div>
               <select
                 value={selectedMethod}
-                onChange={(e) => setSelectedMethod(e.target.value)}
+                onChange={(e) => handleSelectMethod(e.target.value)}
                 aria-label="JSON-RPC Method"
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 h-10 sm:h-9 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
               >
@@ -290,11 +318,29 @@ export function PlaygroundView() {
             </div>
           </div>
 
+          {/* Quick Method Buttons */}
+          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+            <span className="text-[10px] uppercase font-mono text-zinc-500 mr-1 select-none">Quick Methods:</span>
+            {["eth_blockNumber", "eth_chainId", "net_version", "eth_syncing"].map((m) => (
+              <button
+                key={m}
+                onClick={() => handleSelectMethod(m)}
+                className={`text-[11px] font-mono px-2 py-0.5 rounded border transition-colors ${
+                  selectedMethod === m
+                    ? "bg-zinc-800 text-white border-zinc-600 font-medium"
+                    : "bg-zinc-950 text-zinc-400 hover:text-zinc-200 border-zinc-800/80"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+
           <div className="flex justify-end pt-1">
             <Button
               onClick={runRpcQuery}
               disabled={isQuerying}
-              className="w-full sm:w-auto bg-white hover:bg-zinc-200 text-black font-semibold text-xs px-5 h-9 rounded-md gap-2 shadow-sm"
+              className="w-full sm:w-auto bg-white hover:bg-zinc-200 text-black font-semibold text-xs px-4 h-9 rounded-md gap-2 shadow-sm transition-all"
             >
               {isQuerying ? (
                 <>
@@ -305,6 +351,9 @@ export function PlaygroundView() {
                 <>
                   <Play className="size-3.5 fill-current text-[#28A0F0]" />
                   <span>Run Live Query</span>
+                  <kbd className="hidden sm:inline-flex items-center text-[10px] font-mono px-1 py-0.2 bg-zinc-200 text-zinc-800 rounded border border-zinc-300 ml-1">
+                    ⌘↵
+                  </kbd>
                 </>
               )}
             </Button>
@@ -330,7 +379,12 @@ export function PlaygroundView() {
                 </div>
                 <div>
                   <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">Latency</span>
-                  <span className="font-semibold text-zinc-200">{queryResponse.latency} ms</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-semibold text-zinc-200">{queryResponse.latency} ms</span>
+                    <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-900/60 px-1 rounded">
+                      &lt;130ms SLA
+                    </span>
+                  </div>
                 </div>
                 <div className="min-w-0">
                   <span className="text-[10px] uppercase text-zinc-500 block mb-0.5">{contextualMetric.label}</span>

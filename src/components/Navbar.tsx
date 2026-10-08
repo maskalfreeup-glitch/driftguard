@@ -98,7 +98,7 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
               }`}
             >
               <span>Incident Ledger</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-cyan-950 text-[#28A0F0] border border-cyan-800 text-[10px] font-mono">
+              <span className="px-1.5 py-0.2 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700 text-[10px] font-mono">
                 {incidentCount}
               </span>
             </button>
@@ -202,7 +202,7 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
                 <Activity className="size-3.5 text-[#28A0F0]" />
                 <span>Incident Ledger &amp; Audits</span>
               </span>
-              <span className="px-1.5 py-0.2 rounded bg-cyan-950 text-[#28A0F0] text-[10px]">
+              <span className="px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 text-[10px]">
                 {incidentCount}
               </span>
             </button>

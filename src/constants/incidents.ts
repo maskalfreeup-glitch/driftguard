@@ -62,7 +62,7 @@ export const LEDGER_INCIDENTS: LedgerIncident[] = [
       mttdMs: 180,
       mttcMs: 119.8,
       recoveryCondition: "2 consecutive verified consensus checks (Tip Parity with canonical Alchemy reference)",
-      complianceStandard: "POSIX UNIX Domain Socket IPC / Zero TCP RST Guarantee"
+      complianceStandard: "POSIX UNIX Domain Socket IPC / Zero TCP RST Ingress Standard"
     }
   },
   {
@@ -428,7 +428,7 @@ export const LEDGER_INCIDENTS: LedgerIncident[] = [
       title: "97-Minute Continuous Failover Endurance Under Active Production Load",
       ecosystemRiskAverted: "Shielded 10,000+ Arbitrum One queries during an extended primary node outage with 0.00% dropped packets and zero memory leakage.",
       affectedStakeholders: "Entire Arbitrum Mainnet dApp Ecosystem",
-      productionImpact: "Proves DriftGuard's rock-solid operational endurance. It is not just a fast failover tool; it is an enterprise-grade high-availability shield."
+      productionImpact: "Demonstrates daemon operational stability over sustained failover intervals without memory leakage or state divergence."
     },
     techStandard: {
       rootCause: "Persistent upstream execution node desynchronization lasting 1h 37m.",

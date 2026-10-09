@@ -1,4 +1,4 @@
-import { BookOpen, ExternalLink, Terminal, MessageSquare, Github, ShieldCheck, Activity, Download, FileCode, Layers, Radio, Award } from "lucide-react"
+import { BookOpen, ExternalLink, Terminal, MessageSquare, Github, ShieldCheck, Activity, Download, FileCode, Layers, Radio } from "lucide-react"
 
 interface ResourcesSectionProps {
   onSelectTab: (tab: "overview" | "rpc" | "docs" | "audit") => void
@@ -12,14 +12,14 @@ export function ResourcesSection({ onSelectTab }: ResourcesSectionProps) {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-zinc-800/80 pb-4">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#28A0F0] mb-1">
-              DOCUMENTATION &amp; FIELD VERIFICATION MATRIX
+              PROTOCOL SPECIFICATIONS &amp; REFERENCE RESOURCES
             </div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-              Ecosystem Architecture &amp; Engineering Proof
+              Technical Documentation &amp; Operational Network
             </h2>
           </div>
           <p className="text-xs text-zinc-400 font-mono">
-            Structured into 3 Core Technical Domains
+            Structured Reference Architecture
           </p>
         </div>
 
@@ -33,12 +33,12 @@ export function ResourcesSection({ onSelectTab }: ResourcesSectionProps) {
               <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
                   <Terminal className="size-4 text-[#28A0F0]" />
-                  01 / Live Ingress &amp; Views
+                  01 / Ingress Gateways &amp; Tools
                 </span>
                 <span className="text-[10px] font-mono text-zinc-500">GATEWAYS</span>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                Interactive edge gateways, RPC methods, and empirical production failover records.
+                Reference edge gateways, RPC test environments, and empirical consensus failover ledgers.
               </p>
 
               <div className="space-y-2 pt-1 font-mono text-xs">
@@ -91,12 +91,12 @@ export function ResourcesSection({ onSelectTab }: ResourcesSectionProps) {
               <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
                   <BookOpen className="size-4 text-emerald-400" />
-                  02 / Technical RFCs &amp; Proof
+                  02 / Protocol Specifications &amp; RFCs
                 </span>
                 <span className="text-[10px] font-mono text-zinc-500">STANDARDS</span>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                Peer-reviewed architectural RFCs, partner letter of intent, and live field post-mortems.
+                Architectural specifications, L7 ingress RFCs, and canonical desync post-mortem documentation.
               </p>
 
               <div className="space-y-2 pt-1 font-mono text-xs">
@@ -108,20 +108,20 @@ export function ResourcesSection({ onSelectTab }: ResourcesSectionProps) {
                 >
                   <span className="flex items-center gap-2 truncate">
                     <FileCode className="size-3.5 text-zinc-400 group-hover:text-[#28A0F0]" />
-                    <span>High-Throughput Ingress Guide</span>
+                    <span>High-Throughput Ingress RFC</span>
                   </span>
                   <ExternalLink className="size-3 text-zinc-500 group-hover:text-white" />
                 </a>
 
                 <a
-                  href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/PILOT_PARTNER_LOI.md"
+                  href="https://github.com/maskalfreeup-glitch/driftguard#architecture"
                   target="_blank"
                   rel="noreferrer"
                   className="p-2.5 rounded-lg bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 transition-colors flex items-center justify-between group block"
                 >
                   <span className="flex items-center gap-2 truncate">
-                    <Award className="size-3.5 text-cyan-400" />
-                    <span>Pilot Partner LOI-2026-ORBIT-001</span>
+                    <Layers className="size-3.5 text-cyan-400" />
+                    <span>Dual-Plane Ingress Architecture Spec</span>
                   </span>
                   <ExternalLink className="size-3 text-zinc-500 group-hover:text-white" />
                 </a>
@@ -168,12 +168,12 @@ export function ResourcesSection({ onSelectTab }: ResourcesSectionProps) {
               <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
                   <Radio className="size-4 text-purple-400" />
-                  03 / Community &amp; Telemetry
+                  03 / Source &amp; Operational Network
                 </span>
-                <span className="text-[10px] font-mono text-zinc-500">LIVE OPS</span>
+                <span className="text-[10px] font-mono text-zinc-500">NETWORK</span>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                Real-time operational streams, Discord alert bots, and open-source codebase.
+                Real-time sentinel telemetry streams, Discord telemetry ingress, and repository source.
               </p>
 
               <div className="space-y-2 pt-1 font-mono text-xs">
@@ -205,12 +205,12 @@ export function ResourcesSection({ onSelectTab }: ResourcesSectionProps) {
 
                 <a
                   href="/driftguard-explainer.mp4"
-                  download="driftguard-explainer-1080p.mp4"
+                  download="driftguard-explainer.mp4"
                   className="p-2.5 rounded-lg bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 transition-colors flex items-center justify-between group block"
                 >
                   <span className="flex items-center gap-2 truncate">
                     <Download className="size-3.5 text-[#28A0F0]" />
-                    <span>Download 1080p Master (5.8 MB)</span>
+                    <span>Architecture Walkthrough Video</span>
                   </span>
                   <span className="text-zinc-500 text-[10px]">MP4</span>
                 </a>

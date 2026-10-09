@@ -382,7 +382,7 @@ export function PlaygroundView() {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-semibold text-zinc-200">{queryResponse.latency} ms</span>
                     <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-900/60 px-1 rounded">
-                      &lt;130ms SLA
+                      &lt;130ms Bound
                     </span>
                   </div>
                 </div>

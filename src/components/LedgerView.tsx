@@ -77,13 +77,13 @@ export function LedgerView({ initialIncidentId }: LedgerViewProps) {
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/80 text-[10px] font-mono text-emerald-400">
             <ShieldCheck className="size-3 text-emerald-400" />
             <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            LIVE ARBITRUM NITRO RPC LEDGER · EMPIRICAL VERIFICATION
+            ARBITRUM NITRO &amp; ORBIT · CONSENSUS POST-MORTEM LEDGER
           </div>
           <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-            Production Incident Command &amp; Consensus Audit Ledger
+            Consensus Divergence Post-Mortem &amp; Incident Ledger
           </h2>
           <p className="text-xs text-zinc-400 max-w-3xl leading-relaxed font-sans">
-            Real-time autonomous failover telemetry across Arbitrum One, Nova, and Sepolia. Out-of-band consensus sentinel sampling canonical anchors at 200ms cadence.
+            Empirical failover telemetry across Arbitrum One, Nova, and Sepolia. Out-of-band consensus sentinel sampling canonical anchors at 200ms cadence.
           </p>
         </div>
 
@@ -108,7 +108,7 @@ export function LedgerView({ initialIncidentId }: LedgerViewProps) {
             <Activity className="size-3 text-emerald-400" />
           </div>
           <div className="text-lg font-bold text-white mt-0.5">{totalMitigatedCount} Events</div>
-          <div className="text-[10px] text-emerald-400 mt-0.5">100% Cutovers Met</div>
+          <div className="text-[10px] text-emerald-400 mt-0.5">Zero Stalled Ingress</div>
         </div>
         <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/80 font-mono specular-border">
           <div className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center justify-between">
@@ -116,7 +116,7 @@ export function LedgerView({ initialIncidentId }: LedgerViewProps) {
             <Zap className="size-3 text-[#28A0F0]" />
           </div>
           <div className="text-lg font-bold text-[#28A0F0] mt-0.5">{avgCutoverLatencyVal} ms</div>
-          <div className="text-[10px] text-zinc-400 mt-0.5">&lt; 130ms SLA Met</div>
+          <div className="text-[10px] text-zinc-400 mt-0.5">&lt; 130ms UNIX Cutover</div>
         </div>
         <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/80 font-mono specular-border">
           <div className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center justify-between">

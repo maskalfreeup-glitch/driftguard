@@ -41,19 +41,13 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
     <>
       <header className="relative z-30 sticky top-0 w-full border-b border-zinc-800/80 bg-[#09090b]/85 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-4">
-          {/* Left: Brand Logo & Status Indicator */}
+          {/* Left: Brand Logo */}
           <div className="flex items-center gap-3 shrink-0">
             <div
               className="cursor-pointer flex items-center"
               onClick={() => handleTabClick("overview")}
             >
               <DriftGuardLogo iconSize={26} showBadge={false} />
-            </div>
-
-            {/* Live Operational Beacon Pill (Visible on all screens) */}
-            <div className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/80 text-[10px] font-mono text-emerald-400">
-              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>LIVE SENTINEL</span>
             </div>
           </div>
 
@@ -87,7 +81,7 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              Specifications
+              Specification
             </button>
             <button
               onClick={() => handleTabClick("audit")}
@@ -143,7 +137,7 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
           {/* Main Navigation Views */}
           <div className="space-y-1">
             <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 px-2 mb-1">
-              Core Platform Views
+              Navigation
             </div>
             <button
               onClick={() => handleTabClick("overview")}
@@ -155,7 +149,7 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
             >
               <span className="flex items-center gap-2">
                 <Shield className="size-3.5 text-[#28A0F0]" />
-                <span>Architecture Overview</span>
+                <span>Overview</span>
               </span>
               <span className="text-zinc-500">→</span>
             </button>
@@ -170,7 +164,7 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
             >
               <span className="flex items-center gap-2">
                 <Terminal className="size-3.5 text-emerald-400" />
-                <span>JSON-RPC Gateway Tester</span>
+                <span>RPC Playground</span>
               </span>
               <span className="text-zinc-500">→</span>
             </button>
@@ -185,7 +179,7 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
             >
               <span className="flex items-center gap-2">
                 <BookOpen className="size-3.5 text-purple-400" />
-                <span>Sidecar Daemon Specifications</span>
+                <span>Protocol Specification</span>
               </span>
               <span className="text-zinc-500">→</span>
             </button>
@@ -200,7 +194,7 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
             >
               <span className="flex items-center gap-2">
                 <Activity className="size-3.5 text-[#28A0F0]" />
-                <span>Incident Ledger &amp; Audits</span>
+                <span>Incident Ledger</span>
               </span>
               <span className="px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 text-[10px]">
                 {incidentCount}
@@ -211,7 +205,7 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
           {/* Quick Technical Documents & RFCs */}
           <div className="space-y-1 pt-2 border-t border-zinc-800/80">
             <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 px-2 mb-1">
-              Technical RFCs &amp; Evidence
+              Specifications &amp; RFCs
             </div>
             <a
               href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/guides/HIGH_THROUGHPUT_INGRESS_GUIDE.md"
@@ -226,14 +220,14 @@ export function Navbar({ activeTab, setActiveTab, incidentCount }: NavbarProps) 
               <ExternalLink className="size-3 text-zinc-600" />
             </a>
             <a
-              href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/PILOT_PARTNER_LOI.md"
+              href="https://github.com/maskalfreeup-glitch/driftguard#architecture"
               target="_blank"
               rel="noreferrer"
               className="flex items-center justify-between p-2 rounded-lg text-xs font-mono text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
             >
               <span className="flex items-center gap-2">
                 <Layers className="size-3 text-cyan-500" />
-                <span>Pilot Partner LOI-2026-ORBIT-001</span>
+                <span>Protocol Architecture Specification</span>
               </span>
               <ExternalLink className="size-3 text-zinc-600" />
             </a>

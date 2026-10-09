@@ -20,7 +20,7 @@ export function Footer({ onSelectTab }: FooterProps) {
             </div>
 
             <p className="text-zinc-400 text-xs leading-relaxed max-w-sm font-sans">
-              Deterministic out-of-band consensus sentinel and L7 reverse proxy for Arbitrum Nitro, Orbit chains, and transaction relayers. Sub-130ms UNIX socket failover with zero packet drops.
+              Open-source consensus ingress gateway and out-of-band drift detection sentinel for Arbitrum Nitro, Orbit chains, and transaction relayers. Sub-130ms POSIX socket state transition with zero dropped requests.
             </p>
 
             <div className="space-y-1.5 font-mono text-[11px] text-zinc-500">
@@ -58,12 +58,12 @@ export function Footer({ onSelectTab }: FooterProps) {
               </li>
               <li>
                 <a
-                  href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/PILOT_PARTNER_LOI.md"
+                  href="https://github.com/maskalfreeup-glitch/driftguard#architecture"
                   target="_blank"
                   rel="noreferrer"
                   className="hover:text-white transition-colors flex items-center gap-1.5 text-zinc-300"
                 >
-                  <span>Pilot Partner LOI-2026-ORBIT-001</span>
+                  <span>Protocol Architecture Specification</span>
                   <ExternalLink className="size-3 text-zinc-500" />
                 </a>
               </li>
@@ -147,11 +147,11 @@ export function Footer({ onSelectTab }: FooterProps) {
               <li>
                 <a
                   href="/driftguard-explainer.mp4"
-                  download="driftguard-explainer-1080p.mp4"
+                  download="driftguard-explainer.mp4"
                   className="hover:text-white transition-colors flex items-center gap-1.5 text-zinc-400"
                 >
                   <Download className="size-3 text-[#28A0F0]" />
-                  <span>Download 1080p Master (5.8 MB)</span>
+                  <span>Architecture Walkthrough Video (MP4)</span>
                 </a>
               </li>
             </ul>
@@ -161,9 +161,9 @@ export function Footer({ onSelectTab }: FooterProps) {
         {/* ── Bottom Disclaimer & Metadata Bar ── */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-zinc-500 font-mono">
           <div>
-            <span>DriftGuard Systems Architecture</span>
+            <span>DriftGuard Open-Source Project</span>
             <span className="mx-2">·</span>
-            <span>Deterministic Out-of-Band Consensus Guard</span>
+            <span>MIT License • Arbitrum Nitro &amp; Orbit Ingress</span>
           </div>
 
           <div className="flex items-center gap-4">

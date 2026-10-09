@@ -14,28 +14,28 @@ export function LiveTelemetryStreamCard({ onOpenLedger }: LiveTelemetryStreamCar
           <div className="flex items-center gap-2">
             <Radio className="size-4 text-[#28A0F0] animate-pulse" />
             <CardTitle className="text-sm font-mono tracking-tight font-semibold text-white">
-              LIVE PRODUCTION TELEMETRY STREAM
+              NETWORK TELEMETRY & OPERATIONS STREAM
             </CardTitle>
           </div>
           <Badge variant="outline" className="border-sky-800/80 bg-sky-950/40 text-[#28A0F0] text-[10px] font-mono tracking-wider w-fit">
-            DISCORD #BOT-STATS · 24/7 ACTIVE SENTINEL
+            PUBLIC AUDIT CHANNEL · DISCORD #BOT-STATS
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="pt-4 space-y-4">
         <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans">
-          Every out-of-band consensus probe, block height delta, socket drain command, and recovery event is streamed directly to our public operations channel in real time.
+          Out-of-band consensus probes, head block height deltas, socket drain state transitions, and recovery events are broadcast to the public operations audit channel in real time.
         </p>
         <div className="rounded-lg bg-zinc-950 p-3 border border-zinc-800/80 font-mono text-xs space-y-1.5 text-zinc-400">
           <div className="flex items-center justify-between text-[11px] text-zinc-500 pb-1 border-b border-zinc-800/60">
             <span className="flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-emerald-500" />
-              socket://run/haproxy/admin.sock
+              socket:///run/haproxy/admin.sock
             </span>
-            <span>100% OPERATIONAL STREAM</span>
+            <span>IPC STATE: SYNCHRONIZED</span>
           </div>
           <div className="text-zinc-300 font-mono text-[11px] truncate">
-            <span className="text-[#28A0F0]">[DISCORD EMBED]</span> sentinel.probe.arbitrum-one: delta=0 blocks | status=HEALTHY | p99=18ms
+            <span className="text-[#28A0F0]">[PROBE DISPATCH]</span> sentinel.probe.arbitrum-one: delta=0 blocks | status=UPSTREAM_HEALTHY | Nitro RPC=28.4ms
           </div>
         </div>
         <div className="pt-1 flex flex-wrap items-center justify-between gap-3">

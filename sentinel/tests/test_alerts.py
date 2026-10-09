@@ -51,8 +51,8 @@ async def test_dispatch_drift_alert_with_haproxy_stats_and_drain_latency():
     assert len(dispatched) == 1
     embed = dispatched[0]["embeds"][0]
 
-    # Verify footer and ISO-8601 UTC timestamp format
-    assert "UTC" in embed["footer"]["text"]
+    # Verify clean footer and ISO-8601 UTC timestamp format
+    assert embed["footer"]["text"] == "DriftGuard High-Availability EVM Gateway"
     assert "timestamp" in embed
     ts = datetime.fromisoformat(embed["timestamp"])
     assert ts.tzinfo is not None
@@ -64,10 +64,55 @@ async def test_dispatch_drift_alert_with_haproxy_stats_and_drain_latency():
     assert field_map["Canonical Head"] == "#511900000"
     assert field_map["Primary Head"] == "#511899986"
     assert "14 blocks" in field_map["Delta Blocks"]
-    assert "123.85 ms" in field_map["Socket Drain Latency"]
-    assert "14,500 reqs" in field_map["HAProxy Ingress Stats"]
-    assert "12 TCP sessions" in field_map["HAProxy Ingress Stats"]
+    assert "123.85 ms (POSIX Socket Drain)" in field_map["Socket Drain Latency"]
+    assert "12 in-flight queries preserved (0 dropped)" in field_map["HAProxy Ingress Stats"]
     assert "0.00% dropped" in field_map["Error Rate & Packet Drops"]
+    assert "primary: DRAIN (0%) -> fallback: ACTIVE (100%)" in field_map["Routing Transition"]
+
+    await alerter.close()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_consensus_recovered_with_mttr_and_catchup():
+    dispatched = []
+
+    def mock_handler(request: httpx.Request):
+        dispatched.append(json.loads(request.content))
+        return httpx.Response(204)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(mock_handler))
+    alerter = DiscordAlerter(webhook_url="https://discord.com/api/webhooks/mock/recovery", client=client)
+
+    # Trip alert
+    alerter._drift_tripped_at["be_arb"] = 1000.0
+    alerter._tripped_blocks["be_arb"] = 6
+
+    res = await alerter.send_consensus_recovered(
+        chain_name="Arbitrum One",
+        backend="be_arb",
+        primary_weight_restored="Ready (100%)",
+        force=True,
+        drift_tripped_at=1000.0,
+        now=1002.1,
+        caught_up_blocks=6,
+        protected_traffic="1,420 queries routed (0% dropped)",
+    )
+
+    assert res is True
+    assert len(dispatched) == 1
+    embed = dispatched[0]["embeds"][0]
+
+    assert embed["footer"]["text"] == "DriftGuard High-Availability EVM Gateway"
+    assert "timestamp" in embed
+    ts = datetime.fromisoformat(embed["timestamp"])
+    assert ts.tzinfo is not None
+
+    field_map = {f["name"]: f["value"] for f in embed["fields"]}
+    assert field_map["Chain Name"] == "Arbitrum One"
+    assert field_map["Status"] == "Synced to Tip"
+    assert field_map["Primary Weight Restored"] == "Ready (100%)"
+    assert field_map["Resolution Time (MTTR)"] == "2.1s (6 blocks caught up)"
+    assert field_map["Protected Traffic"] == "1,420 queries routed (0% dropped)"
 
     await alerter.close()
 

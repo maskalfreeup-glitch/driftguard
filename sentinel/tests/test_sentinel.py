@@ -258,7 +258,7 @@ async def test_discord_alerter_embed_payload():
     assert "timestamp" in embed
     ts = datetime.fromisoformat(embed["timestamp"])
     assert ts.tzinfo is not None
-    assert "UTC" in embed["footer"]["text"]
+    assert embed["footer"]["text"] == "DriftGuard High-Availability EVM Gateway"
     field_names = [f["name"] for f in embed["fields"]]
     assert "Chain Name" in field_names
     assert "Chain ID" in field_names
@@ -269,7 +269,7 @@ async def test_discord_alerter_embed_payload():
     assert "Socket Drain Latency" in field_names
     assert "HAProxy Ingress Stats" in field_names
     assert "Error Rate & Packet Drops" in field_names
-    assert "Failover Action" in field_names
+    assert "Routing Transition" in field_names
 
     # 2. Test Cooldown / Debounce suppression
     res_dup = await alerter.send_drift_tripped(
@@ -297,11 +297,13 @@ async def test_discord_alerter_embed_payload():
     assert "timestamp" in rec_embed
     rec_ts = datetime.fromisoformat(rec_embed["timestamp"])
     assert rec_ts.tzinfo is not None
-    assert "UTC" in rec_embed["footer"]["text"]
+    assert rec_embed["footer"]["text"] == "DriftGuard High-Availability EVM Gateway"
     rec_fields = {f["name"]: f["value"] for f in rec_embed["fields"]}
     assert rec_fields["Chain Name"] == "Base Mainnet"
     assert rec_fields["Status"] == "Synced to Tip"
     assert rec_fields["Primary Weight Restored"] == "Ready (100%)"
+    assert "Resolution Time (MTTR)" in rec_fields
+    assert "Protected Traffic" in rec_fields
 
     await alerter.close()
 

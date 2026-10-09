@@ -95,13 +95,13 @@ export function DocsView() {
               <span>[ Technical Architecture RFC ]</span>
             </a>
             <a
-              href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/PILOT_PARTNER_LOI.md"
+              href="https://github.com/maskalfreeup-glitch/driftguard/blob/main/docs/reports/INCIDENT_LEDGER.md"
               target="_blank"
               rel="noreferrer"
               className="text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1 font-mono"
             >
               <ExternalLink className="size-3" />
-              <span>[ Partner Verification: LOI-2026-ORBIT-001 ]</span>
+              <span>[ Canonical Incident Ledger RFC ]</span>
             </a>
           </div>
         </CardContent>

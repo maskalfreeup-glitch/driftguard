@@ -92,11 +92,6 @@ export function HeroBrandShield() {
         </svg>
       </div>
 
-      {/* Connectivity Status Display */}
-      <div className="mt-4 relative z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs font-mono">
-        <span className="size-2 rounded-full bg-emerald-400" />
-        <span className="tracking-tight">status: nominal</span>
-      </div>
     </div>
   )
 }

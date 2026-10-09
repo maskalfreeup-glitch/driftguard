@@ -74,6 +74,8 @@ class ChainMonitor:
         self.simulated_drift: int | None = None
         self.simulated_fault: str | None = None
         self.simulated_node = "primary"
+        self.incident_start: float | None = None
+        self.trip_delta_blocks: int = 0
 
     async def start(self):
         self.is_running = True
@@ -228,6 +230,8 @@ class ChainMonitor:
                         f"\033[91m[ALERT] [{self.chain.name}] Node '{node.name}' transitioned to UNHEALTHY! "
                         f"Failures: {node.consecutive_failures}, Reason: {reason}\033[0m"
                     )
+                    self.incident_start = time.time()
+                    self.trip_delta_blocks = drift
                     # Dispatch Discord incident embed with live HAProxy traffic stats & drain latency
                     await self.alerter.send_drift_tripped(
                         chain_name=self.chain.name,
@@ -255,7 +259,11 @@ class ChainMonitor:
                     await self.alerter.send_consensus_recovered(
                         chain_name=self.chain.name,
                         backend=self.chain.backend,
+                        drift_tripped_at=self.incident_start,
+                        caught_up_blocks=self.trip_delta_blocks,
                     )
+                    self.incident_start = None
+                    self.trip_delta_blocks = 0
                 node.status = "HEALTHY"
                 if node.current_haproxy_state != "ready":
                     server = "primary" if node is self.primary else "fallback"
@@ -308,6 +316,8 @@ class ChainMonitor:
             # Immediate HAProxy cutover for < 0.5s chaos drills
             if await set_server_state(self.socket_path, self.chain.backend, server, "maint"):
                 target.current_haproxy_state = "maint"
+            self.incident_start = time.time()
+            self.trip_delta_blocks = drift or 0
             await self.alerter.send_drift_tripped(
                 chain_name=self.chain.name,
                 chain_id=self.chain.chain_id,
@@ -334,7 +344,11 @@ class ChainMonitor:
         await self.alerter.send_consensus_recovered(
             chain_name=self.chain.name,
             backend=self.chain.backend,
+            drift_tripped_at=self.incident_start,
+            caught_up_blocks=self.trip_delta_blocks,
         )
+        self.incident_start = None
+        self.trip_delta_blocks = 0
 
 
 class DriftMonitor:

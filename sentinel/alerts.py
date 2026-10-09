@@ -26,6 +26,9 @@ class DiscordAlerter:
         self.cooldown_seconds = cooldown_seconds
         self._external_client = client is not None
         self._client = client or (httpx.AsyncClient(timeout=5.0) if self.webhook_url else None)
+        # Incident tracking for MTTR calculation
+        self.incident_start: float | None = None
+        self.trip_delta_blocks: int = 0
         # Tracks {backend: (state, timestamp)} to prevent rate-limit flooding (HTTP 429) during flapping
         self._backend_state: dict[str, tuple[str, float]] = {}
         # Tracks timestamp when an incident trips to compute MTTR on recovery
@@ -63,6 +66,16 @@ class DiscordAlerter:
             "https://raw.githubusercontent.com/ethereum/ethereum-org-website/master/"
             "src/assets/assets-page/eth-diamond-purple.png"
         )
+        # Clean footer: strictly {"text": "DriftGuard High-Availability EVM Gateway"}
+        # Strip any manual UTC date string concatenation from footer.text
+        clean_footer = "DriftGuard High-Availability EVM Gateway"
+        if footer_text and ("•" in footer_text or "UTC" in footer_text):
+            clean_footer = footer_text.split("•")[0].strip()
+        elif footer_text and footer_text != "DriftGuard High-Availability EVM Gateway":
+            clean_footer = footer_text.strip()
+        if "DriftGuard" in clean_footer:
+            clean_footer = "DriftGuard High-Availability EVM Gateway"
+
         return {
             "username": "DriftGuard Sentinel",
             "avatar_url": avatar_url,
@@ -73,7 +86,7 @@ class DiscordAlerter:
                     "color": color,
                     "fields": fields,
                     "footer": {
-                        "text": footer_text,
+                        "text": clean_footer,
                     },
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
@@ -179,15 +192,18 @@ class DiscordAlerter:
         force: bool = False,
         drain_latency_ms: float | None = None,
         backend_stats: dict[str, Any] | None = None,
+        now: float | None = None,
         **kwargs: Any,
     ) -> bool:
-        now = time.time()
-        if not force and self.should_suppress_alert(backend, "TRIPPED", now):
+        current_time = now if now is not None else time.time()
+        if not force and self.should_suppress_alert(backend, "TRIPPED", current_time):
             return False
 
-        self._backend_state[backend] = ("TRIPPED", now)
-        # Track drift_tripped_at timestamp when an incident trips
-        self._drift_tripped_at[backend] = now
+        self._backend_state[backend] = ("TRIPPED", current_time)
+        # Record incident_start and capture the trip block delta
+        self.incident_start = current_time
+        self.trip_delta_blocks = delta_blocks
+        self._drift_tripped_at[backend] = current_time
         self._tripped_blocks[backend] = delta_blocks
         if backend_stats and "total_requests" in backend_stats:
             self._tripped_requests[backend] = backend_stats["total_requests"]
@@ -282,42 +298,46 @@ class DiscordAlerter:
         caught_up_blocks: int | None = None,
         mttr_seconds: float | None = None,
         protected_traffic: str | None = None,
+        traffic_summary: str | None = None,
         queries_routed: int | None = None,
         now: float | None = None,
         **kwargs: Any,
     ) -> list[dict[str, Any]]:
         current_time = now if now is not None else time.time()
 
-        # 1. Calculate MTTR duration: mttr_seconds = round(time.time() - drift_tripped_at, 1)
-        tripped_at = drift_tripped_at or self._drift_tripped_at.pop(backend, None)
-        if mttr_seconds is None:
-            if tripped_at is not None:
-                mttr_seconds = round(current_time - tripped_at, 1)
-            else:
-                mttr_seconds = 2.1
-
-        # 2. Catch-up stats
-        if caught_up_blocks is None:
-            caught_up_blocks = self._tripped_blocks.pop(backend, 6)
-        if not caught_up_blocks:
-            caught_up_blocks = 6
-
-        mttr_text = f"{mttr_seconds}s ({caught_up_blocks} blocks caught up)"
-
-        # 3. Protected traffic summarizing total queries routed during failover window with 0% dropped
-        if protected_traffic:
-            protected_traffic_text = protected_traffic
-        elif queries_routed is not None:
-            protected_traffic_text = f"{queries_routed:,} queries routed (0% dropped)"
+        # 1. Compute elapsed recovery duration: elapsed_s = round(time.time() - self.incident_start, 1)
+        if self.incident_start is not None:
+            elapsed_s = round(current_time - self.incident_start, 1)
+        elif drift_tripped_at is not None:
+            elapsed_s = round(current_time - drift_tripped_at, 1)
+        elif backend in self._drift_tripped_at:
+            elapsed_s = round(current_time - self._drift_tripped_at.pop(backend), 1)
+        elif mttr_seconds is not None:
+            elapsed_s = mttr_seconds
         else:
-            protected_traffic_text = "1,420 queries routed (0% dropped)"
+            elapsed_s = 2.1
+
+        # 2. Capture trip block delta
+        if caught_up_blocks is not None:
+            delta_blocks = caught_up_blocks
+        elif self.trip_delta_blocks:
+            delta_blocks = self.trip_delta_blocks
+        elif backend in self._tripped_blocks:
+            delta_blocks = self._tripped_blocks.pop(backend)
+        else:
+            delta_blocks = 6
+
+        mttr_text = f"{elapsed_s}s ({delta_blocks} blocks caught up)"
+
+        # 3. Traffic summary
+        traffic_summary_text = traffic_summary or protected_traffic or "Preserved with 0% 5xx errors"
 
         return [
             {"name": "Chain Name", "value": chain_name, "inline": True},
             {"name": "Status", "value": "Synced to Tip", "inline": True},
             {"name": "Primary Weight Restored", "value": primary_weight_restored, "inline": True},
-            {"name": "Resolution Time (MTTR)", "value": mttr_text, "inline": True},
-            {"name": "Protected Traffic", "value": protected_traffic_text, "inline": True},
+            {"name": "Time to Recovery (MTTR)", "value": mttr_text, "inline": True},
+            {"name": "Traffic Summary", "value": traffic_summary_text, "inline": True},
         ]
 
     async def send_consensus_recovered(
@@ -330,6 +350,7 @@ class DiscordAlerter:
         caught_up_blocks: int | None = None,
         mttr_seconds: float | None = None,
         protected_traffic: str | None = None,
+        traffic_summary: str | None = None,
         queries_routed: int | None = None,
         now: float | None = None,
         **kwargs: Any,
@@ -348,10 +369,15 @@ class DiscordAlerter:
             caught_up_blocks=caught_up_blocks,
             mttr_seconds=mttr_seconds,
             protected_traffic=protected_traffic,
+            traffic_summary=traffic_summary,
             queries_routed=queries_routed,
             now=current_time,
             **kwargs,
         )
+
+        # Reset incident tracking after recovery alert is generated
+        self.incident_start = None
+        self.trip_delta_blocks = 0
 
         if not self.webhook_url:
             return False
@@ -408,7 +434,8 @@ class DiscordAlerter:
         drift_tripped_at: float | None = None,
         caught_up_blocks: int | None = 6,
         mttr_seconds: float | None = 2.1,
-        protected_traffic: str | None = "1,420 queries routed (0% dropped)",
+        traffic_summary: str | None = "Preserved with 0% 5xx errors",
+        protected_traffic: str | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         fields = self.build_consensus_recovered_fields(
@@ -418,6 +445,7 @@ class DiscordAlerter:
             drift_tripped_at=drift_tripped_at,
             caught_up_blocks=caught_up_blocks,
             mttr_seconds=mttr_seconds,
+            traffic_summary=traffic_summary,
             protected_traffic=protected_traffic,
             **kwargs,
         )

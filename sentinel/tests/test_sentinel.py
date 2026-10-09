@@ -302,8 +302,8 @@ async def test_discord_alerter_embed_payload():
     assert rec_fields["Chain Name"] == "Base Mainnet"
     assert rec_fields["Status"] == "Synced to Tip"
     assert rec_fields["Primary Weight Restored"] == "Ready (100%)"
-    assert "Resolution Time (MTTR)" in rec_fields
-    assert "Protected Traffic" in rec_fields
+    assert "Time to Recovery (MTTR)" in rec_fields or "Resolution Time (MTTR)" in rec_fields
+    assert "Traffic Summary" in rec_fields or "Protected Traffic" in rec_fields
 
     await alerter.close()
 

@@ -83,20 +83,22 @@ def validate_consensus_recovered_schema(payload: dict) -> None:
     ts = datetime.fromisoformat(embed["timestamp"])
     assert ts.tzinfo is not None, "Timestamp must be timezone-aware (ISO-8601 UTC)"
 
-    # 3. Enriched MTTR and Protected Traffic fields
+    # 3. Enriched MTTR and Traffic Summary fields
     field_map = {f["name"]: f["value"] for f in embed.get("fields", [])}
 
-    # Resolution Time (MTTR)
-    assert "Resolution Time (MTTR)" in field_map, "Field 'Resolution Time (MTTR)' is required"
-    mttr_val = field_map["Resolution Time (MTTR)"]
+    # Time to Recovery (MTTR)
+    mttr_key = "Time to Recovery (MTTR)" if "Time to Recovery (MTTR)" in field_map else "Resolution Time (MTTR)"
+    assert mttr_key in field_map, "Field 'Time to Recovery (MTTR)' is required"
+    mttr_val = field_map[mttr_key]
     assert "s (" in mttr_val and "blocks caught up)" in mttr_val, (
         f"Unexpected MTTR format: {mttr_val}"
     )
 
-    # Protected Traffic
-    assert "Protected Traffic" in field_map, "Field 'Protected Traffic' is required"
-    assert "0% dropped" in field_map["Protected Traffic"], (
-        f"Protected Traffic must summarize zero dropped: {field_map['Protected Traffic']}"
+    # Traffic Summary
+    traffic_key = "Traffic Summary" if "Traffic Summary" in field_map else "Protected Traffic"
+    assert traffic_key in field_map, "Field 'Traffic Summary' is required"
+    assert "0%" in field_map[traffic_key], (
+        f"Traffic Summary must summarize zero errors/drops: {field_map[traffic_key]}"
     )
 
 

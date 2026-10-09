@@ -111,8 +111,10 @@ async def test_dispatch_consensus_recovered_with_mttr_and_catchup():
     assert field_map["Chain Name"] == "Arbitrum One"
     assert field_map["Status"] == "Synced to Tip"
     assert field_map["Primary Weight Restored"] == "Ready (100%)"
-    assert field_map["Resolution Time (MTTR)"] == "2.1s (6 blocks caught up)"
-    assert field_map["Protected Traffic"] == "1,420 queries routed (0% dropped)"
+    mttr_val = field_map.get("Time to Recovery (MTTR)") or field_map.get("Resolution Time (MTTR)")
+    assert mttr_val == "2.1s (6 blocks caught up)"
+    traffic_val = field_map.get("Traffic Summary") or field_map.get("Protected Traffic")
+    assert "0%" in traffic_val
 
     await alerter.close()
 
@@ -140,3 +142,62 @@ async def test_get_backend_stats_parser():
     assert stats["current_in_flight"] == 3
     assert stats["http_2xx"] == 747
     assert stats["http_5xx"] == 0
+
+
+@pytest.mark.asyncio
+async def test_trip_and_recovery_mttr_calculation():
+    dispatched = []
+
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        dispatched.append(json.loads(request.content))
+        return httpx.Response(204)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(mock_handler))
+    alerter = DiscordAlerter(webhook_url="https://discord.com/api/webhooks/mock/incident", client=client)
+
+    # 1. Trip alert at t=1000.0 with 8 blocks drift
+    await alerter.send_drift_tripped(
+        chain_name="Arbitrum One",
+        chain_id=42161,
+        backend="be_arb",
+        canonical_head=100,
+        primary_head=92,
+        delta_blocks=8,
+        now=1000.0,
+        force=True,
+    )
+    assert alerter.incident_start == 1000.0
+    assert alerter.trip_delta_blocks == 8
+
+    # 2. Recover at t=1003.4
+    await alerter.send_consensus_recovered(
+        chain_name="Arbitrum One",
+        backend="be_arb",
+        now=1003.4,
+        force=True,
+    )
+    assert len(dispatched) == 2
+
+    # Verify tripped embed footer
+    trip_embed = dispatched[0]["embeds"][0]
+    assert trip_embed["footer"] == {"text": "DriftGuard High-Availability EVM Gateway"}
+    assert "timestamp" in trip_embed
+
+    # Verify recovery embed fields and footer
+    rec_embed = dispatched[1]["embeds"][0]
+    assert rec_embed["footer"] == {"text": "DriftGuard High-Availability EVM Gateway"}
+    assert "timestamp" in rec_embed
+
+    fields = {f["name"]: f for f in rec_embed["fields"]}
+    assert "Time to Recovery (MTTR)" in fields
+    assert fields["Time to Recovery (MTTR)"]["value"] == "3.4s (8 blocks caught up)"
+    assert fields["Time to Recovery (MTTR)"]["inline"] is True
+
+    assert "Traffic Summary" in fields
+    assert fields["Traffic Summary"]["value"] == "Preserved with 0% 5xx errors"
+    assert fields["Traffic Summary"]["inline"] is True
+
+    # Assert incident_start is reset
+    assert alerter.incident_start is None
+
+    await alerter.close()

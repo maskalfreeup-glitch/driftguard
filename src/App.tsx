@@ -13,28 +13,41 @@ const LedgerView = lazy(() => import("@/components/LedgerView").then((m) => ({ d
 
 type TabType = "overview" | "rpc" | "docs" | "audit"
 
+const getInitialTab = (): "overview" | "rpc" | "docs" | "audit" => {
+  if (typeof window === "undefined") return "overview";
+  const host = window.location.hostname;
+  const path = window.location.pathname.toLowerCase();
+
+  if (host.startsWith("docs.") || path.startsWith("/docs") || path.startsWith("/specs")) {
+    return "docs";
+  }
+  if (path.startsWith("/rpc") || path.startsWith("/playground")) {
+    return "rpc";
+  }
+  if (path.startsWith("/audit") || path.startsWith("/incidents")) {
+    return "audit";
+  }
+  return "overview";
+};
+
 function getTabFromUrl(): { tab: TabType; incidentId?: string } {
   if (typeof window === "undefined") return { tab: "overview" }
 
-  const isDocsSubdomain =
-    window.location.hostname.startsWith("docs.") || window.location.hostname === "docs.driftguard.live"
-  if (isDocsSubdomain) return { tab: "docs" }
-
   const hash = window.location.hash.replace(/^#/, "").trim()
-  if (!hash) return { tab: "overview" }
-
   const [path, queryString] = hash.split("?")
   const params = new URLSearchParams(queryString || "")
   const incidentId = params.get("id") || undefined
 
-  if (path === "rpc" || path === "playground") return { tab: "rpc" }
-  if (path === "docs" || path === "specs") return { tab: "docs" }
-  if (path === "audit" || path === "ledger" || path === "incidents") return { tab: "audit", incidentId }
-  if (path.startsWith("audit/") || path.startsWith("ledger/")) {
-    return { tab: "audit", incidentId: path.split("/")[1] }
+  if (hash) {
+    if (path === "rpc" || path === "playground") return { tab: "rpc" }
+    if (path === "docs" || path === "specs") return { tab: "docs" }
+    if (path === "audit" || path === "ledger" || path === "incidents") return { tab: "audit", incidentId }
+    if (path.startsWith("audit/") || path.startsWith("ledger/")) {
+      return { tab: "audit", incidentId: path.split("/")[1] }
+    }
   }
 
-  return { tab: "overview" }
+  return { tab: getInitialTab(), incidentId }
 }
 
 function ViewSkeleton() {
@@ -47,9 +60,8 @@ function ViewSkeleton() {
 }
 
 export function App() {
-  const initial = getTabFromUrl()
-  const [activeTab, setActiveTab] = useState<TabType>(initial.tab)
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string | undefined>(initial.incidentId)
+  const [activeTab, setActiveTab] = useState<"overview" | "rpc" | "docs" | "audit">(getInitialTab);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | undefined>(() => getTabFromUrl().incidentId)
 
   const handleTabChange = (tab: TabType, incidentId?: string) => {
     setActiveTab(tab)

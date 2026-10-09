@@ -7,11 +7,12 @@ export function ExplainerShowcase() {
 
   const chapters = [
     { label: "00:00 Intro", time: 0 },
-    { label: "00:23 Problem", time: 23 },
-    { label: "00:43 Architecture", time: 43 },
-    { label: "01:04 QuickStart", time: 64 },
-    { label: "01:21 Failover Drill", time: 81 },
-    { label: "01:53 Open Source", time: 113 },
+    { label: "00:27 Problem", time: 28 },
+    { label: "00:49 Architecture", time: 49 },
+    { label: "01:20 QuickStart", time: 80 },
+    { label: "01:44 Chaos Drill", time: 104 },
+    { label: "02:10 Ecosystem", time: 130 },
+    { label: "02:28 Open Source", time: 148 },
   ]
 
   const seekToChapter = (seconds: number, index: number) => {
@@ -26,10 +27,10 @@ export function ExplainerShowcase() {
     <div id="explainer-video" className="py-12 space-y-6">
       <div className="text-center space-y-2 max-w-2xl mx-auto">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-          Technical Walkthrough &amp; Failover Drill
+          Technical Consensus Walkthrough &amp; Chaos Benchmark
         </h2>
         <p className="text-sm sm:text-base text-zinc-400 font-sans">
-          Watch DriftGuard detect upstream consensus drift out-of-band and execute atomic UNIX socket failover in under 130 milliseconds.
+          Watch DriftGuard's Multi-Provider Quorum Engine detect consensus drift and execute atomic UNIX socket drains under 200–400 req/s load with zero HTTP 5xx errors.
         </p>
       </div>
 

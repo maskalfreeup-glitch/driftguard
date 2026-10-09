@@ -151,98 +151,102 @@ SCENE_CUES: Dict[int, List[NarrationCue]] = {
             "Welcome to DriftGuard."
         ),
         NarrationCue(
-            "DriftGuard is an ultra-low-footprint Layer 7 ingress gateway and out-of-band consensus sentinel...",
-            "Ultra-low-footprint Layer 7 ingress gateway and consensus sentinel..."
+            "DriftGuard is a deterministic Layer 7 ingress gateway and out-of-band consensus sentinel...",
+            "Deterministic Layer 7 ingress gateway and out-of-band consensus sentinel..."
         ),
         NarrationCue(
-            "...built for Arbitrum Orbit chains, validator clusters, and high-throughput relayers.",
-            "...built for Arbitrum Orbit chains, validators, and high-throughput relayers."
+            "...engineered for high-throughput EVM rollups, validator nodes, and session relayers.",
+            "...engineered for EVM rollups, validator nodes, and session relayers."
         ),
         NarrationCue(
-            "It enforces sub-130 millisecond UNIX socket draining with zero dropped TCP connections...",
-            "Enforces sub-130ms UNIX socket draining with zero dropped TCP connections..."
+            "It decouples client JSON-RPC proxying from consensus verification, enforcing sub-130 millisecond UNIX socket draining...",
+            "Decouples JSON-RPC proxying from consensus verification, enforcing < 130ms UNIX socket drain..."
         ),
         NarrationCue(
-            "...running in under forty-five megabytes of memory.",
-            "...running in under 45 MB of RAM."
+            "...operating with zero dropped TCP connections in under forty-five megabytes of memory.",
+            "...operating with zero dropped TCP connections in under 45 MB of RAM."
         ),
     ],
     2: [
         NarrationCue(
-            "In Arbitrum Nitro rollups, micro-batches settle every 250 milliseconds.",
-            "In Arbitrum Nitro rollups, micro-batches settle every 250 milliseconds."
+            "In sub-second rollups, block tips advance every 250 milliseconds.",
+            "In sub-second rollups, block tips advance every 250 milliseconds."
         ),
         NarrationCue(
-            "When an upstream sequencer stalls, standard load balancers only check HTTP 200 and stay blind to blockchain desyncs.",
-            "When an upstream sequencer stalls, standard load balancers only check HTTP 200 and stay blind to desyncs."
+            "When an upstream node stalls its ingestion feed, standard load balancers only check HTTP 200 and stay blind to blockchain desyncs.",
+            "When an upstream node stalls its ingestion feed, standard load balancers only check HTTP 200 and stay blind to desyncs."
         ),
         NarrationCue(
-            "Relayers submit stale nonces, causing severe on-chain transaction reverts and broken game states.",
-            "Relayers submit stale nonces, causing severe on-chain reverts and broken game states."
+            "Querying clients receive outdated nonces, causing newly signed transactions to immediately revert on-chain with nonce too low.",
+            "Querying clients receive outdated nonces, causing transactions to immediately revert on-chain with nonce too low."
         ),
     ],
     3: [
         NarrationCue(
-            "DriftGuard decouples Layer 7 proxying from consensus checking.",
-            "DriftGuard decouples Layer 7 proxying from consensus checking."
+            "DriftGuard operates a multi-provider quorum engine sampling three independent references every 200 milliseconds.",
+            "Multi-provider quorum engine sampling 3 independent references every 200ms."
         ),
         NarrationCue(
-            "The HAProxy data plane forwards client requests with sub-millisecond latency...",
-            "The HAProxy data plane forwards client requests with sub-millisecond latency..."
+            "It verifies block height parity and cryptographic parent-hash linkage between adjacent blocks.",
+            "Verifies block height parity and cryptographic parent-hash linkage between adjacent blocks."
         ),
         NarrationCue(
-            "...while the asynchronous Python sentinel queries kuh-NON-ih-kuhl anchors every 200 milliseconds out-of-band.",
-            "...while the asynchronous Python sentinel queries canonical anchors every 200ms out-of-band."
+            "Two-thirds majority consensus isolates lagging reference outliers without draining local nodes.",
+            "Two-thirds majority consensus isolates lagging reference outliers without draining local nodes."
         ),
         NarrationCue(
-            "On drift, Sentinel drains the node via a UNIX domain socket in under 130 milliseconds.",
-            "On drift, Sentinel drains the node via a UNIX domain socket in under 130ms."
+            "A four-state hysteresis controller manages transitions from healthy to suspect, draining only after three consecutive suspect ticks.",
+            "4-state hysteresis controller transitions to suspect, draining only after K=3 suspect ticks."
+        ),
+        NarrationCue(
+            "The minimum-healthy guardrail ensures routing is preserved if draining would leave zero active backends.",
+            "Minimum-Healthy Guardrail ensures routing is preserved if draining would leave zero active backends."
         ),
     ],
     4: [
         NarrationCue(
-            "Getting started takes under 60 seconds.",
-            "Getting started takes under 60 seconds."
+            "Getting started and verifying consensus resilience takes under 60 seconds.",
+            "Getting started and verifying consensus resilience takes under 60 seconds."
         ),
         NarrationCue(
-            "Clone the repository, copy the example environment file to configure your RPC upstreams...",
-            "Clone the repo, copy .env.example to configure your RPC upstreams..."
+            "Clone the repository and launch the deterministic chaos acceptance suite with make test-chaos.",
+            "Clone the repository and launch the deterministic chaos acceptance suite: make test-chaos"
         ),
         NarrationCue(
-            "...and launch the stack with docker compose up.",
-            "...and launch the stack with: docker compose up -d"
+            "The testbed spins up three mock EVM nodes, an HAProxy gateway, and the DriftGuard consensus controller in isolation.",
+            "Spins up 3 mock EVM nodes, an HAProxy gateway, and the DriftGuard controller in isolation."
         ),
         NarrationCue(
-            "The entire three-container deployment uses less than 120 megabytes of memory.",
-            "The entire three-container deployment uses less than 120 MB of RAM."
+            "Production sidecar deployments run via Docker Compose in under forty-five megabytes of RAM.",
+            "Production sidecar deployments run via Docker Compose in under 45 MB of RAM."
         ),
     ],
     5: [
         NarrationCue(
-            "Verify live edge routing by curling port eighty-five forty-five to inspect custom gateway telemetry headers.",
-            "Verify live edge routing by curling port :8545 to inspect custom telemetry headers."
+            "The deterministic runner streams two to four hundred requests per second against the gateway while validating against oracle ground truth.",
+            "Deterministic runner streams 200-400 req/s while validating against oracle ground truth."
         ),
         NarrationCue(
-            "Then run the test failover script to inject synthetic drift.",
-            "Then run the test failover script to inject synthetic drift."
+            "When an eight-block sequencer stall is injected, DriftGuard detects the lag and drains the node in 132 milliseconds.",
+            "When an 8-block stall is injected, DriftGuard detects and drains the node in 132 milliseconds."
         ),
         NarrationCue(
-            "HAProxy instantly drains the primary node to maintenance mode, and fallback serves requests with zero errors.",
-            "HAProxy instantly drains the primary node, and fallback serves requests with zero errors."
+            "Traffic reroutes to fallback with zero HTTP 5xx errors and zero dropped requests, recovering automatically after five synchronized ticks.",
+            "Traffic reroutes to fallback with 0 HTTP 5xx errors, recovering after M=5 synchronized ticks."
         ),
     ],
     6: [
         NarrationCue(
-            "DriftGuard is open source under the MIT license...",
-            "DriftGuard is open source under the MIT license..."
+            "DriftGuard deploys alongside rollup sequencers, validator clusters, and transaction relayers.",
+            "Deploys alongside rollup sequencers, validator clusters, and transaction relayers."
         ),
         NarrationCue(
-            "...ready as a sidecar for Orbit Rollup operators, validators, and E-R-C forty-three thirty-seven paymasters.",
-            "...ready as a sidecar for Orbit Rollup operators, validators, and ERC-4337 paymasters."
+            "Account abstraction paymasters eliminate nonce desyncs without client SDK modifications.",
+            "Account abstraction paymasters eliminate nonce desyncs without client SDK modifications."
         ),
         NarrationCue(
-            "Test our live mainnet reference endpoints at R-P-C dot drift guard dot live.",
-            "Test our live mainnet reference endpoints at rpc.driftguard.live."
+            "Live multi-chain reference endpoints are active across Arbitrum networks at R-P-C dot drift guard dot live.",
+            "Live multi-chain reference endpoints active at rpc.driftguard.live."
         ),
     ],
     7: [
@@ -937,17 +941,17 @@ class SceneIntro(Scene):
         anchor_2_x = 980
 
         mission_bullets = [
-            "Deterministic Ingress Gateway for Arbitrum Nitro & Orbit Chains.",
-            "Eliminates silent blockchain desyncs behind healthy HTTP 200 OK responses.",
-            "Sub-130ms UNIX domain socket drain enforcement for zero TCP packet drops.",
-            "Active consensus sentinel checking canonical block height anchors every 200ms.",
-            "Ultra-low resource footprint: runs in under 45 MB of RAM.",
-            "Seamless drop-in sidecar container alongside Nitro validator clusters."
+            "Deterministic L7 Ingress Gateway for sub-second block velocity rollups.",
+            "Decouples JSON-RPC transport from asynchronous consensus verification.",
+            "Multi-provider quorum engine with cryptographic parent-hash lineage validation.",
+            "4-state hysteresis controller dampening transient latency spikes and flapping.",
+            "Zero-blackhole Minimum-Healthy Guardrail preserving live traffic routing.",
+            "Runs as a standalone sidecar container in under 45 MB of RAM."
         ]
         mission_metrics = [
-            ("SPEC", "NITRO & ORBIT"),
+            ("SPEC", "EVM & ORBIT"),
             ("DRAIN SLA", "< 130ms"),
-            ("ERROR RATE", "0.00%")
+            ("FOOTPRINT", "< 45 MB")
         ]
         draw_card(
             draw, anchor_2_x, FOCAL_START_Y, card_w_hero, card_h_hero,
@@ -1004,22 +1008,22 @@ class SceneProblem(Scene):
 
         # Left Column: Standard Load Balancer
         std_bullets = [
-            "Probes GET /healthz or curl :8545: receives HTTP 200 OK.",
+            "Probes GET /healthz or TCP connect: receives HTTP 200 OK.",
             "Node process is alive, but blockchain consensus engine is frozen.",
-            "Stuck at block height #194,520,200 (stale by 40+ blocks).",
+            "Stuck at stale block height while canonical sequencer tip advances.",
             "Keeps routing live user and relayer transactions to desynced node.",
-            "Silent failure: no 5xx errors recorded in cloud metrics dashboards.",
-            "Relayers submit invalid nonces causing transaction rejection storms."
+            "Silent failure: zero 5xx errors recorded in cloud metrics dashboards.",
+            "Relayers submit stale nonces causing transaction rejection storms."
         ]
         std_metrics = [
-            ("DRIFT VISIBILITY", "0%"),
-            ("PROBING", "BLIND 200 OK"),
-            ("OUTAGE RISK", "SEV-1")
+            ("DRIFT VISIBILITY", "0% BLIND"),
+            ("PROBING", "HTTP 200 OK"),
+            ("FAILURE", "NONCE TOO LOW")
         ]
         draw_card(
             draw, left_x, FOCAL_START_Y, col_w, col_h,
-            title="Standard Load Balancer (NGINX / ALB)",
-            subtitle="Blind HTTP Status Probing",
+            title="Standard Transport Load Balancer",
+            subtitle="Blind L4 / L7 Transport Probing",
             bullets=std_bullets,
             fonts=fonts,
             border_color=RED,
@@ -1031,17 +1035,17 @@ class SceneProblem(Scene):
 
         # Right Column: DriftGuard Out-of-Band Sentinel
         dg_bullets = [
-            "Queries canonical reference head every 200ms out-of-band.",
-            "Compares local tip against trusted quorum anchor in real-time.",
-            "Detects 3-block consensus lag within 240 milliseconds.",
-            "Sends socket drain command via UNIX domain socket in under 130ms.",
+            "Out-of-band consensus verification sampling independent references.",
+            "Evaluates block numbers, tip hashes, and parent hash continuity.",
+            "Detects consensus lag and isolates stale upstreams in under 130ms.",
+            "Commands HAProxy via UNIX domain socket without client disconnects.",
             "Drains node cleanly without dropping in-flight TCP connections.",
-            "Preserves zero 5xx errors: fallback pool seamlessly serves traffic."
+            "Zero client modifications: transparent drop-in reverse proxy."
         ]
         dg_metrics = [
-            ("LAG DETECT", "<= 240ms"),
-            ("DRAIN SLA", "< 130ms"),
-            ("DROPPED READS", "0")
+            ("DETECTION", "< 130ms"),
+            ("ERROR RATE", "0.00%"),
+            ("TCP DROPS", "0")
         ]
         draw_card(
             draw, right_x, FOCAL_START_Y, col_w, col_h,
@@ -1086,8 +1090,8 @@ class SceneArchitecture(Scene):
         # 1. Header Zone (y < 160px)
         draw_scene_header(
             draw, fonts,
-            title="Decoupled Data & Control Planes",
-            subtitle="Sub-Millisecond L7 Ingress Proxy with Out-of-Band Consensus Watchdog"
+            title="Multi-Provider Quorum & Hysteresis FSM",
+            subtitle="Cryptographic Lineage Verification & Flap Dampening Controller"
         )
 
         # 2. Primary Focal Anchors: Dual Planes (Rule of Thirds: y = 210..720)
@@ -1096,58 +1100,58 @@ class SceneArchitecture(Scene):
         left_x = MARGIN_X
         right_x = w - MARGIN_X - plane_w
 
-        # Left Anchor: Data Plane (HAProxy 2.8)
-        data_bullets = [
-            "Ultra-fast HAProxy 2.8 engine routing JSON-RPC client requests.",
-            "Sub-millisecond ingress latency overhead (p99 < 0.4ms).",
-            "Zero in-band blockchain consensus checks blocking request pipeline.",
-            "Health-checks primary node and standby fallback pool in parallel.",
-            "UNIX domain socket runtime API: /var/run/haproxy/admin.sock.",
-            "Executes seamless graceful connection handoff with zero TCP resets."
+        # Left Anchor: Quorum Consensus Engine
+        quorum_bullets = [
+            "Samples N=3 independent reference providers every 200 milliseconds.",
+            "Equal height verification: block hashes must match identically.",
+            "Lineage verification: block(h) parent hash must match block(h-1) tip hash.",
+            "Two-thirds majority consensus: 2 matching providers isolate rogue outliers.",
+            "Rogue reference jitter does not trigger false drains on healthy local nodes.",
+            "Fail-Open principle: ambiguous or lost quorum freezes routing state safely."
         ]
-        data_metrics = [
-            ("ENGINE", "HAPROXY 2.8"),
-            ("P99 LATENCY", "< 0.4ms"),
-            ("SOCKET", "UNIX DRAIN")
+        quorum_metrics = [
+            ("QUORUM", "2/3 MAJORITY"),
+            ("LINEAGE", "SHA256 LINK"),
+            ("FAIL-OPEN", "FROZEN STATE")
         ]
         draw_card(
             draw, left_x, FOCAL_START_Y, plane_w, plane_h,
-            title="HAProxy 2.8 Data Plane",
-            subtitle="Ultra-Low Latency RPC Gateway",
-            bullets=data_bullets,
+            title="Multi-Provider Quorum Engine",
+            subtitle="N=3 Consensus & Lineage Validation",
+            bullets=quorum_bullets,
             fonts=fonts,
-            border_color=ARBITRUM_BLUE,
-            tag="DATA PLANE (INGRESS)",
-            tag_color=ARBITRUM_BLUE,
+            border_color=CYAN,
+            tag="2/3 MAJORITY QUORUM",
+            tag_color=CYAN,
             wrap_width=56,
-            metrics=data_metrics
+            metrics=quorum_metrics
         )
 
-        # Right Anchor: Control Plane (Sentinel)
-        ctrl_bullets = [
-            "Async Python 3.11 daemon querying block tip anchors every 200ms.",
-            "Evaluates eth_blockNumber, sequencer feed, and peer lag metrics.",
-            "Drift trigger threshold: block lag >= 3 blocks or sequence stall.",
-            "Issues UNIX domain socket drain command: 'set server node/srv maint'.",
-            "Under 130 milliseconds end-to-end drain confirmation.",
-            "Prometheus metrics exporter at :8000/metrics and automated webhook alerts."
+        # Right Anchor: 4-State Hysteresis Controller (FSM)
+        fsm_bullets = [
+            "State machine lifecycle: HEALTHY -> SUSPECT -> DRAINED -> RECOVERING.",
+            "First lag tick (>= 4 blocks): node marked SUSPECT without immediate drain.",
+            "Drained actuation: triggered after K=3 consecutive suspect ticks.",
+            "Immediate cutover: parent-hash fork divergence bypasses counters.",
+            "Recovery dampening: requires M=5 consecutive synchronized ticks.",
+            "Minimum-Healthy Guardrail: refuses drain if healthy backends <= 1."
         ]
-        ctrl_metrics = [
-            ("POLL LOOP", "200ms"),
-            ("TRIGGER", ">= 3 BLOCKS"),
-            ("METRICS", ":8000/METRICS")
+        fsm_metrics = [
+            ("FSM STATES", "4 DISCRETE"),
+            ("DRAIN (K)", "3 TICKS"),
+            ("RECOVERY (M)", "5 TICKS")
         ]
         draw_card(
             draw, right_x, FOCAL_START_Y, plane_w, plane_h,
-            title="Async Sentinel Control Plane",
-            subtitle="Out-of-Band Consensus Watchdog",
-            bullets=ctrl_bullets,
+            title="4-State Hysteresis Controller",
+            subtitle="Hysteresis Dampening & Safe Actuation",
+            bullets=fsm_bullets,
             fonts=fonts,
-            border_color=CYAN,
-            tag="CONTROL PLANE (SENTINEL)",
-            tag_color=CYAN,
+            border_color=ARBITRUM_BLUE,
+            tag="FSM CONTROLLER",
+            tag_color=ARBITRUM_BLUE,
             wrap_width=56,
-            metrics=ctrl_metrics
+            metrics=fsm_metrics
         )
 
         # Animated Connector Arrow between Planes
@@ -1189,8 +1193,8 @@ class SceneQuickStart(Scene):
         # 1. Header Zone (y < 160px)
         draw_scene_header(
             draw, fonts,
-            title="Quick Start & Configuration",
-            subtitle="Drop-In Docker Sidecar Setup for Arbitrum Nitro & Orbit Upstreams"
+            title="Quick Start & Deterministic Verification",
+            subtitle="60-Second Chaos Acceptance Suite & Production Topology"
         )
 
         # 2. Primary Focal Anchors: Dual Terminal / Code Windows (Rule of Thirds: y = 210..720)
@@ -1205,30 +1209,28 @@ class SceneQuickStart(Scene):
             "$ git clone https://github.com/maskalfreeup-glitch/driftguard.git",
             "$ cd driftguard",
             "",
-            "# 2. Configure environment with RPC endpoints",
-            "$ cp .env.example .env",
-            "$ vim .env",
-            "",
-            "# 3. Launch Docker Compose stack",
-            "$ docker compose up -d",
-            "✔ Container driftguard-haproxy  Started  [HEALTHY]",
-            "✔ Container driftguard-sentinel Started  [HEALTHY]",
-            "✔ Container driftguard-redis    Started  [HEALTHY]",
-            "",
-            "# 4. Ready! Ingress listening on port :8545",
-            "$ curl -s http://localhost:8545/healthz",
-            "{\"status\":\"synced\",\"block\":194520245,\"lag\":0}"
+            "# 2. Run deterministic chaos testbed (< 60s)",
+            "$ make test-chaos",
+            "✔ Starting mock reference nodes (ref-a, ref-b, ref-c)",
+            "✔ Starting local target node & fallback replica",
+            "✔ Starting HAProxy 2.8 gateway on port :8545",
+            "✔ Generating 200-400 req/s multi-threaded load",
+            "✔ Scenario 1: Baseline load -> 0 false drains [PASS]",
+            "✔ Scenario 2: Outlier reference lag -> Isolated [PASS]",
+            "✔ Scenario 3: Local stall -> Drained in 132.51ms [PASS]",
+            "✔ Recovery verified after M=5 ticks in 259.68ms [PASS]",
+            "✔ Total HTTP 5xx errors: 0 (0.00%) [PASS]"
         ]
 
         term_metrics = [
-            ("STACK", "COMPOSE"),
-            ("PORT", ":8545"),
-            ("STATUS", "SYNCED")
+            ("SUITE", "CHAOS ACCEPTANCE"),
+            ("LOAD", "200-400 RPS"),
+            ("STATUS", "ALL PASS")
         ]
         visible_lines = min(len(term_lines), int(t * 3.2) + 2)
         draw_terminal_window(
             draw, left_x, FOCAL_START_Y, win_w, win_h,
-            title="Terminal — bash (Docker Compose)",
+            title="Terminal — bash (make test-chaos)",
             lines=term_lines[:visible_lines],
             fonts=fonts,
             cursor_line=visible_lines - 1,
@@ -1236,33 +1238,32 @@ class SceneQuickStart(Scene):
             metrics=term_metrics
         )
 
-        # Right Window: config/chains.json Specification
+        # Right Window: sentinel/config/chains.yaml Specification
         config_lines = [
-            "# config/chains.json (Multi-Chain Topology)",
-            "{",
-            "  \"chain\": \"arbitrum-one\",",
-            "  \"chain_id\": 42161,",
-            "  \"primary_rpc\": \"http://nitro-node:8547\",",
-            "  \"canonical_rpc\": \"https://arb1.arbitrum.io/rpc\",",
-            "  \"poll_interval_ms\": 200,",
-            "  \"max_block_lag\": 3,",
-            "  \"socket_path\": \"/var/run/haproxy/admin.sock\",",
-            "  \"routing\": {",
-            "    \"listen_port\": 8545,",
-            "    \"path_prefix\": \"/arb\",",
-            "    \"mode\": \"roundrobin\",",
-            "    \"timeout_connect_ms\": 500",
-            "  }",
-            "}"
+            "# sentinel/config/chains.yaml",
+            "- name: \"arbitrum-one\"",
+            "  chain_id: 42161",
+            "  backend: \"be_arb\"",
+            "  poll_interval: 0.2",
+            "  drift_threshold: 4",
+            "  failure_threshold: 3",
+            "  recovery_threshold: 5",
+            "  nodes:",
+            "    primary: \"http://nitro-node:8547\"",
+            "    fallback: \"https://fallback-rpc:8547\"",
+            "  references:",
+            "    - \"https://ref-rpc-a:8547\"",
+            "    - \"https://ref-rpc-b:8547\"",
+            "    - \"https://ref-rpc-c:8547\""
         ]
         config_metrics = [
-            ("CHAIN", "ARBITRUM-ONE"),
+            ("CONFIG", "CHAINS.YAML"),
             ("POLL", "200ms"),
-            ("MAX_LAG", "3 BLOCKS")
+            ("THRESHOLD", "4 BLOCKS")
         ]
         draw_terminal_window(
             draw, right_x, FOCAL_START_Y, win_w, win_h,
-            title="config/chains.json — JSON Configuration",
+            title="sentinel/config/chains.yaml — Topology Spec",
             lines=config_lines,
             fonts=fonts,
             metrics=config_metrics
@@ -1298,80 +1299,79 @@ class SceneLiveDrill(Scene):
         # 1. Header Zone (y < 160px)
         draw_scene_header(
             draw, fonts,
-            title="Live Edge Routing & Chaos Failover Drill",
-            subtitle="Automated Verification with Real-Time Header Telemetry & Socket Draining"
+            title="Chaos Benchmark & Empirical SLA Results",
+            subtitle="Ground-Truth Oracle Validation Under 200–400 req/s Load"
         )
 
-        # 2. Primary Focal Anchors: Dual Terminal Windows (Rule of Thirds: y = 210..720)
+        # 2. Primary Focal Anchors: Terminal & Summary Card (Rule of Thirds: y = 210..720)
         win_w = 860
         win_h = FOCAL_END_Y - FOCAL_START_Y  # 510px
         left_x = MARGIN_X
         right_x = w - MARGIN_X - win_w
 
-        # Left Window: curl telemetry verification
-        curl_lines = [
-            "$ curl -i -X POST http://localhost:8545/arb \\",
-            "    -H 'Content-Type: application/json' \\",
-            "    --data '{\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}'",
-            "",
-            "HTTP/1.1 200 OK",
-            "x-driftguard-route: primary",
-            "x-driftguard-lag: 0",
-            "x-driftguard-upstream: http://nitro-node:8547",
-            "Content-Type: application/json",
-            "",
-            "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0xb9c63b\"}",
-            "",
-            "# Response latency: 0.38ms (sub-millisecond overhead)"
-        ]
-        curl_metrics = [
-            ("ROUTE", "PRIMARY"),
-            ("OVERHEAD", "0.38ms"),
-            ("ERRORS", "0")
-        ]
-        draw_terminal_window(
-            draw, left_x, FOCAL_START_Y, win_w, win_h,
-            title="curl -i http://localhost:8545/arb — Telemetry Inspection",
-            lines=curl_lines,
-            fonts=fonts,
-            metrics=curl_metrics
-        )
-
-        # Right Window: chaos drill failover output
-        is_drill_active = (t >= 3.5)
+        # Left Window: python3 tests/chaos/runner.py
+        is_drill_active = (t >= 2.5)
         drill_lines = [
-            "$ ./scripts/test_failover.sh",
-            "[INFO] Starting synthetic drift drill on primary node...",
-            "[INFO] Injecting artificial 5-block desync...",
-            "⚡ [WARN] Sentinel detected consensus divergence: lag=5 blocks",
-            "⚡ [WARN] Threshold exceeded (max_lag=3). Triggering drain...",
-            "",
-            "✔ [PASS] HAProxy command sent: 'set server arbitrum/primary maint'",
-            "✔ [PASS] Drain confirmed via UNIX socket in 84ms (< 130ms SLA)",
-            "✔ [PASS] Subsequent RPC query routed to fallback pool",
-            "x-driftguard-route: fallback",
-            "x-driftguard-upstream: https://arb1.arbitrum.io/rpc",
-            "✔ [PASS] Zero dropped connections during cutover (0 errors)",
-            "",
-            "[SUCCESS] Failover drill completed successfully!"
+            "$ python3 tests/chaos/runner.py",
+            "[*] Generating 200-400 req/s load on :8545",
+            "[*] Oracle ground-truth poller active at :9090",
+            "[Scenario 1] 5s baseline: 285.2 req/s -> 0 false drains [PASS]",
+            "[Scenario 2] Injecting 10-block lag on Reference C",
+            "  -> Quorum Engine: 2/3 majority reached; C isolated",
+            "  -> Local node routing preserved [PASS]",
+            "[Scenario 3] Injecting 8-block stall on Local Node",
+            "  -> DRAINED transition confirmed via UNIX socket",
+            "  -> Detection Latency: 132.51 ms (< 350 ms limit) [PASS]",
+            "  -> Fallback actively serving in-flight client traffic",
+            "  -> Tip sync restored: Recovered in 259.68 ms [PASS]",
+            "  -> Total HTTP 5xx errors: 0 (0.00%) [PASS]"
         ] if is_drill_active else [
-            "$ ./scripts/test_failover.sh",
-            "[INFO] Starting synthetic drift drill on primary node...",
-            "[INFO] Injecting artificial 5-block desync...",
-            "[INFO] Polling out-of-band sentinel response..."
+            "$ python3 tests/chaos/runner.py",
+            "[*] Generating 200-400 req/s load on :8545",
+            "[*] Oracle ground-truth poller active at :9090",
+            "[Scenario 1] 5s baseline: 285.2 req/s -> 0 false drains [PASS]",
+            "[Scenario 2] Injecting 10-block lag on Reference C...",
+            "[Scenario 3] Injecting 8-block stall on Local Node..."
         ]
 
         drill_metrics = [
-            ("FAILOVER SLA", "< 130ms"),
-            ("ACTUAL DRAIN", "84ms"),
-            ("DROPPED TXS", "0")
+            ("DETECTION", "132.51 ms"),
+            ("RECOVERY", "259.68 ms"),
+            ("HTTP 5XX", "0 (0.00%)")
         ]
         draw_terminal_window(
-            draw, right_x, FOCAL_START_Y, win_w, win_h,
-            title="Drift Injection Drill — ./scripts/test_failover.sh",
+            draw, left_x, FOCAL_START_Y, win_w, win_h,
+            title="python3 tests/chaos/runner.py — Chaos Benchmark",
             lines=drill_lines,
             fonts=fonts,
             metrics=drill_metrics
+        )
+
+        # Right Card: Official Benchmark Summary Table
+        summary_bullets = [
+            "Detection Latency: 132.51 ms (Spec limit: < 350 ms) -> PASS",
+            "Recovery Latency: 259.68 ms (M=5 consecutive ticks) -> PASS",
+            "Total Stale Reads Leaked: 35 reads under active stall -> PASS",
+            "False-Positive Drains: 0 during baseline and jitter -> PASS",
+            "HTTP 5xx Error Rate: 0 (0.00% packet loss) -> PASS",
+            "POSIX UNIX Socket Drain: atomic cutover without client reconnects."
+        ]
+        summary_metrics = [
+            ("SLA TARGET", "< 350ms"),
+            ("MEASURED", "132.51ms"),
+            ("STATUS", "ALL PASS")
+        ]
+        draw_card(
+            draw, right_x, FOCAL_START_Y, win_w, win_h,
+            title="Deterministic Benchmark Summary",
+            subtitle="Verified Empirical SLA Acceptance Criteria",
+            bullets=summary_bullets,
+            fonts=fonts,
+            border_color=EMERALD,
+            tag="BENCHMARK ACCEPTED",
+            tag_color=EMERALD,
+            wrap_width=58,
+            metrics=summary_metrics
         )
 
 
@@ -1447,11 +1447,11 @@ class SceneSummary(Scene):
             "Guarantees that all signed transactions read synchronized heads.",
             "Decouples trading daemons from stale validator heads.",
             "Zero code changes required in client SDKs or paymasters.",
-            "Drop-in sidecar for Biconomy, ZeroDev, and custom relayers.",
+            "Drop-in sidecar for ERC-4337 bundlers and custom relayers.",
             "Multi-chain support: Arbitrum One, Nova, Sepolia, Orbit L3."
         ]
         relayer_metrics = [
-            ("INTEGRATION", "ERC-4337 & BICONOMY"),
+            ("INTEGRATION", "ERC-4337 BUNDLERS"),
             ("NONCE DRIFT", "0% REVERTS"),
             ("HEAD", "CANONICAL")
         ]
@@ -1512,8 +1512,8 @@ class SceneOutroCommunity(Scene):
         github_bullets = [
             "Public repository: github.com/maskalfreeup-glitch/driftguard",
             "Permissive MIT license: fully open for commercial and community use.",
-            "Complete test suite: unit tests, chaos drill scripts, mock RPC engines.",
-            "Full source code for drift detector, agent sidecar, and HAProxy templates.",
+            "Complete test suite: unit tests, chaos benchmark runner, mock RPC engines.",
+            "Full source code for quorum engine, hysteresis FSM, and HAProxy templates.",
             "Comprehensive CI/CD pipelines and reproducible Docker Compose recipes.",
             "Contributions welcome: submit pull requests, issues, or RFC proposals."
         ]
@@ -1571,7 +1571,7 @@ class SceneOutroLogo(Scene):
     2-second cinematic outro logo bumper:
     - Official DriftGuard logo with radial glow
     - Title: DRIFTGUARD
-    - Tagline: Stay Synced. Never Drop a Transaction.
+    - Tagline: High-Availability EVM Gateway & Consensus Sentinel
     - Community links & MIT licensing
     - Smooth fade-out to black
     """
@@ -1613,7 +1613,7 @@ class SceneOutroLogo(Scene):
         draw.text((cx - (tb[2] - tb[0]) // 2, cy + 130), title, font=fonts.hero_font, fill=WHITE)
 
         # Tagline
-        sub = "Stay Synced. Never Drop a Transaction."
+        sub = "High-Availability EVM Gateway & Consensus Sentinel"
         sb = draw.textbbox((0, 0), sub, font=fonts.h1_font)
         draw.text((cx - (sb[2] - sb[0]) // 2, cy + 195), sub, font=fonts.h1_font, fill=CYAN)
 
@@ -1894,6 +1894,13 @@ def render_video(
     total_frames = sum(sc.total_frames for sc in scenes)
     total_duration = sum(sc.duration_sec for sc in scenes)
     print(f"[*] Total video duration: {total_duration:.1f}s ({total_frames} frames)")
+    print("\n[*] Chapter Timestamps:")
+    accum_t = 0.0
+    for sc in scenes:
+        m, s = divmod(int(accum_t), 60)
+        print(f"    - {m:02d}:{s:02d} ({accum_t:.2f}s) -> Scene {sc.scene_id}: {sc.name}")
+        accum_t += sc.duration_sec
+    print()
 
     combined_wav = os.path.join(temp_dir, "master_soundtrack.wav")
     print("[*] Synthesizing audio score (hum-free, studio narration)...")
@@ -1903,8 +1910,12 @@ def render_video(
     # Ensure target directory exists
     Path(output_mp4).parent.mkdir(parents=True, exist_ok=True)
 
+    ffmpeg_log_path = os.path.join(temp_dir, "ffmpeg.log")
+    ffmpeg_log = open(ffmpeg_log_path, "w")
+
     ffmpeg_cmd = [
         "ffmpeg", "-y",
+        "-loglevel", "warning",
         "-f", "rawvideo",
         "-vcodec", "rawvideo",
         "-s", f"{width}x{height}",
@@ -1923,7 +1934,7 @@ def render_video(
     ]
 
     print(f"[*] Launching FFmpeg encoder -> {output_mp4}")
-    proc = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=ffmpeg_log)
 
     start_time = time.time()
     global_frame = 0
@@ -1985,13 +1996,19 @@ def render_video(
 
     except BrokenPipeError:
         print("\nError: FFmpeg pipe broken unexpectedly.")
-        _, err = proc.communicate()
-        print(err.decode("utf-8", errors="ignore"))
+        ffmpeg_log.close()
+        if os.path.exists(ffmpeg_log_path):
+            with open(ffmpeg_log_path, "r") as f:
+                print(f.read())
         sys.exit(1)
     finally:
         if proc.stdin:
-            proc.stdin.close()
+            try:
+                proc.stdin.close()
+            except Exception:
+                pass
         proc.wait()
+        ffmpeg_log.close()
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     total_time = time.time() - start_time

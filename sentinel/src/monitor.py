@@ -148,56 +148,49 @@ class ChainMonitor:
         self.reference.last_sample = r_res if isinstance(r_res, NodeSample) else None
 
         if reference_valid:
-            was_unhealthy = self.reference.status in ("UNHEALTHY", "DEGRADED")
-            self.reference.status = "HEALTHY"
-            self.reference.reason = "Healthy"
             self.reference.consecutive_successes += 1
             self.reference.consecutive_failures = 0
-            if was_unhealthy:
-                logger.info(
-                    f"\033[92m[REFERENCE RECOVERED] [{self.chain.name}] Canonical reference restored to HEALTHY.\033[0m"
-                )
-                await self.alerter.send_reference_recovered(
-                    self.chain.name, self.chain.chain_id, self.chain.backend
-                )
+            if self.reference.consecutive_successes >= self.reference_recovery_threshold:
+                was_degraded = self.reference_degraded or self.reference.status == "DEGRADED"
+                self.reference.status = "HEALTHY"
+                self.reference.reason = "Healthy"
+                if was_degraded:
+                    self.reference_degraded = False
+                    logger.info(
+                        f"\033[92m[REFERENCE RECOVERED] [{self.chain.name}] Canonical reference restored to HEALTHY "
+                        f"after {self.reference.consecutive_successes} consecutive successful probes.\033[0m"
+                    )
+                    await self.alerter.send_reference_recovered(
+                        self.chain.name, self.chain.chain_id, self.chain.backend
+                    )
         else:
-            reason = "Canonical reference unavailable, stale, syncing, or wrong chain ID"
-            should_alert = self.reference.status not in ("UNHEALTHY", "DEGRADED")
-            self.reference.status = "UNHEALTHY"
-            self.reference.reason = reason
             self.reference.consecutive_failures += 1
             self.reference.consecutive_successes = 0
-
-            if self.is_fail_open:
-                # FAIL-OPEN PRINCIPLE (e.g. arbitrum-nova):
-                # Never trigger a drain when reference providers fail or rate-limit.
-                # Freeze routing state and preserve backend serving traffic.
-                logger.warning(
-                    f"\033[93m[FAIL-OPEN ACTIVE] [{self.chain.name}] Canonical reference unavailable or rate-limited. "
-                    f"Freezing routing state and preserving serving pools with 0 drains.\033[0m"
-                )
-                await self._evaluate_node_fail_open(self.primary, p_res, now)
-                await self._evaluate_node_fail_open(self.fallback, f_res, now)
+            err_msg = (
+                r_res.error if isinstance(r_res, NodeSample) and r_res.error
+                else (f"Exception: {r_res}" if not isinstance(r_res, NodeSample) else "Invalid block height or chain ID")
+            )
+            if self.reference.consecutive_failures >= self.reference_failure_threshold:
+                should_alert = not self.reference_degraded
+                self.reference.status = "DEGRADED"
+                self.reference_degraded = True
+                self.reference.reason = f"Canonical reference degraded ({self.reference.consecutive_failures} failures: {err_msg})"
                 if should_alert:
-                    await self.alerter.send_reference_unavailable(
-                        self.chain.name, self.chain.chain_id, self.chain.backend, reason
+                    logger.warning(
+                        f"\033[93m[FAIL-OPEN ACTIVE] [{self.chain.name}] Canonical reference degraded ({self.reference.consecutive_failures} failures). "
+                        f"Freezing routing state and preserving serving pools with 0 drains.\033[0m"
                     )
-                return
+                    await self.alerter.send_reference_unavailable(
+                        self.chain.name, self.chain.chain_id, self.chain.backend,
+                        f"Canonical Reference Degraded (Fail-Open Active: Routing Frozen, 0 Drains) - {err_msg}",
+                    )
 
-            # FAIL-CLOSED (default/legacy chains): drain both serving pools
-            for node, server in ((self.primary, "primary"), (self.fallback, "fallback")):
-                node.consecutive_failures = self.failure_threshold
-                node.consecutive_successes = 0
-                node.status = "UNHEALTHY"
-                node.reason = reason
-                METRIC_STATUS.labels(node=node.name).set(0)
-                if node.current_haproxy_state != "maint":
-                    if await set_server_state(self.socket_path, self.chain.backend, server, "maint"):
-                        node.current_haproxy_state = "maint"
-            if should_alert:
-                await self.alerter.send_reference_unavailable(
-                    self.chain.name, self.chain.chain_id, self.chain.backend, reason
-                )
+        # FAIL-OPEN PRINCIPLE:
+        # If canonical reference is not valid OR reference status is DEGRADED:
+        # DO NOT drain serving nodes. FREEZE HAProxy routing state. Preserve backend traffic.
+        if not reference_valid or self.reference.status != "HEALTHY":
+            await self._evaluate_node_fail_open(self.primary, p_res, now)
+            await self._evaluate_node_fail_open(self.fallback, f_res, now)
             return
 
         reference_head = r_res.block_number
@@ -299,6 +292,7 @@ class ChainMonitor:
                 reason = f"Drift threshold exceeded: {drift} blocks (threshold: {self.chain.drift_threshold})"
         else:
             # Reference block unavailable: fail open, do not mark node faulty
+            is_faulty = False
             drift = 0
             node.last_drift = 0
 

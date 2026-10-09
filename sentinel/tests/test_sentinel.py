@@ -429,3 +429,61 @@ def test_anchor_environment_variable_fallback_when_unset(monkeypatch):
     assert chain_map["arbitrum-one"].reference_url == "https://arbitrum.gateway.tenderly.co"
     assert chain_map["arbitrum-nova"].reference_url == "https://arbitrum-nova.drpc.org"
     assert chain_map["arbitrum-sepolia"].reference_url == "https://arbitrum-sepolia.drpc.org"
+
+
+@pytest.mark.asyncio
+async def test_arbitrum_nova_enforces_fail_open_on_reference_failure(monkeypatch):
+    from sentinel.src.config import load_chains_config
+    chains = load_chains_config("sentinel/config/chains.yaml")
+    nova_config = next(c for c in chains if c.name == "arbitrum-nova")
+    assert nova_config.fail_open is True
+
+    config = Settings(failure_threshold=2, recovery_threshold=2)
+    storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
+    monitor = DriftMonitor(config=config, storage=storage, chains=[nova_config])
+    nova_monitor = monitor.unique_monitors()["arbitrum-nova"]
+    nova_monitor.primary.status = "HEALTHY"
+    nova_monitor.fallback.status = "HEALTHY"
+
+    # Simulate reference provider failing / rate limiting (returns HTTP 429 / error)
+    async def mock_probe_reference(url, fallback_urls=None, timeout=5.0):
+        return NodeSample(
+            endpoint=url,
+            block_number=None,
+            is_syncing=False,
+            latency_ms=500.0,
+            error="HTTP 429 Too Many Requests (Rate limit exceeded)",
+            timestamp=time.time(),
+        )
+
+    async def mock_probe(endpoint, check_syncing=True, timeout=None):
+        return NodeSample(
+            endpoint=endpoint,
+            block_number=85282920,
+            is_syncing=False,
+            latency_ms=10.0,
+            error=None,
+            timestamp=time.time(),
+            chain_id=42170,
+        )
+
+    monkeypatch.setattr(nova_monitor.rpc_client, "probe_reference", mock_probe_reference)
+    monkeypatch.setattr(nova_monitor.rpc_client, "probe", mock_probe)
+    set_state = AsyncMock(return_value=True)
+    monkeypatch.setattr("sentinel.src.monitor.set_server_state", set_state)
+    mock_unavailable = AsyncMock(return_value=True)
+    monkeypatch.setattr(nova_monitor.alerter, "send_reference_unavailable", mock_unavailable)
+
+    # Execute multiple poll cycles while reference is rate-limited
+    for _ in range(5):
+        await nova_monitor._poll_cycle()
+
+    # Fail-Open Assertions:
+    # 1. HAProxy drain command was NEVER called (0 drains)
+    assert set_state.await_count == 0
+    # 2. Serving nodes remained HEALTHY and routing intact
+    assert nova_monitor.primary.status == "HEALTHY"
+    assert nova_monitor.fallback.status == "HEALTHY"
+    # 3. Serving nodes were not penalized with consecutive failures
+    assert nova_monitor.primary.consecutive_failures == 0
+    assert nova_monitor.fallback.consecutive_failures == 0

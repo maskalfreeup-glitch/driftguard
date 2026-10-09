@@ -1,0 +1,106 @@
+services:
+  ref-rpc-a:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.mock
+    container_name: test-ref-rpc-a
+    command: ["--host", "0.0.0.0", "--port", "8545", "--block-time-ms", "250"]
+    ports:
+      - "8546:8545"
+    networks:
+      - testnet
+
+  ref-rpc-b:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.mock
+    container_name: test-ref-rpc-b
+    command: ["--host", "0.0.0.0", "--port", "8545", "--block-time-ms", "250"]
+    ports:
+      - "8547:8545"
+    networks:
+      - testnet
+
+  ref-rpc-c:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.mock
+    container_name: test-ref-rpc-c
+    command: ["--host", "0.0.0.0", "--port", "8545", "--block-time-ms", "250"]
+    ports:
+      - "8548:8545"
+    networks:
+      - testnet
+
+  local-nitro-node:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.mock
+    container_name: test-local-nitro-node
+    command: ["--host", "0.0.0.0", "--port", "8545", "--control-port", "9090", "--block-time-ms", "250"]
+    ports:
+      - "9090:9090"
+      - "8549:8545"
+    networks:
+      - testnet
+
+  fallback-nitro-node:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.mock
+    container_name: test-fallback-nitro-node
+    command: ["--host", "0.0.0.0", "--port", "8545", "--block-time-ms", "250"]
+    ports:
+      - "8550:8545"
+    networks:
+      - testnet
+
+  haproxy:
+    image: haproxy:2.8-alpine
+    container_name: test-haproxy
+    user: root
+    volumes:
+      - ./haproxy.test.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - haproxy_sock:/var/run/haproxy
+    ports:
+      - "8545:8545"
+      - "8404:8404"
+    depends_on:
+      - local-nitro-node
+      - fallback-nitro-node
+    networks:
+      - testnet
+
+  driftguard:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.driftguard
+    container_name: test-driftguard
+    environment:
+      - REF_RPC_ENDPOINTS=http://ref-rpc-a:8545,http://ref-rpc-b:8545,http://ref-rpc-c:8545
+      - LOCAL_NODE_ENDPOINT=http://local-nitro-node:8545
+      - FALLBACK_NODE_ENDPOINT=http://fallback-nitro-node:8545
+      - HAPROXY_SOCKET_PATH=/var/run/haproxy/admin.sock
+      - HAPROXY_BACKEND=be_nitro
+      - HAPROXY_SERVER=local
+      - TICK_INTERVAL_MS=50
+      - PORT=8000
+    volumes:
+      - haproxy_sock:/var/run/haproxy
+    ports:
+      - "8000:8000"
+    depends_on:
+      - haproxy
+      - ref-rpc-a
+      - ref-rpc-b
+      - ref-rpc-c
+      - local-nitro-node
+    networks:
+      - testnet
+
+networks:
+  testnet:
+    driver: bridge
+
+volumes:
+  haproxy_sock:

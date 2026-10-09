@@ -1,4 +1,4 @@
-.PHONY: all build up down restart logs status test test-unit test-failover clean help
+.PHONY: all build up down restart logs status test test-unit test-failover test-chaos clean help
 
 all: up
 
@@ -22,6 +22,12 @@ test:
 	@./scripts/test_failover.sh
 
 test-failover: test
+
+test-chaos:
+	docker compose -f deploy/docker-compose.test.yml up -d --build
+	sleep 3
+	python3 tests/chaos/runner.py
+	docker compose -f deploy/docker-compose.test.yml down -v
 
 test-unit:
 	@docker compose exec -e PYTHONPATH=/app sentinel pytest sentinel/tests/ -v || PYTHONPATH=. pytest sentinel/tests/ -v

@@ -1,0 +1,6 @@
+FROM python:3.12-alpine
+WORKDIR /app
+COPY tests/fixtures/mock_rpc.py /app/mock_rpc.py
+RUN chmod +x /app/mock_rpc.py
+EXPOSE 8545 9090
+ENTRYPOINT ["python3", "/app/mock_rpc.py"]

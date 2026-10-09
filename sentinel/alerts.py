@@ -176,10 +176,17 @@ class DiscordAlerter:
         # Format routing transition clearly
         if routing_transition:
             transition_text = routing_transition
-        elif failover_action and failover_action != "Drained primary -> Fallback active":
+        elif failover_action and failover_action not in (
+            "Drained primary -> Fallback active",
+            "Drained fallback -> Primary active",
+        ):
             transition_text = failover_action
         else:
-            transition_text = "primary: DRAIN (0%) -> fallback: ACTIVE (100%)"
+            role = node_role.lower()
+            if role in ("fallback", "backup"):
+                transition_text = "fallback: DRAIN (0%) -> primary: ACTIVE (100%)"
+            else:
+                transition_text = "primary: DRAIN (0%) -> fallback: ACTIVE (100%)"
 
         return [
             {"name": "Chain Name", "value": chain_name, "inline": True},
@@ -448,7 +455,7 @@ class DiscordAlerter:
         primary_head: int | None = 511899986,
         delta_blocks: int = 14,
         node_role: str = "primary",
-        routing_transition: str = "primary: DRAIN (0%) -> fallback: ACTIVE (100%)",
+        routing_transition: str | None = None,
         drain_latency_ms: float | None = 0.60,
         backend_stats: dict[str, Any] | None = None,
         node_name: str | None = None,

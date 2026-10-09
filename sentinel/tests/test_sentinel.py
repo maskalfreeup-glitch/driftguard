@@ -91,6 +91,46 @@ async def test_drift_monitor_drift_exceeded_trips_circuit():
 
 
 @pytest.mark.asyncio
+async def test_drift_monitor_node_ahead_of_reference_is_not_penalized():
+    config = Settings(failure_threshold=2, recovery_threshold=1)
+    storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
+    monitor = DriftMonitor(config=config, storage=storage, chains=[TEST_CHAIN])
+    monitor.primary.status = "HEALTHY"
+
+    # Reference is 85283569, but node is at 85283581 (12 blocks ahead, negative delta)
+    ahead_sample = NodeSample(
+        endpoint="http://mock", block_number=85283581, is_syncing=False, latency_ms=40.0, error=None,
+        timestamp=1000.0, chain_id=11155111
+    )
+
+    await monitor._evaluate_node(monitor.primary, ahead_sample, reference_block=85283569, timestamp=1000)
+    assert monitor.primary.consecutive_failures == 0
+    assert monitor.primary.consecutive_successes >= 1
+    assert monitor.primary.status == "HEALTHY"
+    assert monitor.primary.last_drift == 0
+    assert monitor.primary.reason == "Healthy"
+
+
+def test_calculate_one_way_drift():
+    from sentinel.ha_guard import calculate_one_way_drift
+
+    # Node is behind canonical reference -> positive drift
+    assert calculate_one_way_drift(canonical_head=100, node_head=90) == 10
+    assert calculate_one_way_drift(canonical_head=100, node_head=99) == 1
+
+    # Node is ahead of canonical reference -> clamped to 0
+    assert calculate_one_way_drift(canonical_head=100, node_head=110) == 0
+    assert calculate_one_way_drift(canonical_head=85283569, node_head=85283581) == 0
+
+    # Node is at same block -> 0
+    assert calculate_one_way_drift(canonical_head=100, node_head=100) == 0
+
+    # None values -> 0
+    assert calculate_one_way_drift(canonical_head=None, node_head=100) == 0
+    assert calculate_one_way_drift(canonical_head=100, node_head=None) == 0
+
+
+@pytest.mark.asyncio
 async def test_drift_monitor_syncing_node_rejected():
     config = Settings(failure_threshold=1)
     storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)

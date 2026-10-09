@@ -23,6 +23,20 @@ METRIC_POLL_COUNT = Counter("driftguard_polls_total", "Total poll cycles execute
 METRIC_FAILOVERS = Counter("driftguard_circuit_trips_total", "Total circuit breaker trips to unhealthy", ["node"])
 
 
+def calculate_one_way_drift(canonical_head: int | None, node_head: int | None) -> int:
+    """
+    Compute one-way consensus drift delta (only penalize lagging nodes).
+
+    A node is only in drift if it is BEHIND the canonical anchor:
+        drift = canonical_head - node_head
+    If node_head >= canonical_head (drift <= 0), the node is ahead/synced; return 0.
+    """
+    if canonical_head is None or node_head is None:
+        return 0
+    drift = canonical_head - node_head
+    return 0 if drift <= 0 else drift
+
+
 class NodeState:
     def __init__(self, name: str, url: str):
         self.name = name
@@ -273,9 +287,9 @@ class ChainMonitor:
 
         simulated = node is (self.primary if self.simulated_node == "primary" else self.fallback)
         if simulated and self.simulated_drift is not None:
-            drift = self.simulated_drift
+            drift = calculate_one_way_drift(self.simulated_drift, 0)
             node.last_drift = drift
-            if abs(drift) > self.chain.drift_threshold:
+            if drift > self.chain.drift_threshold:
                 is_faulty = True
                 reason = f"Simulated drift anomaly: {drift} blocks (threshold: {self.chain.drift_threshold})"
         elif simulated and self.simulated_fault is not None:
@@ -291,9 +305,14 @@ class ChainMonitor:
             is_faulty = True
             reason = f"Wrong chain ID: got {sample.chain_id}, expected {self.chain.chain_id}"
         elif reference_block is not None:
-            drift = reference_block - sample.block_number
+            drift = calculate_one_way_drift(reference_block, sample.block_number)
+            if sample.block_number is not None and sample.block_number > reference_block:
+                # Node is ahead of reference anchor: advance reference head tracking if healthy
+                if self.reference.last_sample and self.reference.last_sample.block_number is not None:
+                    if sample.block_number > self.reference.last_sample.block_number:
+                        self.reference.last_sample.block_number = sample.block_number
             node.last_drift = drift
-            if abs(drift) > self.chain.drift_threshold:
+            if drift > self.chain.drift_threshold:
                 is_faulty = True
                 reason = f"Drift threshold exceeded: {drift} blocks (threshold: {self.chain.drift_threshold})"
         else:
@@ -415,7 +434,7 @@ class ChainMonitor:
         self.simulated_drift = drift
         self.simulated_fault = fault
         self.simulated_node = node_name
-        if (drift is not None and abs(drift) > self.chain.drift_threshold) or fault is not None:
+        if (drift is not None and drift > self.chain.drift_threshold) or fault is not None:
             target.consecutive_failures = self.failure_threshold
             target.consecutive_successes = 0
             target.status = "UNHEALTHY"

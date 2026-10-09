@@ -259,3 +259,23 @@ async def test_alert_titles_include_node_identifier():
             assert p_fb["embeds"][0]["title"] == "🚨 Consensus Drift Tripped - Arbitrum Sepolia (dg-node)"
 
     await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_routing_transition_reflects_node_role():
+    alerter = DiscordAlerter(webhook_url="")
+
+    # Primary node tripped -> drain primary, fallback active
+    p_prim = alerter.build_drift_tripped_payload(node_role="primary")
+    fields_prim = {f["name"]: f["value"] for f in p_prim["embeds"][0]["fields"]}
+    assert fields_prim["Routing Transition"] == "primary: DRAIN (0%) -> fallback: ACTIVE (100%)"
+
+    # Fallback node tripped -> drain fallback, primary active
+    p_fall = alerter.build_drift_tripped_payload(node_role="fallback")
+    fields_fall = {f["name"]: f["value"] for f in p_fall["embeds"][0]["fields"]}
+    assert fields_fall["Routing Transition"] == "fallback: DRAIN (0%) -> primary: ACTIVE (100%)"
+
+    # Backup alias tripped -> drain fallback, primary active
+    p_back = alerter.build_drift_tripped_payload(node_role="backup")
+    fields_back = {f["name"]: f["value"] for f in p_back["embeds"][0]["fields"]}
+    assert fields_back["Routing Transition"] == "fallback: DRAIN (0%) -> primary: ACTIVE (100%)"

@@ -66,15 +66,17 @@ class DiscordAlerter:
             "https://raw.githubusercontent.com/ethereum/ethereum-org-website/master/"
             "src/assets/assets-page/eth-diamond-purple.png"
         )
-        # Clean footer: strictly {"text": "DriftGuard High-Availability EVM Gateway"}
-        # Strip any manual UTC date string concatenation from footer.text
-        clean_footer = "DriftGuard High-Availability EVM Gateway"
-        if footer_text and ("•" in footer_text or "UTC" in footer_text):
-            clean_footer = footer_text.split("•")[0].strip()
-        elif footer_text and footer_text != "DriftGuard High-Availability EVM Gateway":
-            clean_footer = footer_text.strip()
-        if "DriftGuard" in clean_footer:
-            clean_footer = "DriftGuard High-Availability EVM Gateway"
+        # Footer text strictly: "DriftGuard High-Availability EVM Gateway"
+        # Remove any • {now_utc} or manual UTC string formatting from footer text
+        footer_text_clean = "DriftGuard High-Availability EVM Gateway"
+        if footer_text and footer_text != "DriftGuard High-Availability EVM Gateway":
+            stripped = footer_text.split("•")[0].strip()
+            if "UTC" in stripped:
+                stripped = stripped.split("UTC")[0].strip()
+            if "DriftGuard" in stripped or not stripped:
+                footer_text_clean = "DriftGuard High-Availability EVM Gateway"
+            else:
+                footer_text_clean = stripped
 
         return {
             "username": "DriftGuard Sentinel",
@@ -86,7 +88,7 @@ class DiscordAlerter:
                     "color": color,
                     "fields": fields,
                     "footer": {
-                        "text": clean_footer,
+                        "text": footer_text_clean,
                     },
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
@@ -234,6 +236,7 @@ class DiscordAlerter:
             ),
             color=COLOR_DRIFT_TRIPPED,
             fields=fields,
+            footer_text="DriftGuard High-Availability EVM Gateway",
         )
 
     async def dispatch_drift_alert(
@@ -424,6 +427,7 @@ class DiscordAlerter:
             ),
             color=COLOR_DRIFT_TRIPPED,
             fields=fields,
+            footer_text="DriftGuard High-Availability EVM Gateway",
         )
 
     def build_consensus_recovered_payload(

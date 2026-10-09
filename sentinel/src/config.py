@@ -54,8 +54,10 @@ class ChainConfig(BaseModel):
     primary_url: str
     fallback_url: str
     reference_url: str
+    reference_fallback_urls: list[str] = Field(default_factory=list)
     drift_threshold: int = 2
     poll_interval: float = 0.2
+    fail_open: bool = False
 
     @model_validator(mode="after")
     def validate_identity_and_urls(self):
@@ -66,6 +68,10 @@ class ChainConfig(BaseModel):
             parsed_url = urlsplit(val or "")
             if parsed_url.scheme != "https" or not parsed_url.hostname or parsed_url.fragment:
                 raise ValueError(f"{field_name} must use HTTPS")
+        for fb_url in self.reference_fallback_urls:
+            parsed_url = urlsplit(fb_url or "")
+            if parsed_url.scheme != "https" or not parsed_url.hostname or parsed_url.fragment:
+                raise ValueError("reference_fallback_urls must use HTTPS")
         if len({self.primary_url, self.fallback_url, self.reference_url}) != 3:
             raise ValueError("primary, fallback, and reference URLs must be independent endpoints")
         if self.poll_interval <= 0 or self.drift_threshold < 0:

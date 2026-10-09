@@ -5,6 +5,9 @@ chains:
     primary_url: "https://arb1.arbitrum.io/rpc"
     fallback_url: "https://arbitrum-one-rpc.publicnode.com"
     reference_url: "https://arbitrum.gateway.tenderly.co"
+    reference_fallback_urls:
+      - "https://arbitrum-one-rpc.publicnode.com"
+      - "https://arb1.arbitrum.io/rpc"
     drift_threshold: 4
     poll_interval: 0.2
   - name: "arbitrum-nova"
@@ -13,13 +16,20 @@ chains:
     primary_url: "https://nova.arbitrum.io/rpc"
     fallback_url: "https://arbitrum-nova-rpc.publicnode.com"
     reference_url: "https://arbitrum-nova.drpc.org"
+    reference_fallback_urls:
+      - "https://arbitrum-nova-rpc.publicnode.com"
+      - "https://nova.arbitrum.io/rpc"
     drift_threshold: 4
     poll_interval: 0.2
+    fail_open: true
   - name: "arbitrum-sepolia"
     chain_id: 421614
     backend: "be_arb_sepolia"
     primary_url: "https://sepolia-rollup.arbitrum.io/rpc"
     fallback_url: "https://arbitrum-sepolia-rpc.publicnode.com"
     reference_url: "https://arbitrum-sepolia.drpc.org"
+    reference_fallback_urls:
+      - "https://arbitrum-sepolia-rpc.publicnode.com"
+      - "https://sepolia-rollup.arbitrum.io/rpc"
     drift_threshold: 6
     poll_interval: 0.2

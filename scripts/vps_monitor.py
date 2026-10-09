@@ -93,7 +93,7 @@ class DiscordDispatcher:
         description: str,
         color: int,
         fields: list[dict[str, Any]],
-        footer_text: str = "DriftGuard VPS Monitor",
+        footer_text: str = "DriftGuard High-Availability EVM Gateway",
     ) -> bool:
         if not self.webhook_url:
             logger.warning("No Discord webhook URL configured. Skipping alert.")
@@ -110,7 +110,7 @@ class DiscordDispatcher:
                     "color": color,
                     "fields": fields,
                     "footer": {
-                        "text": footer_text
+                        "text": "DriftGuard High-Availability EVM Gateway"
                     },
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
@@ -327,7 +327,7 @@ class ClusterMonitor:
             description="Remote diagnostic probe for Oracle Cloud VPS nodes and DriftGuard gateway.",
             color=color,
             fields=fields,
-            footer_text="DriftGuard Remote Monitor",
+            footer_text="DriftGuard High-Availability EVM Gateway",
         )
 
 

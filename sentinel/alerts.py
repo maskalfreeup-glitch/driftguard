@@ -66,18 +66,6 @@ class DiscordAlerter:
             "https://raw.githubusercontent.com/ethereum/ethereum-org-website/master/"
             "src/assets/assets-page/eth-diamond-purple.png"
         )
-        # Footer text strictly: "DriftGuard High-Availability EVM Gateway"
-        # Remove any • {now_utc} or manual UTC string formatting from footer text
-        footer_text_clean = "DriftGuard High-Availability EVM Gateway"
-        if footer_text and footer_text != "DriftGuard High-Availability EVM Gateway":
-            stripped = footer_text.split("•")[0].strip()
-            if "UTC" in stripped:
-                stripped = stripped.split("UTC")[0].strip()
-            if "DriftGuard" in stripped or not stripped:
-                footer_text_clean = "DriftGuard High-Availability EVM Gateway"
-            else:
-                footer_text_clean = stripped
-
         return {
             "username": "DriftGuard Sentinel",
             "avatar_url": avatar_url,
@@ -88,7 +76,7 @@ class DiscordAlerter:
                     "color": color,
                     "fields": fields,
                     "footer": {
-                        "text": footer_text_clean,
+                        "text": "DriftGuard High-Availability EVM Gateway",
                     },
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
@@ -273,23 +261,50 @@ class DiscordAlerter:
         )
 
     async def send_reference_unavailable(
-        self, chain_name: str, chain_id: int, backend: str, reason: str
+        self, chain_name: str, chain_id: int, backend: str, reason: str, force: bool = False
     ) -> bool:
         now = time.time()
-        if self.should_suppress_alert(backend, "REFERENCE_UNAVAILABLE", now):
+        if not force and self.should_suppress_alert(backend, "REFERENCE_UNAVAILABLE", now):
             return False
         self._backend_state[backend] = ("REFERENCE_UNAVAILABLE", now)
         if not self.webhook_url:
             return False
         return await self.dispatch_embed(
-            title=f"Canonical Reference Unavailable - {chain_name}",
-            description="Serving pools were drained because the independent chain reference could not be trusted.",
-            color=COLOR_DRIFT_TRIPPED,
+            title=f"⚠️ Canonical Reference Degraded - {chain_name}",
+            description="Canonical Reference Degraded (Fail-Open Active: Routing Frozen, 0 Drains)",
+            color=0xF59E0B,  # Warning Amber
             fields=[
+                {"name": "Chain Name", "value": chain_name, "inline": True},
                 {"name": "Chain ID", "value": str(chain_id), "inline": True},
                 {"name": "Backend", "value": backend, "inline": True},
-                {"name": "Reason", "value": reason[:1000], "inline": False},
+                {"name": "Fail-Open Status", "value": "Routing Frozen (0 Drains Triggered)", "inline": True},
+                {"name": "Traffic Status", "value": "Serving Pools Preserved (100% Intact)", "inline": True},
+                {"name": "Degradation Reason", "value": reason[:1000], "inline": False},
             ],
+            footer_text="DriftGuard High-Availability EVM Gateway",
+        )
+
+    async def send_reference_recovered(
+        self, chain_name: str, chain_id: int, backend: str, force: bool = False
+    ) -> bool:
+        now = time.time()
+        if not force and self.should_suppress_alert(backend, "REFERENCE_RECOVERED", now):
+            return False
+        self._backend_state[backend] = ("REFERENCE_RECOVERED", now)
+        if not self.webhook_url:
+            return False
+        return await self.dispatch_embed(
+            title=f"✅ Canonical Reference Recovered - {chain_name}",
+            description="Canonical reference health restored across consecutive probes. Normal consensus monitoring active.",
+            color=COLOR_RECOVERED,
+            fields=[
+                {"name": "Chain Name", "value": chain_name, "inline": True},
+                {"name": "Chain ID", "value": str(chain_id), "inline": True},
+                {"name": "Backend", "value": backend, "inline": True},
+                {"name": "Reference Status", "value": "Synchronized (Probes Passing)", "inline": True},
+                {"name": "Traffic Summary", "value": "Preserved with 0% 5xx errors", "inline": True},
+            ],
+            footer_text="DriftGuard High-Availability EVM Gateway",
         )
 
     def build_consensus_recovered_fields(

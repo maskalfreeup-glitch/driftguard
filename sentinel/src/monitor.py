@@ -66,6 +66,11 @@ class ChainMonitor:
         self.primary = NodeState(f"{chain.backend}:primary", chain.primary_url)
         self.fallback = NodeState(f"{chain.backend}:fallback", chain.fallback_url)
         self.reference = NodeState(f"{chain.backend}:reference", chain.reference_url)
+        self.reference.consecutive_failures = 0
+        self.reference.consecutive_successes = 0
+        self.reference_failure_threshold = 3
+        self.reference_recovery_threshold = 3
+        self.reference_degraded = False
 
         self.is_running = False
         self._task: asyncio.Task | None = None
@@ -76,6 +81,14 @@ class ChainMonitor:
         self.simulated_node = "primary"
         self.incident_start: float | None = None
         self.trip_delta_blocks: int = 0
+
+    @property
+    def is_fail_open(self) -> bool:
+        return (
+            getattr(self.chain, "fail_open", False)
+            or self.chain.name == "arbitrum-nova"
+            or self.chain.backend == "be_nova"
+        )
 
     async def start(self):
         self.is_running = True
@@ -111,25 +124,67 @@ class ChainMonitor:
         METRIC_POLL_COUNT.inc()
         now = int(time.time())
 
-        # Concurrently probe primary and fallback RPC endpoints
+        # Concurrently probe primary, fallback, and reference (with fallbacks and 5s timeout)
+        fallback_refs = getattr(self.chain, "reference_fallback_urls", [])
         p_res, f_res, r_res = await asyncio.gather(
             self.rpc_client.probe(self.chain.primary_url),
             self.rpc_client.probe(self.chain.fallback_url),
-            self.rpc_client.probe(self.chain.reference_url, check_syncing=False),
+            self.rpc_client.probe_reference(
+                self.chain.reference_url,
+                fallback_urls=fallback_refs,
+                timeout=5.0,
+            ),
             return_exceptions=True,
         )
 
         reference_valid = (
-            isinstance(r_res, NodeSample) and r_res.error is None and r_res.block_number is not None
-            and r_res.chain_id == self.chain.chain_id and not r_res.is_syncing
-            and 0 <= time.time() - r_res.timestamp <= self.max_reference_age
+            isinstance(r_res, NodeSample)
+            and r_res.error is None
+            and r_res.block_number is not None
+            and r_res.chain_id == self.chain.chain_id
+            and not r_res.is_syncing
+            and 0 <= (time.time() - r_res.timestamp) <= self.max_reference_age
         )
         self.reference.last_sample = r_res if isinstance(r_res, NodeSample) else None
-        if not reference_valid:
+
+        if reference_valid:
+            was_unhealthy = self.reference.status in ("UNHEALTHY", "DEGRADED")
+            self.reference.status = "HEALTHY"
+            self.reference.reason = "Healthy"
+            self.reference.consecutive_successes += 1
+            self.reference.consecutive_failures = 0
+            if was_unhealthy:
+                logger.info(
+                    f"\033[92m[REFERENCE RECOVERED] [{self.chain.name}] Canonical reference restored to HEALTHY.\033[0m"
+                )
+                await self.alerter.send_reference_recovered(
+                    self.chain.name, self.chain.chain_id, self.chain.backend
+                )
+        else:
             reason = "Canonical reference unavailable, stale, syncing, or wrong chain ID"
-            should_alert = self.reference.status != "UNHEALTHY"
+            should_alert = self.reference.status not in ("UNHEALTHY", "DEGRADED")
             self.reference.status = "UNHEALTHY"
             self.reference.reason = reason
+            self.reference.consecutive_failures += 1
+            self.reference.consecutive_successes = 0
+
+            if self.is_fail_open:
+                # FAIL-OPEN PRINCIPLE (e.g. arbitrum-nova):
+                # Never trigger a drain when reference providers fail or rate-limit.
+                # Freeze routing state and preserve backend serving traffic.
+                logger.warning(
+                    f"\033[93m[FAIL-OPEN ACTIVE] [{self.chain.name}] Canonical reference unavailable or rate-limited. "
+                    f"Freezing routing state and preserving serving pools with 0 drains.\033[0m"
+                )
+                await self._evaluate_node_fail_open(self.primary, p_res, now)
+                await self._evaluate_node_fail_open(self.fallback, f_res, now)
+                if should_alert:
+                    await self.alerter.send_reference_unavailable(
+                        self.chain.name, self.chain.chain_id, self.chain.backend, reason
+                    )
+                return
+
+            # FAIL-CLOSED (default/legacy chains): drain both serving pools
             for node, server in ((self.primary, "primary"), (self.fallback, "fallback")):
                 node.consecutive_failures = self.failure_threshold
                 node.consecutive_successes = 0
@@ -145,11 +200,59 @@ class ChainMonitor:
                 )
             return
 
-        self.reference.status = "HEALTHY"
-        self.reference.reason = "Healthy"
         reference_head = r_res.block_number
         await self._evaluate_node(self.primary, p_res, reference_head, now)
         await self._evaluate_node(self.fallback, f_res, reference_head, now)
+
+    async def _evaluate_node_fail_open(self, node: NodeState, sample_or_exc: Any, timestamp: int):
+        """
+        Fail-Open Evaluator:
+        When reference is untrusted or degraded:
+        - Freezes routing state (no HAProxy socket drain commands issued).
+        - Records node reachability and block height telemetry.
+        - Does NOT increment consecutive failures or trigger circuit trips.
+        """
+        if not isinstance(sample_or_exc, NodeSample):
+            sample = NodeSample(
+                endpoint=node.url,
+                block_number=None,
+                is_syncing=False,
+                latency_ms=0.0,
+                error=f"Internal exception: {sample_or_exc}",
+                timestamp=timestamp,
+            )
+        else:
+            sample = sample_or_exc
+
+        node.last_sample = sample
+        if sample.block_number is not None:
+            METRIC_BLOCK_HEIGHT.labels(node=node.name).set(sample.block_number)
+            METRIC_LATENCY.labels(node=node.name).set(sample.latency_ms / 1000.0)
+        METRIC_DRIFT.labels(node=node.name).set(0)
+        METRIC_STATUS.labels(node=node.name).set(1 if node.status == "HEALTHY" else 0)
+
+        telemetry = {
+            "timestamp": timestamp,
+            "chain": self.chain.name,
+            "chain_id": self.chain.chain_id,
+            "backend": self.chain.backend,
+            "node": node.name,
+            "status": node.status,
+            "block_number": sample.block_number,
+            "reference_block": None,
+            "drift": 0,
+            "latency_ms": sample.latency_ms,
+            "is_syncing": sample.is_syncing,
+            "syncing_checked": sample.syncing_checked,
+            "reason": "Fail-Open Active (Routing Frozen)",
+            "consecutive_failures": node.consecutive_failures,
+            "consecutive_successes": node.consecutive_successes,
+        }
+
+        role = "primary" if node is self.primary else "fallback"
+        await self.storage.set_health(f"{self.chain.backend}:{role}", telemetry)
+        await self.storage.set_health(f"{self.chain.name}:{role}", telemetry)
+        await self.storage.push_history(f"{self.chain.backend}:{role}", telemetry)
 
     async def _evaluate_node(self, node: NodeState, sample_or_exc: Any, reference_block: int | None, timestamp: int):
         if not isinstance(sample_or_exc, NodeSample):
@@ -195,10 +298,9 @@ class ChainMonitor:
                 is_faulty = True
                 reason = f"Drift threshold exceeded: {drift} blocks (threshold: {self.chain.drift_threshold})"
         else:
-            is_faulty = True
-            reason = "Canonical reference unavailable or stale"
+            # Reference block unavailable: fail open, do not mark node faulty
+            drift = 0
             node.last_drift = 0
-            node.consecutive_failures = max(node.consecutive_failures, self.failure_threshold - 1)
 
         # Update Metrics
 
@@ -216,11 +318,19 @@ class ChainMonitor:
                 cutover_latency_ms = None
                 if node.current_haproxy_state != "maint":
                     server = "primary" if node is self.primary else "fallback"
-                    t0 = time.perf_counter()
-                    drained = await set_server_state(self.socket_path, self.chain.backend, server, "maint")
-                    cutover_latency_ms = (time.perf_counter() - t0) * 1000.0
-                    if drained:
-                        node.current_haproxy_state = "maint"
+                    peer_node = self.fallback if node is self.primary else self.primary
+                    # Minimum-Healthy Guardrail: refuse to drain if peer is already in maint
+                    if peer_node.current_haproxy_state == "maint":
+                        logger.error(
+                            f"[FAIL-OPEN GUARDRAIL] Refusing to drain {self.chain.backend}/{server}: "
+                            f"peer {peer_node.name} is already in maint. Preserving routing."
+                        )
+                    else:
+                        t0 = time.perf_counter()
+                        drained = await set_server_state(self.socket_path, self.chain.backend, server, "maint")
+                        cutover_latency_ms = (time.perf_counter() - t0) * 1000.0
+                        if drained:
+                            node.current_haproxy_state = "maint"
 
                 backend_stats = await get_backend_stats(self.chain.backend, socket_path=self.socket_path)
 
@@ -395,7 +505,7 @@ class DriftMonitor:
     @property
     def is_healthy(self) -> bool:
         return bool(self.unique_monitors()) and any(
-            mon.reference.status == "HEALTHY"
+            mon.reference.status in ("HEALTHY", "DEGRADED", "INITIALIZING")
             and (mon.primary.status == "HEALTHY" or mon.fallback.status == "HEALTHY")
             for mon in self.unique_monitors().values()
         )

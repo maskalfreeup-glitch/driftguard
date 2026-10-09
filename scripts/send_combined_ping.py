@@ -230,7 +230,7 @@ payload = {
             "color": 0x31C48D,  # Healthy Green
             "fields": fields,
             "footer": {
-                "text": "DriftGuard Sentinel • Dual Active-Active Telemetry"
+                "text": "DriftGuard High-Availability EVM Gateway"
             },
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }

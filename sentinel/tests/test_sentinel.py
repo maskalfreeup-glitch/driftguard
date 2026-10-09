@@ -107,7 +107,8 @@ async def test_drift_monitor_syncing_node_rejected():
 
 
 @pytest.mark.asyncio
-async def test_reference_loss_fails_closed_immediately():
+@pytest.mark.asyncio
+async def test_reference_loss_fails_open_preserving_routing():
     config = Settings(failure_threshold=3, recovery_threshold=2)
     storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
     monitor = DriftMonitor(config=config, storage=storage, chains=[TEST_CHAIN])
@@ -119,23 +120,26 @@ async def test_reference_loss_fails_closed_immediately():
 
     await monitor._evaluate_node(monitor.primary, sample, reference_block=None, timestamp=1001)
 
-    assert monitor.primary.status == "UNHEALTHY"
-    assert monitor.primary.consecutive_failures == config.failure_threshold
-    assert monitor.primary.reason == "Canonical reference unavailable or stale"
+    # Fail-Open principle: healthy node is preserved when reference is unavailable
+    assert monitor.primary.status == "HEALTHY"
+    assert monitor.primary.consecutive_failures == 0
+    assert monitor.primary.last_drift == 0
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("reference_chain_id,reference_time", [(1, None), (11155111, 1.0)])
-async def test_poll_cycle_drains_both_pools_when_reference_is_untrusted(
+async def test_poll_cycle_fails_open_and_freezes_routing_when_reference_untrusted(
     monkeypatch, reference_chain_id, reference_time
 ):
     config = Settings(failure_threshold=3, max_reference_age=2)
     storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
     monitor = DriftMonitor(config=config, storage=storage, chains=[TEST_CHAIN])
     chain_monitor = monitor._default_chain
+    chain_monitor.primary.status = "HEALTHY"
+    chain_monitor.fallback.status = "HEALTHY"
     now = time.time()
 
-    async def fake_probe(endpoint, check_syncing=True):
+    async def fake_probe(endpoint, check_syncing=True, timeout=None):
         is_reference = endpoint == TEST_CHAIN.reference_url
         return NodeSample(
             endpoint=endpoint,
@@ -151,14 +155,78 @@ async def test_poll_cycle_drains_both_pools_when_reference_is_untrusted(
     monkeypatch.setattr(monitor.rpc_client, "probe", fake_probe)
     set_state = AsyncMock(return_value=True)
     monkeypatch.setattr("sentinel.src.monitor.set_server_state", set_state)
-    monkeypatch.setattr(monitor.alerter, "send_reference_unavailable", AsyncMock(return_value=True))
+    mock_unavailable = AsyncMock(return_value=True)
+    monkeypatch.setattr(monitor.alerter, "send_reference_unavailable", mock_unavailable)
 
+    # Probe 1: single dropped sample does not immediately flap reference status
     await chain_monitor._poll_cycle()
+    assert chain_monitor.reference.consecutive_failures == 1
+    assert chain_monitor.reference.status != "DEGRADED"
+    assert set_state.await_count == 0  # 0 drains
 
-    assert chain_monitor.reference.status == "UNHEALTHY"
-    assert chain_monitor.primary.status == "UNHEALTHY"
-    assert chain_monitor.fallback.status == "UNHEALTHY"
-    assert set_state.await_count == 2
+    # Probe 2: still debouncing
+    await chain_monitor._poll_cycle()
+    assert chain_monitor.reference.consecutive_failures == 2
+    assert chain_monitor.reference.status != "DEGRADED"
+    assert set_state.await_count == 0  # 0 drains
+
+    # Probe 3: threshold reached (3 consecutive failed probes) -> DEGRADED
+    await chain_monitor._poll_cycle()
+    assert chain_monitor.reference.consecutive_failures == 3
+    assert chain_monitor.reference.status == "DEGRADED"
+
+    # Fail-Open Verification:
+    # 1. Zero drain commands issued via HAProxy socket
+    assert set_state.await_count == 0
+    # 2. Serving pools are preserved
+    assert chain_monitor.primary.status == "HEALTHY"
+    assert chain_monitor.fallback.status == "HEALTHY"
+    # 3. Warning alert emitted
+    assert mock_unavailable.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_reference_hysteresis_recovery(monkeypatch):
+    config = Settings(failure_threshold=3, max_reference_age=2)
+    storage = StorageEngine(redis_url="redis://invalid-host:6379/0", timeout=0.1)
+    monitor = DriftMonitor(config=config, storage=storage, chains=[TEST_CHAIN])
+    chain_monitor = monitor._default_chain
+    chain_monitor.reference.status = "DEGRADED"
+    chain_monitor.reference_degraded = True
+    chain_monitor.reference.consecutive_failures = 3
+    now = time.time()
+
+    async def healthy_probe(endpoint, check_syncing=True, timeout=None):
+        return NodeSample(
+            endpoint=endpoint,
+            block_number=100,
+            is_syncing=False,
+            latency_ms=1.0,
+            error=None,
+            timestamp=now,
+            chain_id=TEST_CHAIN.chain_id,
+            syncing_checked=check_syncing,
+        )
+
+    monkeypatch.setattr(monitor.rpc_client, "probe", healthy_probe)
+    mock_recovered = AsyncMock(return_value=True)
+    monkeypatch.setattr(monitor.alerter, "send_reference_recovered", mock_recovered)
+
+    # 1st healthy sample
+    await chain_monitor._poll_cycle()
+    assert chain_monitor.reference.consecutive_successes == 1
+    assert chain_monitor.reference.status == "DEGRADED"
+
+    # 2nd healthy sample
+    await chain_monitor._poll_cycle()
+    assert chain_monitor.reference.consecutive_successes == 2
+    assert chain_monitor.reference.status == "DEGRADED"
+
+    # 3rd healthy sample: recovers to HEALTHY
+    await chain_monitor._poll_cycle()
+    assert chain_monitor.reference.consecutive_successes == 3
+    assert chain_monitor.reference.status == "HEALTHY"
+    assert mock_recovered.await_count == 1
 
 
 @pytest.mark.asyncio

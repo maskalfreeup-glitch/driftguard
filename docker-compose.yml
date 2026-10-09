@@ -10,13 +10,13 @@ services:
     container_name: driftguard-redis
     restart: unless-stopped
     logging: *default-logging
-    mem_limit: 32m
+    mem_limit: 64m
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
     command: >
       redis-server
       --requirepass "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"
-      --maxmemory 20mb
+      --maxmemory 40mb
       --maxmemory-policy allkeys-lru
       --save ""
       --appendonly no
@@ -34,7 +34,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 32M
+          memory: 64M
 
   sentinel:
     build:
@@ -43,7 +43,7 @@ services:
     container_name: driftguard-sentinel
     restart: unless-stopped
     logging: *default-logging
-    mem_limit: 128m
+    mem_limit: 256m
     depends_on:
       redis:
         condition: service_healthy
@@ -73,7 +73,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 128M
+          memory: 256M
 
   proxy:
     image: haproxy:2.8-alpine

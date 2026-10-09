@@ -73,7 +73,7 @@ dispatch_discord() {
       "color": ${color},
       "fields": ${fields_json},
       "footer": {
-        "text": "DriftGuard Node Sentinel • ${NODE_NAME} (${IP_ADDR})"
+        "text": "DriftGuard High-Availability EVM Gateway"
       },
       "timestamp": "${ISO_TIMESTAMP}"
     }

@@ -36,20 +36,21 @@ class RpcClient:
     async def close(self):
         await self.client.aclose()
 
-    async def probe(self, endpoint_url: str, check_syncing: bool = True) -> NodeSample:
+    async def probe(self, endpoint_url: str, check_syncing: bool = True, timeout: float | None = None) -> NodeSample:
         """
         Queries eth_chainId, eth_blockNumber, and eth_syncing to evaluate node state.
         """
         start = time.perf_counter()
         now = time.time()
+        eff_timeout = timeout if timeout is not None else self.timeout
 
         try:
             calls = [
-                self._rpc_result(endpoint_url, "eth_blockNumber", 1),
-                self._rpc_result(endpoint_url, "eth_chainId", 2),
+                self._rpc_result(endpoint_url, "eth_blockNumber", 1, timeout=timeout),
+                self._rpc_result(endpoint_url, "eth_chainId", 2, timeout=timeout),
             ]
             if check_syncing:
-                calls.append(self._rpc_result(endpoint_url, "eth_syncing", 3))
+                calls.append(self._rpc_result(endpoint_url, "eth_syncing", 3, timeout=timeout))
             results = await asyncio.gather(*calls)
             block_result, chain_result = results[:2]
             sync_result = False
@@ -86,7 +87,7 @@ class RpcClient:
                 block_number=None,
                 is_syncing=False,
                 latency_ms=elapsed_ms,
-                error=f"Request timed out (> {self.timeout}s)",
+                error=f"Request timed out (> {eff_timeout}s)",
                 timestamp=now,
             )
         except Exception as e:
@@ -100,10 +101,44 @@ class RpcClient:
                 timestamp=now,
             )
 
-    async def _rpc_result(self, endpoint_url: str, method: str, request_id: int):
+    async def probe_reference(
+        self,
+        primary_url: str,
+        fallback_urls: list[str] | None = None,
+        timeout: float = 5.0,
+    ) -> NodeSample:
+        """
+        Probes canonical reference endpoint with a 5s timeout.
+        If primary reference fails, times out, or errors, attempts fallback reference URLs
+        to prevent rate-limit stalls (e.g., on arbitrum-nova).
+        """
+        sample = await self.probe(primary_url, check_syncing=False, timeout=timeout)
+        if sample.error is None and sample.block_number is not None:
+            return sample
+
+        # Primary reference failed or rate-limited; try fallback reference providers
+        if fallback_urls:
+            for fallback_url in fallback_urls:
+                if not fallback_url or fallback_url == primary_url:
+                    continue
+                logger.warning(
+                    "Primary reference %s failed (%s); trying fallback reference %s",
+                    primary_url, sample.error, fallback_url
+                )
+                fb_sample = await self.probe(fallback_url, check_syncing=False, timeout=timeout)
+                if fb_sample.error is None and fb_sample.block_number is not None:
+                    return fb_sample
+
+        return sample
+
+    async def _rpc_result(self, endpoint_url: str, method: str, request_id: int, timeout: float | None = None):
+        post_kwargs = {}
+        if timeout is not None:
+            post_kwargs["timeout"] = httpx.Timeout(timeout, connect=min(2.0, timeout))
         response = await self.client.post(
             endpoint_url,
             json={"jsonrpc": "2.0", "method": method, "params": [], "id": request_id},
+            **post_kwargs,
         )
         if response.status_code != 200:
             raise ValueError(f"{method} returned HTTP {response.status_code}")

@@ -107,11 +107,46 @@ async def get_backend_stats(
         return default_stats
 
 
-async def set_server_state(socket_path: str, backend: str, server: str, state: str) -> bool:
+async def can_safely_drain(socket_path: str, backend: str, server: str) -> bool:
+    """
+    Minimum-Healthy Guardrail: Verifies that draining `server` will not leave 0 active backends.
+    If the peer server is already in MAINT, DOWN, or DRAIN state, returns False to preserve traffic.
+    """
+    peer = "fallback" if server == "primary" else "primary"
+    try:
+        raw_output = await send_haproxy_command(socket_path, "show stat")
+        if not raw_output:
+            return True
+        lines = [line.strip() for line in raw_output.splitlines() if line.strip()]
+        if not lines:
+            return True
+        header_line = lines[0].lstrip("#").strip()
+        headers = [h.strip() for h in header_line.split(",")]
+        for line in lines[1:]:
+            parts = [p.strip() for p in line.split(",")]
+            row = dict(zip(headers, parts, strict=False))
+            if row.get("pxname") == backend and row.get("svname") == peer:
+                peer_status = row.get("status", "").upper()
+                if "MAINT" in peer_status or "DOWN" in peer_status or "DRAIN" in peer_status:
+                    logger.warning(
+                        "[MINIMUM_HEALTHY_TRIGGERED] Refusing to drain %s/%s because peer %s is in state '%s'",
+                        backend, server, peer, peer_status
+                    )
+                    return False
+        return True
+    except Exception as e:
+        logger.warning("Error checking peer state during drain guardrail: %s", e)
+        return True
+
+
+async def set_server_state(
+    socket_path: str, backend: str, server: str, state: str, enforce_min_healthy: bool = True
+) -> bool:
     """
     Dynamically update HAProxy server state via UNIX socket:
     'set server <backend>/<server> state maint'
     'set server <backend>/<server> state ready'
+    Enforces minimum-healthy guardrail: refuses drain if peer is down/maint.
     """
     if (state not in {"ready", "maint"}
             or not backend
@@ -125,6 +160,15 @@ async def set_server_state(socket_path: str, backend: str, server: str, state: s
     if not os.path.exists(socket_path):
         logger.error("HAProxy admin socket is unavailable; failed to update %s/%s", backend, server)
         return False
+
+    # Minimum-healthy guardrail: refuse to drain last healthy backend
+    if state == "maint" and enforce_min_healthy:
+        if not await can_safely_drain(socket_path, backend, server):
+            logger.error(
+                "[FAIL-OPEN GUARDRAIL] Refused drain on %s/%s to prevent total backend blackout.",
+                backend, server
+            )
+            return False
 
     cmd = f"set server {backend}/{server} state {state}"
     resp = await send_haproxy_command(socket_path, cmd)

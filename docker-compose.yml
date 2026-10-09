@@ -56,6 +56,7 @@ services:
       ANCHOR_ARB_ONE: ${ANCHOR_ARB_ONE:-}
       ANCHOR_ARB_NOVA: ${ANCHOR_ARB_NOVA:-}
       ANCHOR_ARB_SEPOLIA: ${ANCHOR_ARB_SEPOLIA:-}
+      NODE_NAME: ${NODE_NAME:-}
     volumes:
       - ./sentinel/config/chains.yaml:/app/sentinel/config/chains.yaml:ro
       - haproxy_socket:/run/haproxy

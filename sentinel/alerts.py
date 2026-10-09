@@ -1,5 +1,6 @@
 import logging
 import os
+import socket
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -12,6 +13,22 @@ COLOR_DRIFT_TRIPPED = 0xE02424  # Red
 COLOR_RECOVERED = 0x31C48D      # Green
 
 
+def get_node_name(node_name: str | None = None) -> str:
+    """Read the node identifier from the environment (e.g., NODE_NAME or socket.gethostname(), defaulting to 'dg-node')."""
+    if node_name and node_name.strip():
+        return node_name.strip()
+    env_node = os.environ.get("NODE_NAME")
+    if env_node and env_node.strip():
+        return env_node.strip()
+    try:
+        host = socket.gethostname()
+        if host and host.strip():
+            return host.strip()
+    except Exception:
+        pass
+    return "dg-node"
+
+
 class DiscordAlerter:
     """
     Zero-overhead asynchronous Discord webhook incident alert dispatcher.
@@ -19,13 +36,19 @@ class DiscordAlerter:
     Guarantees zero runtime overhead when DISCORD_WEBHOOK_URL is unset.
     """
 
-    def __init__(self, webhook_url: str | None = None, cooldown_seconds: float = 10.0,
-                 client: httpx.AsyncClient | None = None):
+    def __init__(
+        self,
+        webhook_url: str | None = None,
+        cooldown_seconds: float = 10.0,
+        client: httpx.AsyncClient | None = None,
+        node_name: str | None = None,
+    ):
         self.webhook_url = (webhook_url if webhook_url is not None
                             else os.environ.get("DISCORD_WEBHOOK_URL", "")).strip()
         self.cooldown_seconds = cooldown_seconds
         self._external_client = client is not None
         self._client = client or (httpx.AsyncClient(timeout=5.0) if self.webhook_url else None)
+        self.node_name = get_node_name(node_name)
         # Incident tracking for MTTR calculation
         self.incident_start: float | None = None
         self.trip_delta_blocks: int = 0
@@ -183,6 +206,7 @@ class DiscordAlerter:
         drain_latency_ms: float | None = None,
         backend_stats: dict[str, Any] | None = None,
         now: float | None = None,
+        node_name: str | None = None,
         **kwargs: Any,
     ) -> bool:
         current_time = now if now is not None else time.time()
@@ -216,8 +240,9 @@ class DiscordAlerter:
         if not self.webhook_url:
             return False
 
+        active_node = node_name or self.node_name or get_node_name()
         return await self.dispatch_embed(
-            title=f"🚨 Consensus Drift Tripped - {chain_name}",
+            title=f"🚨 Consensus Drift Tripped - {chain_name} ({active_node})",
             description=(
                 f"{node_role.title()} node failed health checks with "
                 f"**{delta_blocks}** blocks of drift relative to canonical anchor."
@@ -371,6 +396,7 @@ class DiscordAlerter:
         traffic_summary: str | None = None,
         queries_routed: int | None = None,
         now: float | None = None,
+        node_name: str | None = None,
         **kwargs: Any,
     ) -> bool:
         current_time = now if now is not None else time.time()
@@ -400,8 +426,9 @@ class DiscordAlerter:
         if not self.webhook_url:
             return False
 
+        active_node = node_name or self.node_name or get_node_name()
         return await self.dispatch_embed(
-            title=f"✅ Consensus Recovered - {chain_name}",
+            title=f"✅ Consensus Recovered - {chain_name} ({active_node})",
             description="Primary node re-synchronized with canonical head. Primary restored.",
             color=COLOR_RECOVERED,
             fields=fields,
@@ -419,6 +446,7 @@ class DiscordAlerter:
         routing_transition: str = "primary: DRAIN (0%) -> fallback: ACTIVE (100%)",
         drain_latency_ms: float | None = 0.60,
         backend_stats: dict[str, Any] | None = None,
+        node_name: str | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         fields = self.build_drift_tripped_fields(
@@ -434,8 +462,9 @@ class DiscordAlerter:
             backend_stats=backend_stats,
             **kwargs,
         )
+        active_node = node_name or self.node_name or get_node_name()
         return self.build_embed_payload(
-            title=f"🚨 Consensus Drift Tripped - {chain_name}",
+            title=f"🚨 Consensus Drift Tripped - {chain_name} ({active_node})",
             description=(
                 f"{node_role.title()} node failed health checks with "
                 f"**{delta_blocks}** blocks of drift relative to canonical anchor."
@@ -455,6 +484,7 @@ class DiscordAlerter:
         mttr_seconds: float | None = 2.1,
         traffic_summary: str | None = "Preserved with 0% 5xx errors",
         protected_traffic: str | None = None,
+        node_name: str | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         fields = self.build_consensus_recovered_fields(
@@ -468,8 +498,9 @@ class DiscordAlerter:
             protected_traffic=protected_traffic,
             **kwargs,
         )
+        active_node = node_name or self.node_name or get_node_name()
         return self.build_embed_payload(
-            title=f"✅ Consensus Recovered - {chain_name}",
+            title=f"✅ Consensus Recovered - {chain_name} ({active_node})",
             description="Primary node re-synchronized with canonical head. Primary restored.",
             color=COLOR_RECOVERED,
             fields=fields,

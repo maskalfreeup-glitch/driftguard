@@ -3,6 +3,7 @@ from sentinel.alerts import (
     COLOR_DRIFT_TRIPPED,
     COLOR_RECOVERED,
     DiscordAlerter,
+    get_node_name,
 )
 
 __all__ = [
@@ -10,6 +11,7 @@ __all__ = [
     "COLOR_RECOVERED",
     "DiscordAlerter",
     "dispatch_drift_alert",
+    "get_node_name",
 ]
 
 

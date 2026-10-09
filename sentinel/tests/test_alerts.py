@@ -201,3 +201,61 @@ async def test_trip_and_recovery_mttr_calculation():
     assert alerter.incident_start is None
 
     await alerter.close()
+
+
+@pytest.mark.asyncio
+async def test_alert_titles_include_node_identifier():
+    dispatched = []
+
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        dispatched.append(json.loads(request.content))
+        return httpx.Response(204)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(mock_handler))
+
+    # Test with NODE_NAME set in env
+    with patch.dict("os.environ", {"NODE_NAME": "dg-node1"}):
+        alerter = DiscordAlerter(webhook_url="https://discord.com/api/webhooks/mock/node1", client=client)
+        assert alerter.node_name == "dg-node1"
+
+        await alerter.send_drift_tripped(
+            chain_name="Arbitrum One",
+            chain_id=42161,
+            backend="be_arb",
+            canonical_head=100,
+            primary_head=90,
+            delta_blocks=10,
+            force=True,
+        )
+        assert dispatched[-1]["embeds"][0]["title"] == "🚨 Consensus Drift Tripped - Arbitrum One (dg-node1)"
+
+        await alerter.send_consensus_recovered(
+            chain_name="Arbitrum One",
+            backend="be_arb",
+            force=True,
+        )
+        assert dispatched[-1]["embeds"][0]["title"] == "✅ Consensus Recovered - Arbitrum One (dg-node1)"
+
+    # Test payload builders with custom node_name override
+    alerter_custom = DiscordAlerter(webhook_url="", node_name="custom-node")
+    p_trip = alerter_custom.build_drift_tripped_payload(chain_name="Arbitrum Nova", node_name="dg-node2")
+    assert p_trip["embeds"][0]["title"] == "🚨 Consensus Drift Tripped - Arbitrum Nova (dg-node2)"
+
+    p_rec = alerter_custom.build_consensus_recovered_payload(chain_name="Arbitrum Nova", node_name="dg-node2")
+    assert p_rec["embeds"][0]["title"] == "✅ Consensus Recovered - Arbitrum Nova (dg-node2)"
+
+    # Test payload builder defaulting to self.node_name
+    p_trip_def = alerter_custom.build_drift_tripped_payload(chain_name="Arbitrum Nova")
+    assert p_trip_def["embeds"][0]["title"] == "🚨 Consensus Drift Tripped - Arbitrum Nova (custom-node)"
+
+    p_rec_def = alerter_custom.build_consensus_recovered_payload(chain_name="Arbitrum Nova")
+    assert p_rec_def["embeds"][0]["title"] == "✅ Consensus Recovered - Arbitrum Nova (custom-node)"
+
+    # Test fallback to dg-node when env is empty and hostname fails
+    with patch.dict("os.environ", {}, clear=True):
+        with patch("socket.gethostname", side_effect=Exception("no hostname")):
+            fallback_alerter = DiscordAlerter(webhook_url="")
+            p_fb = fallback_alerter.build_drift_tripped_payload(chain_name="Arbitrum Sepolia")
+            assert p_fb["embeds"][0]["title"] == "🚨 Consensus Drift Tripped - Arbitrum Sepolia (dg-node)"
+
+    await client.aclose()

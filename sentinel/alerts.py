@@ -14,7 +14,10 @@ COLOR_RECOVERED = 0x31C48D      # Green
 
 
 def get_node_name(node_name: str | None = None) -> str:
-    """Read the node identifier from the environment (e.g., NODE_NAME or socket.gethostname(), defaulting to 'dg-node')."""
+    """
+    Read the node identifier from the environment (e.g., NODE_NAME or socket.gethostname(),
+    defaulting to 'dg-node').
+    """
     if node_name and node_name.strip():
         return node_name.strip()
     env_node = os.environ.get("NODE_NAME")
@@ -320,7 +323,9 @@ class DiscordAlerter:
             return False
         return await self.dispatch_embed(
             title=f"✅ Canonical Reference Recovered - {chain_name}",
-            description="Canonical reference health restored across consecutive probes. Normal consensus monitoring active.",
+            description=(
+                "Canonical reference health restored across consecutive probes. Normal consensus monitoring active."
+            ),
             color=COLOR_RECOVERED,
             fields=[
                 {"name": "Chain Name", "value": chain_name, "inline": True},

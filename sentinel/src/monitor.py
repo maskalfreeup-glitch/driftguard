@@ -166,18 +166,24 @@ class ChainMonitor:
         else:
             self.reference.consecutive_failures += 1
             self.reference.consecutive_successes = 0
-            err_msg = (
-                r_res.error if isinstance(r_res, NodeSample) and r_res.error
-                else (f"Exception: {r_res}" if not isinstance(r_res, NodeSample) else "Invalid block height or chain ID")
-            )
+            if isinstance(r_res, NodeSample) and r_res.error:
+                err_msg = r_res.error
+            elif not isinstance(r_res, NodeSample):
+                err_msg = f"Exception: {r_res}"
+            else:
+                err_msg = "Invalid block height or chain ID"
+
             if self.reference.consecutive_failures >= self.reference_failure_threshold:
                 should_alert = not self.reference_degraded
                 self.reference.status = "DEGRADED"
                 self.reference_degraded = True
-                self.reference.reason = f"Canonical reference degraded ({self.reference.consecutive_failures} failures: {err_msg})"
+                self.reference.reason = (
+                    f"Canonical reference degraded ({self.reference.consecutive_failures} failures: {err_msg})"
+                )
                 if should_alert:
                     logger.warning(
-                        f"\033[93m[FAIL-OPEN ACTIVE] [{self.chain.name}] Canonical reference degraded ({self.reference.consecutive_failures} failures). "
+                        f"\033[93m[FAIL-OPEN ACTIVE] [{self.chain.name}] Canonical reference degraded "
+                        f"({self.reference.consecutive_failures} failures). "
                         f"Freezing routing state and preserving serving pools with 0 drains.\033[0m"
                     )
                     await self.alerter.send_reference_unavailable(

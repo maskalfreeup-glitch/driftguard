@@ -1,0 +1,22 @@
+[Unit]
+Description=DriftGuard EVM Consensus Telemetry Continuous Daemon
+Documentation=https://github.com/driftguard/driftguard
+After=network.target haproxy.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/opc/driftguard
+Environment=DRIFTGUARD_DB_PATH=/var/lib/driftguard/metrics.db
+Environment=HAPROXY_SOCKET_PATH=/var/run/haproxy/admin.sock
+Environment=NODE1_RPC_URL=http://127.0.0.1:8545
+Environment=NODE2_RPC_URL=https://arbitrum-one-rpc.publicnode.com
+Environment=CANONICAL_RPC_URL=https://arb1.arbitrum.io/rpc
+ExecStart=/usr/bin/python3 /home/opc/driftguard/collector.py --daemon --interval 15
+Restart=always
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=DriftGuard EVM Consensus Telemetry Timer (15s Interval)
+Documentation=https://github.com/driftguard/driftguard
+
+[Timer]
+OnBootSec=10s
+OnUnitActiveSec=15s
+AccuracySec=1s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

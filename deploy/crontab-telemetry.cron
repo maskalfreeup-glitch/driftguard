@@ -1,0 +1,6 @@
+# DriftGuard EVM Consensus Telemetry - 15-second Cron Schedule
+# Four staggered executions per minute ensure continuous 15s sampling resolution
+* * * * * /usr/bin/python3 /home/opc/driftguard/collector.py --once >> /var/log/driftguard-telemetry.log 2>&1
+* * * * * sleep 15; /usr/bin/python3 /home/opc/driftguard/collector.py --once >> /var/log/driftguard-telemetry.log 2>&1
+* * * * * sleep 30; /usr/bin/python3 /home/opc/driftguard/collector.py --once >> /var/log/driftguard-telemetry.log 2>&1
+* * * * * sleep 45; /usr/bin/python3 /home/opc/driftguard/collector.py --once >> /var/log/driftguard-telemetry.log 2>&1

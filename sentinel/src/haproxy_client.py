@@ -79,7 +79,7 @@ async def get_backend_stats(
         matching_rows: list[dict[str, str]] = []
         for line in lines[1:]:
             parts = [p.strip() for p in line.split(",")]
-            row = dict(zip(headers, parts))
+            row = dict(zip(headers, parts, strict=False))
             if row.get("pxname") == backend_name:
                 matching_rows.append(row)
 
@@ -124,7 +124,7 @@ async def can_safely_drain(socket_path: str, backend: str, server: str) -> bool:
         headers = [h.strip() for h in header_line.split(",")]
         for line in lines[1:]:
             parts = [p.strip() for p in line.split(",")]
-            row = dict(zip(headers, parts))
+            row = dict(zip(headers, parts, strict=False))
             if row.get("pxname") == backend and row.get("svname") == peer:
                 peer_status = row.get("status", "").upper()
                 if "MAINT" in peer_status or "DOWN" in peer_status or "DRAIN" in peer_status:

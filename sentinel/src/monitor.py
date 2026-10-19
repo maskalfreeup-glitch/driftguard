@@ -125,14 +125,21 @@ class ChainMonitor:
     async def _poll_loop(self):
         await asyncio.sleep(0.5)
         while self.is_running:
+            sleep_time = 0.40
             try:
                 await self._poll_cycle()
+                delta = getattr(self.primary, "last_drift", 0)
+                if delta == 0:
+                    sleep_time = 0.40
+                elif delta >= 1:
+                    sleep_time = 0.10
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"[{self.chain.name}] Error in chain monitor cycle: {e}", exc_info=True)
+                sleep_time = 1.0
 
-            await asyncio.sleep(self.chain.poll_interval)
+            await asyncio.sleep(sleep_time)
 
     async def _poll_cycle(self):
         METRIC_POLL_COUNT.inc()

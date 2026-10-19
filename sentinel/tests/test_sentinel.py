@@ -527,3 +527,15 @@ async def test_arbitrum_nova_enforces_fail_open_on_reference_failure(monkeypatch
     # 3. Serving nodes were not penalized with consecutive failures
     assert nova_monitor.primary.consecutive_failures == 0
     assert nova_monitor.fallback.consecutive_failures == 0
+
+
+def test_adaptive_cadence_sleep_throttling():
+    from sentinel.driftguard_sentinel import get_sleep_interval
+
+    # delta == 0 (in-sync): sleep 0.40s
+    assert get_sleep_interval(0) == 0.40
+
+    # delta >= 1 (drift detected): sleep 0.10s
+    assert get_sleep_interval(1) == 0.10
+    assert get_sleep_interval(4) == 0.10
+    assert get_sleep_interval(50) == 0.10
